@@ -47,4 +47,4 @@ Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/sup
 
 ## License
 
-AGPL-3.0-only ([LICENSE](LICENSE)). Copyright Chris DeFoe. If you build skycake into your own site or product, the AGPL asks you to publish that code too. See [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes.
+AGPL-3.0-only ([LICENSE](LICENSE)). Copyright Christopher DeFoe. If you build skycake into your own site or product, the AGPL asks you to publish that code too. See [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes.
