@@ -1,0 +1,43 @@
+{
+  "name": "skycake",
+  "version": "0.1.0",
+  "description": "Interactive 3D airspace and instrument procedures over real FAA charts, with terrain and airport diagrams. Free roam, guided walkthroughs and a quiz engine for teaching airspace and IFR. Not for navigation.",
+  "license": "AGPL-3.0-only",
+  "author": "Chris DeFoe",
+  "repository": { "type": "git", "url": "git+https://github.com/Tehcnological/skycake.git" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./style.css": "./style.css",
+    "./data/*": "./data/*"
+  },
+  "files": ["dist", "src", "data", "style.css", "LICENSE", "NOTICE.md"],
+  "sideEffects": ["*.css"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "tsx --test src/*.test.ts",
+    "data": "tsx scripts/build-area.ts"
+  },
+  "peerDependencies": {
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "1.0.13",
+    "@types/node": "22.20.5",
+    "@types/proj4": "2.5.5",
+    "@types/three": "0.180.0",
+    "fflate": "0.8.3",
+    "geotiff": "2.1.3",
+    "pdfjs-dist": "6.4.299",
+    "proj4": "2.12.1",
+    "sharp": "0.35.5",
+    "simplify-js": "1.2.4",
+    "three": "0.180.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  },
+  "engines": { "node": ">=22" }
+}

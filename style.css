@@ -1,0 +1,81 @@
+/* skycake. Colors and type come from the --sc-* variables, which fall back to a host site's own tokens where it has
+   them and to a dark default otherwise. Set any --sc-* on .skycake (or higher) to restyle. */
+.skycake {
+  --sc-frame: var(--frame, #2c323b);
+  --sc-panel: var(--panel, #1b1f25);
+  --sc-side: var(--side, #15181d);
+  --sc-ink: var(--ink, #e6e9ee);
+  --sc-soft: var(--soft, #c3c9d2);
+  --sc-muted: var(--muted, #9aa3ae);
+  --sc-dim: var(--dim, #6f7883);
+  --sc-head: var(--head, system-ui, sans-serif);
+  --sc-mono: var(--mono, ui-monospace, monospace);
+  --sc-r-card: var(--r-card, 16px);
+  --sc-r-pill: var(--r-pill, 999px);
+  margin: 0;
+  border: 1px solid var(--sc-frame);
+  border-radius: var(--sc-r-card);
+  overflow: hidden;
+  background: var(--sc-side);
+  color: var(--sc-ink);
+}
+html.skycake-full { overflow: hidden; }
+.skycake .view { position: relative; height: max(560px, calc(100svh - 270px)); cursor: grab; touch-action: none; overflow: hidden; }
+/* A phone swipe on the view orbits instead of scrolling, so leave room to scroll past it. */
+@media (max-width: 860px) { .skycake .view { height: 70svh; } }
+.skycake.full { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; margin: 0; border: 0; border-radius: 0; }
+.skycake.full .view { flex: 1; height: auto; min-height: 0; }
+.skycake .chip.full { padding: 0 8px; }
+/* A turned phone: one sideways-scrolling row, so the chart keeps the height. */
+@media (max-height: 500px) {
+  .skycake.full .ctl { flex-wrap: nowrap; overflow-x: auto; padding-block: 6px; }
+  .skycake.full .chip { flex: none; white-space: nowrap; }
+  .skycake.full .pick { max-width: 170px; }
+  .skycake.full .chip.full { position: sticky; right: 0; }
+}
+.skycake .view canvas { display: block; width: 100%; height: 100%; }
+/* The figure clips its children, so the view's focus ring is drawn inside. */
+.skycake .view:focus-visible { outline-offset: -2px; }
+.skycake .tip { position: absolute; left: 0; top: 0; z-index: 2; padding: 6px 10px; border: 1px solid var(--sc-frame); border-radius: 10px; background: var(--sc-panel); font: 600 13px var(--sc-mono); color: var(--sc-ink); pointer-events: none; white-space: nowrap; box-shadow: 0 8px 20px rgb(0 0 0 / 0.5); }
+.skycake .tip[hidden] { display: none; }
+.skycake .tip .name { display: block; font: 600 12px var(--sc-head); text-transform: uppercase; letter-spacing: 0.03em; color: var(--sc-soft); }
+.skycake .tip .frac { width: fit-content; margin-top: 5px; font: 600 11px/1.25 var(--sc-mono); }
+.skycake .view .tags { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+/* Tags sit on the chart, so their colors don't change with the page theme. */
+.skycake .view .tag { position: absolute; left: 0; top: 0; font: 600 11px/1.25 var(--sc-mono); white-space: nowrap; will-change: transform; }
+.skycake .view .frac { padding: 2px 5px; border-radius: 4px; background: #fff; text-align: center; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); }
+.skycake .view .frac.b { color: #1f55d8; }
+.skycake .view .frac.m { color: #b02684; }
+.skycake .view .frac b { display: block; font-weight: 700; }
+.skycake .view .frac b + b { border-top: 1.5px solid currentColor; }
+.skycake .view .fix { padding: 3px 6px; border: 1.5px solid #ffffff99; border-radius: 5px; background: #14171cf0; color: #cfd6df; font-weight: 500; }
+.skycake .view .fix.g { border-color: #22d36b; }
+.skycake .view .fix.y { border-color: #ffc21a; }
+.skycake .view .fix b { display: flex; align-items: center; gap: 5px; color: #fff; font-weight: 700; }
+.skycake .view .fix i { padding: 0 4px; border-radius: 3px; background: #22d36b; color: #07150d; font-size: 9px; font-style: normal; }
+.skycake .view .fix.w i { background: #fff; color: #111; }
+.skycake .info { padding: 8px 12px; border-top: 1px solid var(--sc-frame); font: 500 12px var(--sc-mono); color: var(--sc-muted); }
+.skycake .info[hidden] { display: none; }
+.skycake .info summary { display: list-item; margin: 0; padding: 0; background: none; list-style: disclosure-closed inside; font: 600 12px var(--sc-head); text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+.skycake .info[open] summary { list-style-type: disclosure-open; }
+.skycake .info dl { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 8px 0 2px; }
+.skycake .info dl div[hidden] { display: none; }
+.skycake .info dt { font: 600 11px var(--sc-head); text-transform: uppercase; letter-spacing: 0.03em; color: var(--sc-dim); }
+.skycake .info dd { margin: 0; color: var(--sc-ink); font-size: 14px; }
+.skycake .ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--sc-frame); }
+.skycake .sp { flex: 1; }
+.skycake .chip { display: flex; align-items: center; gap: 7px; height: 28px; box-sizing: border-box; margin: 0; padding: 0 11px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-pill); background: none; color: var(--sc-muted); font: 600 12px var(--sc-head); text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; }
+.skycake .chip[aria-pressed="true"] { color: var(--sc-ink); background: var(--sc-panel); }
+.skycake .chip.scale { font-family: var(--sc-mono); color: var(--sc-ink); }
+.skycake .pick { max-width: 100%; color: var(--sc-ink); background: var(--sc-panel); }
+.skycake .chip[hidden] { display: none; }
+.skycake .pick option { color: var(--sc-ink); background: var(--sc-panel); text-transform: none; }
+/* Swatches in the chart's line styles; dimmed when the type is off. */
+.skycake .chip i { --c: #4d82e0; width: 16px; height: 10px; border: 2px solid var(--c); border-radius: 2px; }
+.skycake .chip[aria-pressed="false"] i { opacity: 0.35; }
+.skycake .s-C i, .skycake .s-E i, .skycake .s-E700 i, .skycake .s-MODEC i, .skycake .s-MOA i, .skycake .s-A i { --c: #d0509f; }
+.skycake .s-D i, .skycake .s-E i { border-style: dashed; }
+.skycake .s-E700 i { border: 0; background: color-mix(in srgb, var(--c) 45%, transparent); }
+.skycake .s-MODEC i { border-width: 1px; border-radius: 50%; }
+.skycake .s-R i, .skycake .s-P i, .skycake .s-W i, .skycake .s-MOA i, .skycake .s-A i { background: repeating-linear-gradient(90deg, var(--c) 0 2px, transparent 2px 4px); }
+.skycake figcaption { padding: 0 12px 10px; font: 500 11px var(--sc-mono); color: var(--sc-dim); }
