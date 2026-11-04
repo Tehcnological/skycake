@@ -1,6 +1,6 @@
 # skycake UX: free roam, walkthroughs, quizzes
 
-Status: draft for Chris's review, 2026-11-04. Decisions behind it are in Projects HQ (Notion), project "skycake". Mockups: the "skycake UX layouts" canvas (claude.ai artifact, private to Chris), rows "Chosen", "Walkthrough" and "Quiz".
+Status: approved by Chris 2026-11-04, with everything raised in free roam and several procedures at once. Decisions behind it are in Projects HQ (Notion), project "skycake". Mockups: the "skycake UX layouts" canvas (claude.ai artifact, private to Chris), rows "Chosen", "Walkthrough" and "Quiz".
 
 ## Goal
 
@@ -25,7 +25,7 @@ type Scene = {
   camera?: "fit" | "top" | { frame: Target[]; tilt?: number } | { azimuth: number; tilt: number; distance: number; target: [lat: number, lon: number] };
   raise?: (Kind | AreaRef)[];        // raised; everything else lies flat on the chart. Default: nothing raised
   highlight?: Target[];              // stands out; the rest dims
-  procedure?: { airport: string; name: string; draw?: boolean };  // draw: leg by leg over the step
+  procedures?: { airport: string; name: string; draw?: boolean }[];  // any number at once; draw: leg by leg over the step
   airplane?: { at: [lat: number, lon: number, ft: number] } | { along: ProcedureRef; seconds: number };
   diagram?: string | null;           // airport id
   height?: 1 | 4;
@@ -37,7 +37,7 @@ type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point:
 
 - `camera: "top"` looks straight down, north up, framed on the targets or the whole chart; tags and labels stay readable.
 - Areas get stable ids in `area.json` (built by `npm run data`), so content can name "the Chandler Class D" and survive a data rebuild. An id that disappears after an FAA change makes the step or question fail loudly in tests on the site, not silently on screen.
-- Free roam's first scene, unless the site gives one: Class B raised, camera fit on it (today's view). Walkthroughs and quizzes always set their own.
+- Free roam's first scene, unless the site gives one: every airspace type raised, camera fit on the whole chart (Chris, 2026-11-04). Walkthroughs and quizzes always set their own.
 - Free roam remembers nothing between visits.
 
 ## Layout (all modes)
@@ -52,7 +52,7 @@ The view fills the embed. Controls float over it in small panels with the site's
 
 What the current viewer does, rearranged:
 
-- **Search** (top right; phone: top): one box for airport and procedure. Typing "25L", "BNYRD" or "KSDL" lists matches grouped by airport and type (Approaches, Arrivals, Departures). Picking a procedure shows it and its info card (final course, glidepath, FAF to MAP, approaches only). Clearing it goes back to the first view.
+- **Search** (top right; phone: top): one box for airport and procedure. Typing "25L", "BNYRD" or "KSDL" lists matches grouped by airport and type (Approaches, Arrivals, Departures). Picking a procedure adds it to the view, so an arrival and the approach it feeds can show together (Chris, 2026-11-04). Each shown procedure is a chip under the search box with a remove button; the camera frames all of them. An approach's info card (final course, glidepath, FAF to MAP) shows under its chip. A fix shared by two shown procedures gets one tag. Removing the last one goes back to the first view.
 - **Airspace** (top left button and list; phone: Airspace tab): one row per type with its chart swatch and a switch. Tapping a boundary on the chart still raises that area.
 - **View** (bottom right round buttons; phone: View tab): tags, height 1× or 4×, full screen. **Diagram** has its own button (phone: tab), shown only when the airport has one.
 - Hover or tap on an area shows its name and floor/ceiling, as today. Keyboard: arrows turn the view and + / - zoom while the view has focus; no shortcuts work anywhere else on the page.
@@ -106,7 +106,7 @@ All four share `prompt`, optional `scene` (default chosen per type, below), opti
 | `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM on the ground) | `camera: "top"`, nothing raised |
 | `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target raised alone, oblique |
 | `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, oblique |
-| `procedure` | picks a choice | a choice | only the procedure shown, framed |
+| `procedure` | picks a choice | a choice | only the procedures asked about shown, framed |
 
 ### Format
 
