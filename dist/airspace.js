@@ -26,6 +26,35 @@ export function feet(val, uom, code, ground) {
 }
 /** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
 export const hundreds = (ft, ground) => (ft <= ground ? "SFC" : String(Math.round(ft / 100)));
+/**
+ * One readable id per area, in the same order: kind and name ("d-chandler-municipal-airport-class-d"); where that
+ * repeats, the floor and ceiling as the chart writes them ("b-phoenix-class-b-50-90"); where that still repeats, a
+ * number by position, west to east, then north to south. Input order never changes an id.
+ */
+export function areaIds(areas, ground) {
+    const slug = (a) => `${a.kind}-${a.name}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const count = (xs) => xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map());
+    const base = areas.map(slug);
+    const baseN = count(base);
+    const mid = areas.map((a, i) => (baseN.get(base[i]) > 1 ? `${base[i]}-${hundreds(a.floor, ground)}-${hundreds(a.ceiling, ground)}`.toLowerCase() : base[i]));
+    const midN = count(mid);
+    const centre = (a) => {
+        const r = a.rings[0];
+        return [r.reduce((s, p) => s + p[1], 0) / r.length, r.reduce((s, p) => s + p[0], 0) / r.length];
+    };
+    const out = [...mid];
+    for (const [id, n] of midN) {
+        if (n < 2)
+            continue;
+        const idx = mid.map((m, i) => (m === id ? i : -1)).filter((i) => i >= 0);
+        idx.sort((i, j) => {
+            const [lonI, latI] = centre(areas[i]), [lonJ, latJ] = centre(areas[j]);
+            return lonI - lonJ || latJ - latI;
+        });
+        idx.forEach((i, k) => (out[i] = `${id}-${k + 1}`));
+    }
+    return out;
+}
 /** Ray casting: is the point inside the ring? */
 export function inRing(p, ring) {
     let inside = false;

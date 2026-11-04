@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { KINDS, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile } from "./airspace.js";
+import { KINDS, areaIds, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
 
 test("FAA records map to chart kinds; default 1,200 ft Class E and Class A are left out", () => {
   assert.equal(classKind("B", "CLASS_B", 0, "SFC"), "B");
@@ -70,4 +70,23 @@ test("terrain lines up with the chart: known summits stand at their own spots", 
   assert.ok(near(33.5151, -111.9618) > 2300, "Camelback Mountain, 2,704 ft");
   assert.ok(near(33.6834, -111.3254) > 6800, "Four Peaks, 7,657 ft");
   assert.ok(Math.abs(near(33.4343, -112.0116) - 1135) < 60, "Sky Harbor, 1,135 ft");
+});
+
+test("area ids: readable, unique, and the same for the same data", () => {
+  const ring = (lon: number): Ring => [[33, lon], [33.1, lon], [33.1, lon + 0.1]];
+  const a = [
+    { kind: "D" as const, name: "CHANDLER MUNICIPAL AIRPORT CLASS D", floor: 1135, ceiling: 3000, rings: [ring(-111.8)] },
+    { kind: "B" as const, name: "PHOENIX CLASS B", floor: 5000, ceiling: 9000, rings: [ring(-112.2)] },
+    { kind: "B" as const, name: "PHOENIX CLASS B", floor: 5000, ceiling: 9000, rings: [ring(-111.9)] },
+    { kind: "B" as const, name: "PHOENIX CLASS B", floor: 1135, ceiling: 9000, rings: [ring(-112)] },
+  ];
+  assert.deepEqual(areaIds(a, 1135), ["d-chandler-municipal-airport-class-d", "b-phoenix-class-b-50-90-1", "b-phoenix-class-b-50-90-2", "b-phoenix-class-b-sfc-90"]);
+  assert.deepEqual(areaIds([...a].reverse(), 1135), [...areaIds(a, 1135)].reverse());
+});
+
+test("built Phoenix data: every area has a unique id", () => {
+  const f: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
+  const ids = f.areas.map((a) => a.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.ok(ids.includes("d-chandler-municipal-airport-class-d"));
 });

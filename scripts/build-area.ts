@@ -22,7 +22,7 @@ import { fromArrayBuffer, fromUrl } from "geotiff";
 import proj4 from "proj4";
 import sharp from "sharp";
 import simplify from "simplify-js";
-import { TOP, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
+import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp } from "../src/diagram.js";
 import { parseProcedures, type Airport } from "../src/procedure.js";
 
@@ -140,7 +140,7 @@ function rings(g: Feature["geometry"]): Ring[] {
 }
 
 async function airspace(): Promise<Area[]> {
-  const areas: Area[] = [];
+  const areas: Omit<Area, "id">[] = [];
   for (const f of await query("Class_Airspace")) {
     const p = f.properties;
     const kind = classKind(p.CLASS as string, p.LOCAL_TYPE as string, Number(p.LOWER_VAL), p.LOWER_CODE as string);
@@ -162,7 +162,9 @@ async function airspace(): Promise<Area[]> {
     if (ceiling <= floor) continue;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
   }
-  return areas.filter((a) => a.rings.length > 0);
+  const kept = areas.filter((a) => a.rings.length > 0);
+  const ids = areaIds(kept, GROUND);
+  return kept.map((a, i) => ({ id: ids[i], ...a }));
 }
 
 // ---- Terrain: USGS 3DEP 1 arc-second tiles (public domain), sampled at the view's grid points, as 16-bit feet.

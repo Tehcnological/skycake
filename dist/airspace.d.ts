@@ -3,7 +3,9 @@ import type { Airport } from "./procedure.js";
 export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA", "A"];
 export type Kind = (typeof KINDS)[number];
 export type Ring = [lat: number, lon: number][];
+/** id: stable across data rebuilds while the FAA record stays the same (areaIds), so content can name one area. */
 export type Area = {
+    id: string;
     kind: Kind;
     name: string;
     floor: number;
@@ -42,6 +44,12 @@ export declare function suaKind(typeCode: string | null): Kind | null;
 export declare function feet(val: number, uom: string | null, code: string | null, ground: number): number;
 /** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
 export declare const hundreds: (ft: number, ground: number) => string;
+/**
+ * One readable id per area, in the same order: kind and name ("d-chandler-municipal-airport-class-d"); where that
+ * repeats, the floor and ceiling as the chart writes them ("b-phoenix-class-b-50-90"); where that still repeats, a
+ * number by position, west to east, then north to south. Input order never changes an id.
+ */
+export declare function areaIds(areas: Omit<Area, "id">[], ground: number): string[];
 /** Ray casting: is the point inside the ring? */
 export declare function inRing(p: number[], ring: number[][]): boolean;
 /** The spot on a coarse grid farthest from a ring's corners while inside it: where its tag goes, even on a curved shelf. */
