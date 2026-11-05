@@ -22,6 +22,9 @@ export type Labels = {
   /** The height button's name in words, on hover and on phones. */
   height: string;
   fullScreen: string;
+  /** On phones: the map in the page opens full screen, and the tab bar closes it. */
+  open: string;
+  close: string;
   finalCourse: string;
   glidepath: string;
   fafToMap: string;
@@ -53,6 +56,8 @@ export const LABELS: Labels = {
   heightScale: (n) => `Height scale ${n}×`,
   height: "Height scale",
   fullScreen: "Full screen",
+  open: "Open 3D view",
+  close: "Close",
   finalCourse: "Final course",
   glidepath: "Glidepath",
   fafToMap: "FAF to MAP",

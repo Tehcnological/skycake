@@ -19,6 +19,9 @@ export type Labels = {
     /** The height button's name in words, on hover and on phones. */
     height: string;
     fullScreen: string;
+    /** On phones: the map in the page opens full screen, and the tab bar closes it. */
+    open: string;
+    close: string;
     finalCourse: string;
     glidepath: string;
     fafToMap: string;

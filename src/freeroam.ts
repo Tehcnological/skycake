@@ -100,10 +100,12 @@ export function freeRoam(c: Context): Promise<void> {
 
   // Phone tab bar.
   const tab = (label: string, paths: string[]) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
-  const tabs = { airspace: tab(L.airspace, ICONS.layers), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view) };
+  const tabs = { airspace: tab(L.airspace, ICONS.layers), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), close: tab(L.close, ICONS.close) };
   const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
 
-  fig.querySelector(".view")!.after(topLeft, topRight, bottomRight);
+  // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
+  const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
+  fig.querySelector(".view")!.after(openButton, topLeft, topRight, bottomRight);
   fig.append(tabBar);
 
   const sheet = (name: "kinds" | "view" | null) => {
@@ -278,17 +280,39 @@ export function freeRoam(c: Context): Promise<void> {
   drawChart();
 
   // iPhone Safari has no element fullscreen, so the class fills the window and the real thing is added where it exists.
+  const phone = matchMedia("(max-width: 860px) and (pointer: coarse)");
+  const drawPhone = () => {
+    fig.classList.toggle("sc-preview", phone.matches && !fig.classList.contains("full"));
+    fullButton.hidden = phone.matches;
+    tabs.close.hidden = !phone.matches;
+  };
   const setFull = (on: boolean) => {
     fig.classList.toggle("full", on);
     fullButton.setAttribute("aria-pressed", String(on));
     document.documentElement.classList.toggle("skycake-full", on);
+    drawPhone();
   };
-  fullButton.addEventListener("click", () => {
-    const on = !fig.classList.contains("full");
+  const goFull = (on: boolean) => {
     setFull(on);
     if (on) fig.requestFullscreen?.().catch(() => {});
     else if (document.fullscreenElement) document.exitFullscreen();
+  };
+  fullButton.addEventListener("click", () => goFull(!fig.classList.contains("full")));
+  openButton.addEventListener("click", () => goFull(true));
+  tabs.close.addEventListener("click", () => {
+    sheet(null);
+    results.hidden = true;
+    goFull(false);
   });
+  phone.addEventListener("change", drawPhone);
+  drawPhone();
+
+  // CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms the page.
+  const taken = () => !fig.classList.contains("sc-preview");
+  for (const t of ["gesturestart", "gesturechange", "gestureend", "dblclick"]) fig.addEventListener(t, (e) => taken() && e.preventDefault());
+  fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
+  // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
+  if (matchMedia("(pointer: coarse)").matches) fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) setFull(false);
   });
