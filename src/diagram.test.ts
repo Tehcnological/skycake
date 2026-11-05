@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { boundsOf, fitLabels, frame, labelValue, latLon, northUp, type Label } from "./diagram.js";
+import { boundsOf, fitLabels, frame, labelValue, latLon, northUp, readOutlines, type Glyph, type Label } from "./diagram.js";
 import type { AirspaceFile } from "./airspace.js";
 import { nm } from "./cifp.js";
 
@@ -56,13 +56,59 @@ test("the frame is the outermost long dark lines", () => {
 });
 
 test("built diagrams: each file exists and its area holds its airport", () => {
-  const f: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
-  const withDiagram = f.airports.filter((a) => a.diagram);
-  assert.ok(withDiagram.some((a) => a.id === "KPHX"));
-  for (const a of withDiagram) {
-    assert.ok(existsSync(new URL(`../data/phoenix/${a.diagram!.url}`, import.meta.url)), a.id);
-    const b = a.diagram!.bounds;
-    assert.ok(a.lat > b.s && a.lat < b.n && a.lon > b.w && a.lon < b.e, a.id);
-    assert.ok(nm(b.s, b.w, b.n, b.e) < 5, `${a.id} diagram spans ${nm(b.s, b.w, b.n, b.e)} NM`);
+  const expected = { phoenix: ["KPHX", "KTUS", "KDVT", "KGYR", "KIWA"], miami: ["KMIA", "KFLL", "KOPF", "KHWO"] };
+  for (const [area, ids] of Object.entries(expected)) {
+    const f: AirspaceFile = JSON.parse(readFileSync(new URL(`../data/${area}/area.json`, import.meta.url), "utf8"));
+    const withDiagram = f.airports.filter((a) => a.diagram);
+    for (const id of ids) assert.ok(withDiagram.some((a) => a.id === id), `${id} has no diagram`);
+    for (const a of withDiagram) {
+      assert.ok(existsSync(new URL(`../data/${area}/${a.diagram!.url}`, import.meta.url)), a.id);
+      const b = a.diagram!.bounds;
+      assert.ok(a.lat > b.s && a.lat < b.n && a.lon > b.w && a.lon < b.e, a.id);
+      assert.ok(nm(b.s, b.w, b.n, b.e) < 5, `${a.id} diagram spans ${nm(b.s, b.w, b.n, b.e)} NM`);
+    }
   }
+});
+
+// The 80°17'W label on the KMIA airport diagram (d-TPP 2611), each character an outline, reading up the page.
+const glyph = (segs: number, subs: number, x0: number, x1: number, y0: number, y1: number): Glyph => ({ segs, subs, x0, x1, y0, y1 });
+const MIA: Glyph[] = [
+  glyph(124, 3, 23.11, 27.96, 340.21, 343.02),
+  glyph(96, 2, 23.11, 27.96, 343.58, 346.73),
+  glyph(32, 2, 23.27, 25.34, 347.23, 349.3),
+  glyph(6, 1, 23.28, 27.87, 350.3, 351.61),
+  glyph(6, 1, 23.28, 27.96, 353.37, 356.69),
+  glyph(4, 1, 23.11, 24.9, 356.83, 358.02),
+  glyph(10, 1, 23.11, 28.05, 358.27, 364.74),
+];
+
+test("a tick label drawn as outlines reads as text, centered on its tick, 1 and 7 told apart by width", () => {
+  assert.deepEqual(readOutlines(MIA), [{ x: 25.58, y: 352.475, text: "80°17'W" }]);
+});
+
+test("a 6 and a 9 are the same outline, told apart by where the hole sits as the label reads", () => {
+  // 25°49'N and 25°46'N, reading left to right, then the same turned to read up the page (y runs down).
+  const label = (hole: "top" | "bottom"): Glyph[] => [
+    glyph(46, 1, 0, 3, 0, 5), glyph(66, 1, 3.5, 6.5, 0, 5), glyph(32, 2, 7, 9, 0, 2), glyph(13, 2, 9.5, 12.5, 0, 5),
+    { ...glyph(68, 2, 13, 16, 0, 5), hole: [14.5, hole === "top" ? 1.5 : 3.5] },
+    glyph(4, 1, 16.5, 17.5, 0, 2), glyph(8, 1, 18, 22, 0, 5),
+  ];
+  assert.equal(readOutlines(label("top"))[0].text, "25°49'N");
+  assert.equal(readOutlines(label("bottom"))[0].text, "25°46'N");
+  // Turned a quarter left: page x = text y, page y = 100 - text x, so the top of the text points left.
+  const turned = (l: Glyph[]): Glyph[] => l.map((g) => ({ ...g, x0: g.y0, x1: g.y1, y0: 100 - g.x1, y1: 100 - g.x0, hole: g.hole && [g.hole[1], 100 - g.hole[0]] }));
+  assert.equal(readOutlines(turned(label("top")))[0].text, "25°49'N");
+  assert.equal(readOutlines(turned(label("bottom")))[0].text, "25°46'N");
+});
+
+test("outlines read as a tick label only when they are one run of known characters", () => {
+  const moved = MIA.map((g) => ({ ...g, x0: g.x0 + 100, x1: g.x1 + 100 }));
+  // Two labels one after the other in the drawing order stay two labels.
+  assert.equal(readOutlines([...MIA, ...moved]).length, 2);
+  // A gap wider than the characters splits a label, so neither part reads.
+  assert.deepEqual(readOutlines([...MIA.slice(0, 3), ...moved.slice(3)]), []);
+  // An outline that isn't in the font's table.
+  assert.deepEqual(readOutlines(MIA.map((g, i) => (i === 1 ? { ...g, segs: 95 } : g))), []);
+  // Runway heading 272°: no minutes, not a label.
+  assert.deepEqual(readOutlines([glyph(46, 1, 0, 2, 0, 3), glyph(6, 1, 0, 2, 3.5, 6), glyph(46, 1, 0, 2, 6.5, 9), glyph(32, 2, 0, 2, 9.5, 11)]), []);
 });

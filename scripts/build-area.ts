@@ -25,7 +25,7 @@ import proj4 from "proj4";
 import sharp from "sharp";
 import simplify from "simplify-js";
 import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
-import { boundsOf, fitLabels, frame, labelValue, northUp } from "../src/diagram.js";
+import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
 
 const ROOT = join(import.meta.dirname, "..");
@@ -304,7 +304,7 @@ async function diagrams(airports: Airport[]) {
   const out = join(OUT, "diagrams");
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
-  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   for (const a of airports) {
     const block = meta.split("<airport_name").find((b) => new RegExp(`(icao_ident|apt_ident)="${a.id}"`).test(b.slice(0, b.indexOf(">"))));
     const pdf = block?.split("<record>").find((r) => /<chart_code>APD<\/chart_code>/.test(r))?.match(/<pdf_name>([^<]+)<\/pdf_name>/)?.[1];
@@ -320,10 +320,38 @@ async function diagrams(airports: Airport[]) {
       const [x, y] = one.convertToViewportPoint(te + (ta / run) * (it.width / 2) + (tc / up) * it.height * 0.36, tf + (tb / run) * (it.width / 2) + (td / up) * it.height * 0.36);
       return [{ x, y, text: it.str }];
     });
-    const fit = fitLabels(labels);
+    // Filled paths in drawing order, in page points, for labels drawn as outlines instead of text.
+    const glyphs: Glyph[] = [];
+    const ops = await page.getOperatorList();
+    let m = [1, 0, 0, 1, 0, 0];
+    const saved: number[][] = [];
+    const concat = (t: number[]) => { m = [m[0] * t[0] + m[2] * t[1], m[1] * t[0] + m[3] * t[1], m[0] * t[2] + m[2] * t[3], m[1] * t[2] + m[3] * t[3], m[0] * t[4] + m[2] * t[5] + m[4], m[1] * t[4] + m[3] * t[5] + m[5]]; };
+    ops.fnArray.forEach((fn, i) => {
+      const args = ops.argsArray[i];
+      if (fn === OPS.save) saved.push(m);
+      else if (fn === OPS.restore) m = saved.pop() ?? m;
+      else if (fn === OPS.transform) concat(args);
+      else if (fn === OPS.constructPath && (args[0] === OPS.fill || args[0] === OPS.eoFill) && args[1][0]) {
+        // pdf.js path: 0 move, 1 line, 2 curve, 3 quadratic, 4 close, each followed by its numbers. End points only.
+        const d: ArrayLike<number> = args[1][0], contours: number[][][] = [];
+        let segs = 0;
+        for (let k = 0; k < d.length; ) {
+          const c = d[k++], n = [2, 2, 6, 4, 0][c];
+          if (c === 0) contours.push([]); else if (c !== 4) segs++;
+          if (n) contours[contours.length - 1].push(one.convertToViewportPoint(m[0] * d[k + n - 2] + m[2] * d[k + n - 1] + m[4], m[1] * d[k + n - 2] + m[3] * d[k + n - 1] + m[5]));
+          k += n;
+        }
+        if (!contours.length) return;
+        const box = (pts: number[][]) => { const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) }; };
+        const area = (b: ReturnType<typeof box>) => (b.x1 - b.x0) * (b.y1 - b.y0);
+        const inner = contours.map(box).sort((p, q) => area(p) - area(q))[0];
+        glyphs.push({ segs, subs: contours.length, ...box(contours.flat()), hole: [(inner.x0 + inner.x1) / 2, (inner.y0 + inner.y1) / 2] });
+      }
+    });
+    const outlined = readOutlines(glyphs);
+    const fit = fitLabels(labels) ?? fitLabels(outlined);
     if (!fit) {
-      const why = labels.filter((l) => labelValue(l.text)).length < 4 ? "its tick labels are drawn as shapes, not text" : "its ticks don't fit";
-      console.log(`diagram ${a.id}: ${why}, left out`);
+      console.log(`diagram ${a.id}: its ticks don't fit (${[...labels.filter((l) => labelValue(l.text)), ...outlined].map((l) => l.text).join(" ") || "no labels read"}), left out`);
       continue;
     }
     const scale = 3.4;

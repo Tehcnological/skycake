@@ -18,7 +18,7 @@ test("raise takes kinds and single areas; an unknown area, diagram or procedure 
   assert.ok(r.raised.has("d-chandler-municipal-airport-class-d") && r.raised.has("b-phoenix-class-b-sfc-90"));
   assert.ok(![...r.raised].some((id) => id.startsWith("e700-") || id.startsWith("r-")));
   assert.throws(() => resolve({ raise: [{ area: "nope" }] }, data), SceneError);
-  assert.throws(() => resolve({ diagram: "KDVT" }, data), SceneError);
+  assert.throws(() => resolve({ diagram: "KLUF" }, data), SceneError);
   assert.throws(() => resolve({ procedures: [{ airport: "KPHX", name: "NOPE 1" }] }, data), SceneError);
   assert.deepEqual(resolve({ procedures: [{ airport: "KPHX", name: "EAGUL6", draw: true }] }, data).procedures, [{ airport: "KPHX", name: "EAGUL6" }]);
 });
@@ -46,7 +46,7 @@ test("a first scene with a name the data no longer has falls back to free roam a
 
 test("camera targets are checked like every other name", () => {
   assert.throws(() => resolve({ camera: { frame: [{ area: "nope" }] } }, data), SceneError);
-  assert.throws(() => resolve({ camera: { frame: [{ diagram: "KDVT" }] } }, data), SceneError);
+  assert.throws(() => resolve({ camera: { frame: [{ diagram: "KLUF" }] } }, data), SceneError);
   assert.throws(() => resolve({ camera: { frame: [{ procedure: { airport: "KPHX", name: "NOPE 1" } }] } }, data), SceneError);
   assert.doesNotThrow(() => resolve({ camera: { frame: [{ area: "b-phoenix-class-b-sfc-90" }, { diagram: "KPHX" }, { point: [33.4, -112] }] } }, data));
   const said: string[] = [];
