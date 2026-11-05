@@ -1,6 +1,6 @@
 // What a site embeds: mount() builds the view inside any element. The area's data loads at once; three.js and the
 // chart only when the element comes into sight. Styles are in style.css, which the site loads.
-import type { AirspaceFile, Area, Kind } from "./airspace.js";
+import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
 import { firstScene, type Scene } from "./scene.js";
 
@@ -28,10 +28,10 @@ export type Labels = {
   floor700: string;
   view: string;
   /** Under the view: the charts shown and their edition. */
-  caption: (edition: string, chart: "tac" | "sectional") => string;
+  caption: (edition: string, chart: ChartName) => string;
   /** The chart button's name in words, and its text for each chart. */
   chart: string;
-  charts: Record<"tac" | "sectional", string>;
+  charts: Record<ChartName, string>;
 };
 
 export const LABELS: Labels = {
@@ -55,9 +55,9 @@ export const LABELS: Labels = {
   fafToMap: "FAF to MAP",
   floor700: "Floor 700 AGL",
   view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
-  caption: (edition, chart) => `FAA ${chart === "tac" ? "TAC and sectional" : "sectional"} ${edition} · Not for navigation`,
+  caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
   chart: "Chart",
-  charts: { tac: "TAC", sectional: "SEC" },
+  charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
 };
 
 export type Options = {
@@ -95,13 +95,13 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     return r.json();
   });
   // The viewer takes absolute URLs.
-  data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }) };
+  data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }), ...(data.charts.low && { low: url(data.charts.low) }), ...(data.charts.area && { area: { ...data.charts.area, url: url(data.charts.area.url) } }) };
   data.dem = { ...data.dem, url: url(data.dem.url) };
   for (const a of data.airports) if (a.diagram) a.diagram = { ...a.diagram, url: url(a.diagram.url) };
 
   const tip = h("div", { class: "tip", hidden: true });
   const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
-  const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, data.charts.tac ? "tac" : "sectional")));
+  const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, chartsOf(data.charts)[0])));
   host.replaceChildren(fig);
 
   // three.js and the chart load only when the view comes into sight.

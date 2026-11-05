@@ -62,7 +62,7 @@ html.skycake-full { overflow: hidden; }
 .skycake .sc-br { right: var(--sc-gap); bottom: var(--sc-gap); }
 .skycake .sc-kinds { display: none; flex-direction: column; gap: 2px; padding: 10px; min-height: 0; overflow: auto; }
 .skycake.sc-open-kinds .sc-kinds { display: flex; }
-.skycake .sc-caption { position: absolute; left: var(--sc-gap); bottom: 12px; z-index: 2; margin: 0; font: 500 11px var(--sc-mono); color: var(--sc-soft); text-shadow: 0 1px 2px rgb(0 0 0 / 0.8); pointer-events: none; }
+.skycake .sc-caption { position: absolute; left: var(--sc-gap); bottom: 12px; z-index: 2; margin: 0; padding: 4px 10px; border-radius: var(--sc-r-pill); background: color-mix(in srgb, var(--sc-panel) 94%, transparent); font: 500 11px var(--sc-mono); color: var(--sc-soft); pointer-events: none; }
 
 /* Search, results and the shown procedures. */
 .skycake .sc-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--sc-muted); }

@@ -12,8 +12,13 @@ export type Bounds = { s: number; w: number; n: number; e: number };
 /** Terrain: rows north to south, 16-bit little-endian feet MSL. */
 export type Dem = { url: string; nx: number; ny: number };
 /** One area's data (area.json). URLs are relative to the area's folder; each airport's procedures are in procedures/<id>.json. */
-/** The charts under the airspace: the sectional over the whole area, and the TAC over its own map area if it has one. */
-export type Charts = { sectional: string; tac?: { url: string; bounds: Bounds } };
+/** The charts under the airspace: over the whole area the sectional and the IFR low; over its own map the TAC and the IFR area chart. */
+export type Charts = { sectional: string; tac?: { url: string; bounds: Bounds }; low?: string; area?: { url: string; bounds: Bounds } };
+export type ChartName = "tac" | "sectional" | "area" | "low";
+/** An area's charts in the chart button's order. The area chart only covers its own map, so it needs the low around it. */
+export const chartsOf = (c: Charts): ChartName[] => [...(c.tac ? ["tac" as const] : []), "sectional", ...(c.low && c.area ? ["area" as const] : []), ...(c.low ? ["low" as const] : [])];
+/** The chart asked for if the area has it, else its first. */
+export const pickChart = (c: Charts, wanted?: ChartName): ChartName => (wanted && chartsOf(c).includes(wanted) ? wanted : chartsOf(c)[0]);
 export type AirspaceFile = { edition: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[] };
 
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */

@@ -366,6 +366,12 @@ function builtArea(name: string) {
       assert.ok(p.paths.every((x) => x.pts.every(solid)), `${a.id} ${p.name} runs off the map`);
     }
   }
+  // The IFR charts: the low over the whole area, the area chart over its own map, inside the area.
+  const { low, area } = f.charts;
+  assert.ok(low && area, `${name} has its IFR charts`);
+  for (const file of [low, area.url]) assert.ok(existsSync(new URL(`../data/${name}/${file}`, import.meta.url)), file);
+  const b = area.bounds;
+  assert.ok(b.s > f.bounds.s && b.n < f.bounds.n && b.w > f.bounds.w && b.e < f.bounds.e && b.s < b.n && b.w < b.e, `${name} area chart ${JSON.stringify(b)}`);
   const dem = readFileSync(new URL(`../data/${name}/${f.dem.url}`, import.meta.url));
   assert.equal(dem.length, f.dem.nx * f.dem.ny * 2);
   const ft = new Int16Array(dem.buffer, dem.byteOffset, dem.length / 2);

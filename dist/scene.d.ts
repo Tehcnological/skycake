@@ -1,4 +1,4 @@
-import { type AirspaceFile, type Kind } from "./airspace.js";
+import { type AirspaceFile, type ChartName, type Kind } from "./airspace.js";
 export type ProcedureRef = {
     airport: string;
     name: string;
@@ -38,8 +38,8 @@ export type Scene = {
     diagram?: string | null;
     height?: 1 | 4;
     tags?: boolean;
-    /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere. */
-    chart?: "tac" | "sectional";
+    /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere; "area": the IFR area chart over its own map and the low outside it; "low": the IFR low everywhere. */
+    chart?: ChartName;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
 export type Resolved = {
@@ -49,7 +49,7 @@ export type Resolved = {
     diagram: string | null;
     height: 1 | 4;
     tags: boolean;
-    chart: "tac" | "sectional";
+    chart: ChartName;
 };
 export declare class SceneError extends Error {
 }

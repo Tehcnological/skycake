@@ -1,6 +1,6 @@
 // A scene: everything the view shows at one moment. Free roam starts from one; walkthrough steps and quiz questions
 // each set one. resolve() fills in the defaults and checks every name against the area's data.
-import { KINDS } from "./airspace.js";
+import { KINDS, pickChart } from "./airspace.js";
 export class SceneError extends Error {
 }
 export function resolve(scene, data) {
@@ -29,7 +29,7 @@ export function resolve(scene, data) {
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
             target(t, data);
-    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: data.charts.tac ? (scene.chart ?? "tac") : "sectional" };
+    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
 }
 function target(t, data) {
     if ("area" in t && !data.areas.some((a) => a.id === t.area))

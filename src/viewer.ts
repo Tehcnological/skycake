@@ -10,7 +10,7 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
-import { clipRing, deepest, hundreds, inRing, type AirspaceFile, type Area, type Bounds, type Kind } from "./airspace.js";
+import { clipRing, deepest, hundreds, inRing, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind } from "./airspace.js";
 import type { Point, Procedure, Segment } from "./procedure.js";
 import { fixTags } from "./roam.js";
 import type { Resolved, Target } from "./scene.js";
@@ -132,7 +132,7 @@ export async function build(
   host.append(tagBox);
 
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   host.prepend(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -207,37 +207,69 @@ export async function build(
     return geo;
   };
 
-  // The sectional everywhere; the TAC, when on, over its own map area.
+  // A chart over the whole area (sectional or low) and, when on, a sharper one over its own map (TAC or area chart).
   const load = async (url: string) => {
     const t = await new THREE.TextureLoader().loadAsync(url);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return t;
   };
-  const tac = data.charts.tac;
-  const [sectional, tacTex] = await Promise.all([load(data.charts.sectional), tac ? load(tac.url) : Promise.resolve(new THREE.Texture())]);
+  const textures = new Map<string, Promise<THREE.Texture>>();
+  const texture = (url: string) => {
+    if (!textures.has(url)) textures.set(url, load(url).catch((e) => { textures.delete(url); throw e; }));
+    return textures.get(url)!;
+  };
+  const { tac, low, area } = data.charts;
+  const [sectional, tacTex] = await Promise.all([texture(data.charts.sectional), tac ? texture(tac.url) : new THREE.Texture()]);
   const span = (lo: number, hi: number, a: number, b: number) => [(lo - a) / (b - a), (hi - a) / (b - a)];
-  const [u0, u1] = tac ? span(tac.bounds.w, tac.bounds.e, b.w, b.e) : [0, 0];
-  const [v0, v1] = tac ? span(tac.bounds.s, tac.bounds.n, b.s, b.n) : [0, 0];
-  const chartUniforms = { tacMap: { value: tacTex }, tacRect: { value: new THREE.Vector4(u0, v0, u1, v1) }, tacOn: { value: tac ? 1 : 0 } };
+  const rectOf = (m: Bounds) => {
+    const [u0, u1] = span(m.w, m.e, b.w, b.e);
+    const [v0, v1] = span(m.s, m.n, b.s, b.n);
+    return new THREE.Vector4(u0, v0, u1, v1);
+  };
+  const chartUniforms = { overMap: { value: tacTex }, overRect: { value: tac ? rectOf(tac.bounds) : new THREE.Vector4() }, overOn: { value: tac ? 1 : 0 } };
   const material = new THREE.MeshLambertMaterial({ map: sectional, alphaMap: softEdge(), transparent: true });
-  // Both charts are sampled everywhere and mixed, so mipmaps stay right along the TAC's edge.
+  // Both charts are sampled everywhere and mixed, so mipmaps stay right along the sharper chart's edge.
   material.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, chartUniforms);
     sh.fragmentShader = sh.fragmentShader
-      .replace("#include <common>", "#include <common>\nuniform sampler2D tacMap;\nuniform vec4 tacRect;\nuniform float tacOn;")
+      .replace("#include <common>", "#include <common>\nuniform sampler2D overMap;\nuniform vec4 overRect;\nuniform float overOn;")
       .replace(
         "#include <map_fragment>",
-        `vec4 sectionalColor = texture2D( map, vMapUv );
-        vec2 tacUv = ( vMapUv - tacRect.xy ) / ( tacRect.zw - tacRect.xy );
-        vec4 tacColor = texture2D( tacMap, clamp( tacUv, 0.0, 1.0 ) );
-        float onTac = tacOn * step( 0.0, tacUv.x ) * step( tacUv.x, 1.0 ) * step( 0.0, tacUv.y ) * step( tacUv.y, 1.0 );
-        diffuseColor *= mix( sectionalColor, tacColor, onTac );`,
+        `vec4 baseColor = texture2D( map, vMapUv );
+        vec2 overUv = ( vMapUv - overRect.xy ) / ( overRect.zw - overRect.xy );
+        vec4 overColor = texture2D( overMap, clamp( overUv, 0.0, 1.0 ) );
+        float onOver = overOn * step( 0.0, overUv.x ) * step( overUv.x, 1.0 ) * step( 0.0, overUv.y ) * step( overUv.y, 1.0 );
+        diffuseColor *= mix( baseColor, overColor, onOver );`,
       );
   };
   const chart = new THREE.Mesh(ground, material);
   chart.renderOrder = -1;
   world.add(chart);
+  // The IFR charts load when first picked. The chart on screen stays until the new one is ready, and the latest pick wins.
+  let chartTicket = 0;
+  const showChart = async (name: ChartName) => {
+    const mine = ++chartTicket;
+    const over = name === "tac" ? tac : name === "area" ? area : undefined;
+    let base, overTex;
+    try {
+      [base, overTex] = await Promise.all([texture((name === "area" || name === "low") && low ? low : data.charts.sectional), over && texture(over.url)]);
+    } catch (e) {
+      // shortcut: the button then names a chart that is not showing, until the next pick tries again. Upgrade if it shows up in use.
+      return console.warn(`skycake: ${e}`);
+    }
+    if (mine !== chartTicket) return;
+    const before = [material.map, chartUniforms.overMap.value];
+    material.map = base;
+    chartUniforms.overOn.value = over ? 1 : 0;
+    if (over && overTex) {
+      chartUniforms.overMap.value = overTex;
+      chartUniforms.overRect.value = rectOf(over.bounds);
+    }
+    // Only two charts on the GPU at a time, as phones have little room; the images stay loaded, so going back is quick.
+    for (const t of before) if (t && t !== base && t !== chartUniforms.overMap.value) t.dispose();
+    dirty = true;
+  };
 
   // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
   // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
@@ -274,6 +306,11 @@ export async function build(
   const fat = (color: number, linewidth: number, dashed: boolean, opacity = 1) =>
     new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
 
+  // Each pixel takes one layer of airspace color: a depth-only pass finds the nearest surface, then only that surface draws.
+  // The FAA's shelves overlap their cores in one plane (Tucson's 4,200-6,600 shelf covers its surface area, both up to 6,600),
+  // and such ties would fight. So the depth pass sits just behind the surfaces, letting all tied ones through, and the first
+  // to reach a pixel marks it in the stencil so the rest skip it.
+  const oneLayer = { stencilWrite: true, stencilFunc: THREE.NotEqualStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp };
   // Every area stands in its own group, squashed into the ground while flat.
   const lives: Live[] = [];
   for (const area of data.areas) {
@@ -310,11 +347,11 @@ export async function build(
       const geo = new THREE.ExtrudeGeometry(shape, { depth: Math.max(nm(area.ceiling - floor), 0.01), bevelEnabled: false });
       geo.rotateX(-Math.PI / 2);
       geo.translate(0, nm(floor), 0);
-      const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide }));
+      const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
       pre.renderOrder = 1;
       group.add(pre);
-      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide });
-      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...(s.line === "hatch" ? { map: hatch } : {}) });
+      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...oneLayer });
+      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...oneLayer, ...(s.line === "hatch" ? { map: hatch } : {}) });
       const fill = new THREE.Mesh(geo, [roof, wall]);
       fill.renderOrder = 2;
       live.picks.push(fill);
@@ -599,7 +636,7 @@ export async function build(
         world.scale.y = sc.height;
       }
       tagsOn = sc.tags;
-      chartUniforms.tacOn.value = sc.chart === "tac" && tac ? 1 : 0;
+      void showChart(sc.chart);
       clearRoute();
       for (const a of procs) {
         for (const p of a.paths) {
