@@ -1,6 +1,6 @@
 // A scene: everything the view shows at one moment. Free roam starts from one; walkthrough steps and quiz questions
 // each set one. resolve() fills in the defaults and checks every name against the area's data.
-import { KINDS, type AirspaceFile, type Kind } from "./airspace.js";
+import { KINDS, pickChart, type AirspaceFile, type ChartName, type Kind } from "./airspace.js";
 
 export type ProcedureRef = { airport: string; name: string };
 export type AreaRef = { area: string };
@@ -18,11 +18,11 @@ export type Scene = {
   diagram?: string | null;
   height?: 1 | 4;
   tags?: boolean;
-  /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere. */
-  chart?: "tac" | "sectional";
+  /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere; "area": the IFR area chart over its own map and the low outside it; "low": the IFR low everywhere. */
+  chart?: ChartName;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
-export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean; chart: "tac" | "sectional" };
+export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName };
 
 export class SceneError extends Error {}
 
@@ -44,7 +44,7 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
-  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: data.charts.tac ? (scene.chart ?? "tac") : "sectional" };
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
 }
 
 function target(t: Target, data: AirspaceFile) {

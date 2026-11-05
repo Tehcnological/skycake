@@ -1,3 +1,6 @@
+// What a site embeds: mount() builds the view inside any element. The area's data loads at once; three.js and the
+// chart only when the element comes into sight. Styles are in style.css, which the site loads.
+import { chartsOf } from "./airspace.js";
 import { firstScene } from "./scene.js";
 export const LABELS = {
     kinds: { B: "Class B", C: "Class C", D: "Class D", E: "Class E", E700: "E 700 ft", MODEC: "Mode C", R: "Restricted", P: "Prohibited", W: "Warning", MOA: "MOA", A: "Alert" },
@@ -20,9 +23,9 @@ export const LABELS = {
     fafToMap: "FAF to MAP",
     floor700: "Floor 700 AGL",
     view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
-    caption: (edition, chart) => `FAA ${chart === "tac" ? "TAC and sectional" : "sectional"} ${edition} · Not for navigation`,
+    caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
     chart: "Chart",
-    charts: { tac: "TAC", sectional: "SEC" },
+    charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -48,14 +51,14 @@ export async function mount(host, o) {
         return r.json();
     });
     // The viewer takes absolute URLs.
-    data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }) };
+    data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }), ...(data.charts.low && { low: url(data.charts.low) }), ...(data.charts.area && { area: { ...data.charts.area, url: url(data.charts.area.url) } }) };
     data.dem = { ...data.dem, url: url(data.dem.url) };
     for (const a of data.airports)
         if (a.diagram)
             a.diagram = { ...a.diagram, url: url(a.diagram.url) };
     const tip = h("div", { class: "tip", hidden: true });
     const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
-    const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, data.charts.tac ? "tac" : "sectional")));
+    const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, chartsOf(data.charts)[0])));
     host.replaceChildren(fig);
     // three.js and the chart load only when the view comes into sight.
     await new Promise((done) => {

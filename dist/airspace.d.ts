@@ -25,14 +25,24 @@ export type Dem = {
     ny: number;
 };
 /** One area's data (area.json). URLs are relative to the area's folder; each airport's procedures are in procedures/<id>.json. */
-/** The charts under the airspace: the sectional over the whole area, and the TAC over its own map area if it has one. */
+/** The charts under the airspace: over the whole area the sectional and the IFR low; over its own map the TAC and the IFR area chart. */
 export type Charts = {
     sectional: string;
     tac?: {
         url: string;
         bounds: Bounds;
     };
+    low?: string;
+    area?: {
+        url: string;
+        bounds: Bounds;
+    };
 };
+export type ChartName = "tac" | "sectional" | "area" | "low";
+/** An area's charts in the chart button's order. The area chart only covers its own map, so it needs the low around it. */
+export declare const chartsOf: (c: Charts) => ChartName[];
+/** The chart asked for if the area has it, else its first. */
+export declare const pickChart: (c: Charts, wanted?: ChartName) => ChartName;
 export type AirspaceFile = {
     edition: string;
     bounds: Bounds;

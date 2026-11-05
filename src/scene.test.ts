@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import type { AirspaceFile } from "./airspace.js";
+import { chartsOf, type AirspaceFile } from "./airspace.js";
 import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
@@ -66,4 +66,17 @@ test("the chart: the TAC (sectional outside it) unless a scene asks for the sect
   assert.equal(resolve({}, data).chart, "tac");
   assert.equal(resolve({ chart: "sectional" }, data).chart, "sectional");
   assert.equal(resolve({ chart: "tac" }, { ...data, charts: { sectional: "s.webp" } }).chart, "sectional");
+});
+
+test("the IFR charts: asked for by name, in the button's order, and an area without them falls back to its first chart", () => {
+  const over = { url: "o.webp", bounds: data.bounds };
+  const all = { sectional: "s.webp", tac: over, low: "l.webp", area: over };
+  assert.equal(resolve({ chart: "area" }, { ...data, charts: all }).chart, "area");
+  assert.equal(resolve({ chart: "low" }, { ...data, charts: all }).chart, "low");
+  assert.equal(resolve({ chart: "low" }, { ...data, charts: { sectional: "s.webp", tac: over } }).chart, "tac");
+  assert.equal(resolve({ chart: "area" }, { ...data, charts: { sectional: "s.webp" } }).chart, "sectional");
+  assert.deepEqual(chartsOf(all), ["tac", "sectional", "area", "low"]);
+  assert.deepEqual(chartsOf({ sectional: "s.webp" }), ["sectional"]);
+  // The area chart only covers its own map, so it needs the low around it.
+  assert.deepEqual(chartsOf({ sectional: "s.webp", area: over }), ["sectional"]);
 });

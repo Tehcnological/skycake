@@ -1,4 +1,4 @@
-import type { Kind } from "./airspace.js";
+import { type ChartName, type Kind } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
 import { type Scene } from "./scene.js";
 /** On-screen words. Each site can supply its own; these are placeholders. */
@@ -25,10 +25,10 @@ export type Labels = {
     floor700: string;
     view: string;
     /** Under the view: the charts shown and their edition. */
-    caption: (edition: string, chart: "tac" | "sectional") => string;
+    caption: (edition: string, chart: ChartName) => string;
     /** The chart button's name in words, and its text for each chart. */
     chart: string;
-    charts: Record<"tac" | "sectional", string>;
+    charts: Record<ChartName, string>;
 };
 export declare const LABELS: Labels;
 export type Options = {

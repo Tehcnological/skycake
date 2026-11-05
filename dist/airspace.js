@@ -1,5 +1,9 @@
 /** One toggle each. Order is the legend order. */
 export const KINDS = ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA", "A"];
+/** An area's charts in the chart button's order. The area chart only covers its own map, so it needs the low around it. */
+export const chartsOf = (c) => [...(c.tac ? ["tac"] : []), "sectional", ...(c.low && c.area ? ["area"] : []), ...(c.low ? ["low"] : [])];
+/** The chart asked for if the area has it, else its first. */
+export const pickChart = (c, wanted) => (wanted && chartsOf(c).includes(wanted) ? wanted : chartsOf(c)[0]);
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;
 /** NASR class airspace record to a kind. Class E with a 1,200 ft floor is everywhere and not drawn, as on the chart. */

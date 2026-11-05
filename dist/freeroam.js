@@ -1,7 +1,7 @@
 // Free roam's controls, over the 3D view. Desktop: floating panels in the corners (Airspace top left, search top
 // right, view buttons bottom right). Phone: a tab bar along the bottom, menus as sheets above it. One DOM for both;
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
-import { KINDS } from "./airspace.js";
+import { KINDS, chartsOf, pickChart } from "./airspace.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
 import { SceneError, framedOnly, resolve } from "./scene.js";
 import { airportList, proceduresAt, search } from "./search.js";
@@ -50,8 +50,9 @@ export function freeRoam(c) {
     let shown = false;
     let tagsOn = c.first.tags ?? true;
     let scale = c.first.height ?? c.startScale;
-    // The TAC (over its map area, sectional outside it) or the sectional everywhere.
-    let chart = data.charts.tac ? (c.first.chart ?? "tac") : "sectional";
+    // Which chart is under the airspace; the button steps through what the area has.
+    const charts = chartsOf(data.charts);
+    let chart = pickChart(data.charts, c.first.chart);
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
     // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
     const rows = new Map(present.map((k) => {
@@ -75,7 +76,7 @@ export function freeRoam(c) {
     const tagsButton = round(L.tags, L.tags, [icon(ICONS.tags)]);
     const scaleButton = round(L.heightScale(scale), L.height, [`${scale}×`], "sc-scale");
     const chartButton = round(L.chart, L.chart, [L.charts[chart]], "sc-chart");
-    chartButton.hidden = !data.charts.tac;
+    chartButton.hidden = charts.length < 2;
     const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
     const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, chartButton, fullButton);
     const caption = fig.querySelector(".sc-caption");
@@ -232,7 +233,7 @@ export function freeRoam(c) {
         v.exaggerate(scale);
     });
     chartButton.addEventListener("click", () => {
-        chart = chart === "tac" ? "sectional" : "tac";
+        chart = charts[(charts.indexOf(chart) + 1) % charts.length];
         // Comparing the charts: the camera stays on what is being looked at.
         r = { ...r, camera: null };
         chartButton.textContent = L.charts[chart];
