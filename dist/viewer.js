@@ -410,7 +410,7 @@ airport = () => { }) {
         else
             fly = { p0: camera.position.clone(), p1, t0: controls.target.clone(), t1: center, t: 0 };
     };
-    // What is framed now, so a resize or a height change can frame it again.
+    // What is framed now, so a resize can frame it again.
     let framed = null;
     const whole = () => [new THREE.Vector3(-width / 2, 0, -depth / 2), new THREE.Vector3(width / 2, 0, depth / 2)];
     const ringSpots = (l) => l.rings.flat().map(([x, z]) => new THREE.Vector3(x, nm(l.area.ceiling), z));
@@ -583,13 +583,10 @@ airport = () => { }) {
                     set(l, on);
             setKind(kind);
         },
+        // Only the world stretches: the camera and what it looks at stay put.
         exaggerate: (n) => {
-            controls.target.y *= n / world.scale.y;
             world.scale.y = n;
             dirty = true;
-            // A procedure's far ends move on screen with its height, so keep all of it in view.
-            if (framed?.procedures)
-                frame(framed.spots, framed.tilt);
         },
         tags: (on) => {
             tagsOn = on;
@@ -620,10 +617,7 @@ airport = () => { }) {
         apply: async (sc, procs, now = false, framing = []) => {
             for (const l of lives)
                 set(l, sc.raised.has(l.area.id));
-            if (world.scale.y !== sc.height) {
-                controls.target.y *= sc.height / world.scale.y;
-                world.scale.y = sc.height;
-            }
+            world.scale.y = sc.height;
             tagsOn = sc.tags;
             void showChart(sc.chart);
             clearRoute();
@@ -644,9 +638,7 @@ airport = () => { }) {
             const plateDone = showDiagram(sc.diagram ? (data.airports.find((a) => a.id === sc.diagram)?.diagram ?? null) : null);
             const cam = sc.camera;
             if (cam === null) {
-                // Leave the camera where it is; a procedure's height change still reframes what was framed.
-                if (framed)
-                    framed.procedures = procs.length > 0;
+                // Leave the camera where it is.
             }
             else if (typeof cam === "object" && "azimuth" in cam) {
                 // Placed directly: looking toward the azimuth (degrees true), tilt degrees above the horizon, distance in NM.
@@ -677,7 +669,7 @@ airport = () => { }) {
                 }
                 if (!spots.length)
                     spots = whole();
-                framed = { spots, tilt, procedures: procs.length + framing.length > 0 };
+                framed = { spots, tilt };
                 frame(spots, tilt, now);
             }
             dirty = true;
