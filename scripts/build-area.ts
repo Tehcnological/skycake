@@ -1,6 +1,7 @@
 /**
  * Builds one area's data for skycake from public domain FAA and USGS sources, into data/phoenix/:
- *   tac.webp           the Phoenix TAC, cropped to BOUNDS and reprojected to plain lat/lon
+ *   sectional.webp     the Phoenix sectional, cropped to BOUNDS and reprojected to plain lat/lon
+ *   tac.webp           the Phoenix TAC over its own map area (TAC_AREA), the same way
  *   dem.bin            USGS 3DEP terrain at the view's grid points over BOUNDS, 16-bit feet
  *   area.json          class airspace, Mode C veil, special use airspace inside BOUNDS, and the airports
  *   procedures/*.json  approaches, departures and arrivals of each airport inside BOUNDS, from the CIFP
@@ -29,13 +30,16 @@ import { parseProcedures, type Airport } from "../src/procedure.js";
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
 const KNOWN_EDITION = Date.UTC(2026, 9, 29); // VFR charts repeat every 56 days.
-// Phoenix Class B and what sits under and around it, inside the TAC's map area.
-const BOUNDS: Bounds = { s: 32.9, w: -112.75, n: 34.0, e: -111.3 };
+// Phoenix to Tucson: the Phoenix TAC's map area and south past Tucson, on the Phoenix sectional.
+const BOUNDS: Bounds = { s: 31.85, w: -112.85, n: 34.07, e: -110.6 };
+// Inside the TAC's neatline (34°05' N, 32°47' N; its east and west edges lean slightly), so no collar shows.
+const TAC_AREA: Bounds = { s: 32.795, w: -112.845, n: 34.07, e: -111.195 };
 // Sky Harbor field elevation: where heights written above the ground start.
 const GROUND = 1135;
-const WIDTH = 4096;
-// Terrain cells about 0.2 NM square.
-const DEM = { nx: 352, ny: 320 };
+// The longer side of each chart image; 4096 is the largest texture every phone takes.
+const SIDE = 4096;
+// Terrain cells about 0.25 NM square.
+const DEM = { nx: 452, ny: 532 };
 
 const date = process.argv.slice(2).find((a) => !a.startsWith("--"));
 const now = date ? Date.parse(date) : Date.now();
@@ -43,6 +47,7 @@ const now = date ? Date.parse(date) : Date.now();
 const edition = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (56 * DAY)) * 56 * DAY);
 const [y, m, d] = edition.toISOString().slice(0, 10).split("-");
 const TAC_URL = `https://aeronav.faa.gov/visual/${m}-${d}-${y}/tac-files/Phoenix_TAC.zip`;
+const SECTIONAL_URL = `https://aeronav.faa.gov/visual/${m}-${d}-${y}/sectional-files/Phoenix.zip`;
 const ADDS = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services";
 const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
 const OUT = join(ROOT, "data", "phoenix");
@@ -59,11 +64,11 @@ async function download(url: string, dir = cache): Promise<Uint8Array> {
   return new Uint8Array(await readFile(file));
 }
 
-// ---- Chart: Lambert conformal conic palette image to an equirectangular RGB texture over BOUNDS.
-async function chart() {
-  const zip = unzipSync(await download(TAC_URL), { filter: (f) => f.name.endsWith("TAC.tif") });
+// ---- Charts: a Lambert conformal conic palette image to an equirectangular RGB texture over an area.
+async function chart(url: string, tifName: string, area: Bounds, name: string) {
+  const zip = unzipSync(await download(url), { filter: (f) => f.name.endsWith(tifName) });
   const tif = Object.values(zip)[0];
-  if (!tif) throw new Error("no TAC GeoTIFF in the zip");
+  if (!tif) throw new Error(`no ${tifName} in ${url}`);
   const img = await (await fromArrayBuffer(tif.buffer.slice(tif.byteOffset, tif.byteOffset + tif.byteLength) as ArrayBuffer)).getImage();
   const k = img.getGeoKeys();
   if (k.ProjCoordTransGeoKey !== 8) throw new Error("expected a Lambert conformal conic chart");
@@ -71,18 +76,26 @@ async function chart() {
   const toChart = proj4("EPSG:4326", lcc);
   const [ox, oy] = img.getOrigin();
   const [rx, ry] = img.getResolution();
-  const sw = img.getWidth(), sh = img.getHeight();
-  const src = (await img.readRasters({ interleave: true })) as Uint8Array;
+  // Only the window the area needs: a sectional is 18,000 pixels across.
+  const edge: [number, number][] = [];
+  for (let t = 0; t <= 1; t += 0.125) edge.push([area.w + t * (area.e - area.w), area.s], [area.w + t * (area.e - area.w), area.n], [area.w, area.s + t * (area.n - area.s)], [area.e, area.s + t * (area.n - area.s)]);
+  const at = edge.map((p) => toChart.forward(p)).map(([x, y]) => [(x - ox) / rx, (y - oy) / ry]);
+  const c0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[0]))) - 2), r0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[1]))) - 2);
+  const c1 = Math.min(img.getWidth(), Math.ceil(Math.max(...at.map((p) => p[0]))) + 2), r1 = Math.min(img.getHeight(), Math.ceil(Math.max(...at.map((p) => p[1]))) + 2);
+  const sw = c1 - c0, sh = r1 - r0;
+  const src = (await img.readRasters({ interleave: true, window: [c0, r0, c1, r1] })) as Uint8Array;
   const cmap = img.fileDirectory.ColorMap as Uint16Array; // R, G, B planes of 256, 16-bit
   const n = cmap.length / 3;
 
-  const lat0 = (BOUNDS.s + BOUNDS.n) / 2;
-  const height = Math.round((WIDTH * (BOUNDS.n - BOUNDS.s)) / ((BOUNDS.e - BOUNDS.w) * Math.cos((lat0 * Math.PI) / 180)));
+  // Pixels square on the ground, the longer side SIDE.
+  const aspect = (area.n - area.s) / ((area.e - area.w) * Math.cos((((area.s + area.n) / 2) * Math.PI) / 180));
+  const WIDTH = aspect > 1 ? Math.round(SIDE / aspect) : SIDE;
+  const height = aspect > 1 ? SIDE : Math.round(SIDE * aspect);
   const out = new Uint8Array(WIDTH * height * 3);
   // Source pixel for an output position; the projection is smooth, so a 2x2 supersample is plenty.
   const pixel = (u: number, v: number) => {
-    const [x, yy] = toChart.forward([BOUNDS.w + (u / WIDTH) * (BOUNDS.e - BOUNDS.w), BOUNDS.n - (v / height) * (BOUNDS.n - BOUNDS.s)]);
-    return [(x - ox) / rx, (yy - oy) / ry];
+    const [x, yy] = toChart.forward([area.w + (u / WIDTH) * (area.e - area.w), area.n - (v / height) * (area.n - area.s)]);
+    return [(x - ox) / rx - c0, (yy - oy) / ry - r0];
   };
   for (let v = 0; v < height; v++) {
     for (let u = 0; u < WIDTH; u++) {
@@ -101,10 +114,10 @@ async function chart() {
       out[o + 2] = b >> 2;
     }
   }
-  const file = join(OUT, "tac.webp");
+  const file = join(OUT, name);
   await mkdir(OUT, { recursive: true });
   await sharp(out, { raw: { width: WIDTH, height, channels: 3 } }).webp({ quality: 78 }).toFile(file);
-  console.log(`chart ${WIDTH}x${height}`);
+  console.log(`${name} ${WIDTH}x${height}`);
 }
 
 // ---- Airspace from ADDS, as GeoJSON in lat/lon.
@@ -139,7 +152,32 @@ function rings(g: Feature["geometry"]): Ring[] {
   );
 }
 
-async function airspace(): Promise<Area[]> {
+// The highest ground under a set of rings ([lat, lon]), from the terrain grid: the base of a Class E surface area, whose
+// top is drawn where the 700 ft floor around it starts.
+function highestGround(ft: Int16Array, rs: Ring[]): number {
+  let top = -Infinity;
+  for (const ring of rs) {
+    const lats = ring.map((p) => p[0]), lons = ring.map((p) => p[1]);
+    const j0 = Math.max(0, Math.floor(((BOUNDS.n - Math.max(...lats)) / (BOUNDS.n - BOUNDS.s)) * (DEM.ny - 1)));
+    const j1 = Math.min(DEM.ny - 1, Math.ceil(((BOUNDS.n - Math.min(...lats)) / (BOUNDS.n - BOUNDS.s)) * (DEM.ny - 1)));
+    const i0 = Math.max(0, Math.floor(((Math.min(...lons) - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * (DEM.nx - 1)));
+    const i1 = Math.min(DEM.nx - 1, Math.ceil(((Math.max(...lons) - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * (DEM.nx - 1)));
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const lat = BOUNDS.n - (j / (DEM.ny - 1)) * (BOUNDS.n - BOUNDS.s), lon = BOUNDS.w + (i / (DEM.nx - 1)) * (BOUNDS.e - BOUNDS.w);
+        let inside = false;
+        for (let k = 0, m = ring.length - 1; k < ring.length; m = k++) {
+          const [ya, xa] = ring[k], [yb, xb] = ring[m];
+          if (ya > lat !== yb > lat && lon < ((xb - xa) * (lat - ya)) / (yb - ya) + xa) inside = !inside;
+        }
+        if (inside) top = Math.max(top, ft[j * DEM.nx + i]);
+      }
+    }
+  }
+  return Number.isFinite(top) ? top : GROUND;
+}
+
+async function airspace(ground: Int16Array): Promise<Area[]> {
   const areas: Omit<Area, "id">[] = [];
   for (const f of await query("Class_Airspace")) {
     const p = f.properties;
@@ -149,8 +187,9 @@ async function airspace(): Promise<Area[]> {
     // Class E has no ceiling of its own (-9998): surface areas are drawn up to where the 700 ft floor starts,
     // and the 700 ft area is a sheet.
     const upper = Number(p.UPPER_VAL);
-    const ceiling = kind === "E" ? GROUND + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND));
-    areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
+    const rs = rings(f.geometry);
+    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND));
+    areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rs });
   }
   for (const f of await query("Special_Use_Airspace")) {
     const p = f.properties;
@@ -162,7 +201,15 @@ async function airspace(): Promise<Area[]> {
     if (ceiling <= floor) continue;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
   }
-  const kept = areas.filter((a) => a.rings.length > 0);
+  // A shelf two airports share can come twice, once under each name (Tucson International and Davis-Monthan's
+  // Class C); the first one is kept.
+  const seen = new Set<string>();
+  const kept = areas.filter((a) => {
+    const key = `${a.kind}|${a.floor}|${a.ceiling}|${JSON.stringify(a.rings)}`;
+    if (a.rings.length === 0 || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const ids = areaIds(kept, GROUND);
   return kept.map((a, i) => ({ id: ids[i], ...a }));
 }
@@ -213,7 +260,8 @@ async function terrain() {
   }
   await mkdir(OUT, { recursive: true });
   await writeFile(join(OUT, "dem.bin"), new Uint8Array(ft.buffer));
-  console.log(`terrain ${DEM.nx}x${DEM.ny}, ${Math.min(...ft)} to ${Math.max(...ft)} ft`);
+  console.log(`terrain ${DEM.nx}x${DEM.ny}, ${ft.reduce((a, b) => Math.min(a, b))} to ${ft.reduce((a, b) => Math.max(a, b))} ft`);
+  return ft;
 }
 
 // ---- Procedures from the current CIFP cycle (every 28 days, on the same dates as the charts): approaches, departures
@@ -293,13 +341,16 @@ async function diagrams(airports: Airport[]) {
   }
 }
 
-if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-only")) await chart();
-await terrain();
+if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-only")) {
+  await chart(SECTIONAL_URL, "SEC.tif", BOUNDS, "sectional.webp");
+  await chart(TAC_URL, "TAC.tif", TAC_AREA, "tac.webp");
+}
+const ground = await terrain();
 if (process.argv.includes("--terrain-only")) process.exit(0);
-const areas = await airspace();
+const areas = await airspace(ground);
 const airports = await procedures();
 await diagrams(airports);
-const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, chart: "tac.webp", dem: { url: "dem.bin", ...DEM }, areas, airports };
+const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: TAC_AREA } }, dem: { url: "dem.bin", ...DEM }, areas, airports };
 await writeFile(join(OUT, "area.json"), JSON.stringify(file));
 console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
 for (const t of ["IAP", "SID", "STAR"]) console.log(`${t} ${airports.reduce((n, a) => n + a.procedures.filter((p) => p.type === t).length, 0)}`);

@@ -25,11 +25,19 @@ export type Dem = {
     ny: number;
 };
 /** One area's data (area.json). URLs are relative to the area's folder; each airport's procedures are in procedures/<id>.json. */
+/** The charts under the airspace: the sectional over the whole area, and the TAC over its own map area if it has one. */
+export type Charts = {
+    sectional: string;
+    tac?: {
+        url: string;
+        bounds: Bounds;
+    };
+};
 export type AirspaceFile = {
     edition: string;
     bounds: Bounds;
     ground: number;
-    chart: string;
+    charts: Charts;
     dem: Dem;
     areas: Area[];
     airports: Airport[];

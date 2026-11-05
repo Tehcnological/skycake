@@ -10,6 +10,7 @@ export type Labels = {
   groups: Record<ProcType, string>;
   airspace: string;
   search: string;
+  airports: string;
   noMatches: string;
   remove: (name: string) => string;
   procedureTab: string;
@@ -18,13 +19,19 @@ export type Labels = {
   diagram: string;
   tags: string;
   heightScale: (n: number) => string;
+  /** The height button's name in words, on hover and on phones. */
+  height: string;
   fullScreen: string;
   finalCourse: string;
   glidepath: string;
   fafToMap: string;
   floor700: string;
   view: string;
-  caption: (edition: string) => string;
+  /** Under the view: the charts shown and their edition. */
+  caption: (edition: string, chart: "tac" | "sectional") => string;
+  /** The chart button's name in words, and its text for each chart. */
+  chart: string;
+  charts: Record<"tac" | "sectional", string>;
 };
 
 export const LABELS: Labels = {
@@ -32,6 +39,7 @@ export const LABELS: Labels = {
   groups: { IAP: "Approaches", STAR: "Arrivals", SID: "Departures" },
   airspace: "Airspace",
   search: "Airport or procedure",
+  airports: "Airports",
   noMatches: "No matches",
   remove: (name) => `Remove ${name}`,
   procedureTab: "Procedure",
@@ -40,13 +48,16 @@ export const LABELS: Labels = {
   diagram: "Diagram",
   tags: "Tags",
   heightScale: (n) => `Height scale ${n}×`,
+  height: "Height scale",
   fullScreen: "Full screen",
   finalCourse: "Final course",
   glidepath: "Glidepath",
   fafToMap: "FAF to MAP",
   floor700: "Floor 700 AGL",
   view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
-  caption: (edition) => `FAA TAC ${edition} · Not for navigation`,
+  caption: (edition, chart) => `FAA ${chart === "tac" ? "TAC and sectional" : "sectional"} ${edition} · Not for navigation`,
+  chart: "Chart",
+  charts: { tac: "TAC", sectional: "SEC" },
 };
 
 export type Options = {
@@ -76,7 +87,7 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
-  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups } };
+  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts } };
   const base = new URL(o.base, location.href);
   const url = (p: string) => new URL(p, base).href;
   const data: AirspaceFile = await fetch(url("area.json")).then((r) => {
@@ -84,13 +95,13 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     return r.json();
   });
   // The viewer takes absolute URLs.
-  data.chart = url(data.chart);
+  data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }) };
   data.dem = { ...data.dem, url: url(data.dem.url) };
   for (const a of data.airports) if (a.diagram) a.diagram = { ...a.diagram, url: url(a.diagram.url) };
 
   const tip = h("div", { class: "tip", hidden: true });
   const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
-  const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition)));
+  const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, data.charts.tac ? "tac" : "sectional")));
   host.replaceChildren(fig);
 
   // three.js and the chart load only when the view comes into sight.
@@ -109,7 +120,13 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
     tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
   };
-  const v = await build(view, data, show, (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })));
+  const v = await build(
+    view,
+    data,
+    show,
+    (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })),
+    (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })),
+  );
 
   // Keyboard: arrows turn the view, + and - zoom, only while the view has focus.
   const STEP = Math.PI / 24;

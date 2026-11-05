@@ -7,6 +7,7 @@ export type Labels = {
     groups: Record<ProcType, string>;
     airspace: string;
     search: string;
+    airports: string;
     noMatches: string;
     remove: (name: string) => string;
     procedureTab: string;
@@ -15,13 +16,19 @@ export type Labels = {
     diagram: string;
     tags: string;
     heightScale: (n: number) => string;
+    /** The height button's name in words, on hover and on phones. */
+    height: string;
     fullScreen: string;
     finalCourse: string;
     glidepath: string;
     fafToMap: string;
     floor700: string;
     view: string;
-    caption: (edition: string) => string;
+    /** Under the view: the charts shown and their edition. */
+    caption: (edition: string, chart: "tac" | "sectional") => string;
+    /** The chart button's name in words, and its text for each chart. */
+    chart: string;
+    charts: Record<"tac" | "sectional", string>;
 };
 export declare const LABELS: Labels;
 export type Options = {

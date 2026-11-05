@@ -46,15 +46,16 @@ The view fills the embed. Controls float over it in small panels with the site's
 
 - **Desktop (wider than 860 px):** panels sit in the corners: top left for the mode's main control, top right for search or leave, bottom for captions, players and answers.
 - **Phone:** the view takes everything above a 76 px bar along the bottom. In free roam that bar is the tab bar; in a walkthrough it is the player; in a quiz it is the answer area. Menus open as sheets above the bar.
-- **Caption line:** "FAA TAC <edition> · Not for navigation" stays on screen in every mode (placeholder wording).
+- **Caption line:** "FAA TAC and sectional <edition> · Not for navigation" (or "FAA sectional ...") stays on screen in every mode (placeholder wording).
+- **Area and charts** (Chris, 2026-11-05): Phoenix to Tucson. The TAC shows over its own map area and the Phoenix sectional outside it; a Chart button (View) switches to the sectional everywhere. Scenes take `chart: "tac" | "sectional"`.
 
 ## Free roam
 
 What the current viewer does, rearranged:
 
-- **Search** (top right; phone: top): one box for airport and procedure. Typing "25L", "BNYRD" or "KSDL" lists matches grouped by airport and type (Approaches, Arrivals, Departures). Picking a procedure adds it to the view, so an arrival and the approach it feeds can show together (Chris, 2026-11-04). Each shown procedure is a chip under the search box with a remove button; the camera frames all of them. An approach's info card (final course, glidepath, FAF to MAP) shows under its chip. A fix shared by two shown procedures gets one tag. Removing the last one goes back to the first view.
+- **Search** (top right; phone: top): typing "25L" or "BNYRD" lists procedures whose names match, grouped by airport and type (Approaches, Arrivals, Departures). Airports are not searched (Chris, 2026-11-05): with the box empty it lists the airports, and picking one, or tapping its tag on the chart, lists every procedure there. Airports with procedures have a tag on the chart; procedure tags win over airport tags, and airport tags over airspace tags. Picking a procedure adds it to the view, so an arrival and the approach it feeds can show together (Chris, 2026-11-04). Each shown procedure is a chip under the search box with a remove button; the camera frames all of them. An approach's info card (final course, glidepath, FAF to MAP) shows under its chip. A fix shared by two shown procedures gets one tag. Removing the last one goes back to the first view.
 - **Airspace** (top left button and list; phone: Airspace tab): one row per type with its chart swatch and a switch. Tapping a boundary on the chart still raises that area.
-- **View** (bottom right round buttons; phone: View tab): tags, height 1× or 4×, full screen. **Diagram** has its own button (phone: tab), shown only when the airport has one.
+- **View** (bottom right round buttons; phone: View tab): tags (on at first), height 1× (at first) or 4×, full screen. Each button's name shows on hover or keyboard focus; on phones it sits under the button (Chris, 2026-11-05). **Diagram** has its own button (phone: tab), shown only when the airport has one.
 - Hover or tap on an area shows its name and floor/ceiling, as today. Keyboard: arrows turn the view and + / - zoom while the view has focus; no shortcuts work anywhere else on the page.
 
 ## Walkthroughs

@@ -34,7 +34,7 @@ export const STYLE = {
 // Radar vectors between the field and a departure or arrival: white and black dashes.
 const PATH = { transition: 0xffffff, final: 0x22d36b, common: 0x22d36b, missed: 0xffc21a, vectors: 0xffffff };
 const RAISE_SECONDS = 0.35;
-export const START_SCALE = 4;
+export const START_SCALE = 1;
 // Vertical stripes for hatched walls.
 function stripes() {
     const c = document.createElement("canvas");
@@ -71,7 +71,9 @@ function el(tag, cls, ...kids) {
 }
 /** Ceiling over floor, as the chart prints them. */
 export const fraction = (a, ground) => el("div", `frac ${STYLE[a.kind].color === MAGENTA ? "m" : "b"}`, el("b", "", hundreds(a.ceiling, ground)), el("b", "", hundreds(a.floor, ground)));
-export async function build(host, data, label, raised) {
+export async function build(host, data, label, raised, 
+/** A tap on an airport's tag on the chart. */
+airport = () => { }) {
     const { bounds: b } = data;
     const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
     const k = Math.cos((lat0 * Math.PI) / 180);
@@ -98,7 +100,8 @@ export async function build(host, data, label, raised) {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.minDistance = 3;
-    controls.maxDistance = 300;
+    // Far enough back to see the whole area in a tall, narrow view.
+    controls.maxDistance = Math.max(300, 4 * Math.max(width, depth));
     controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the chart
     let dirty = true;
     controls.addEventListener("change", () => (dirty = true));
@@ -170,15 +173,38 @@ export async function build(host, data, label, raised) {
         geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
         return geo;
     };
-    const tex = await new THREE.TextureLoader().loadAsync(data.chart);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    const chart = new THREE.Mesh(ground, new THREE.MeshLambertMaterial({ map: tex, alphaMap: softEdge(), transparent: true }));
+    // The sectional everywhere; the TAC, when on, over its own map area.
+    const load = async (url) => {
+        const t = await new THREE.TextureLoader().loadAsync(url);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        return t;
+    };
+    const tac = data.charts.tac;
+    const [sectional, tacTex] = await Promise.all([load(data.charts.sectional), tac ? load(tac.url) : Promise.resolve(new THREE.Texture())]);
+    const span = (lo, hi, a, b) => [(lo - a) / (b - a), (hi - a) / (b - a)];
+    const [u0, u1] = tac ? span(tac.bounds.w, tac.bounds.e, b.w, b.e) : [0, 0];
+    const [v0, v1] = tac ? span(tac.bounds.s, tac.bounds.n, b.s, b.n) : [0, 0];
+    const chartUniforms = { tacMap: { value: tacTex }, tacRect: { value: new THREE.Vector4(u0, v0, u1, v1) }, tacOn: { value: tac ? 1 : 0 } };
+    const material = new THREE.MeshLambertMaterial({ map: sectional, alphaMap: softEdge(), transparent: true });
+    // Both charts are sampled everywhere and mixed, so mipmaps stay right along the TAC's edge.
+    material.onBeforeCompile = (sh) => {
+        Object.assign(sh.uniforms, chartUniforms);
+        sh.fragmentShader = sh.fragmentShader
+            .replace("#include <common>", "#include <common>\nuniform sampler2D tacMap;\nuniform vec4 tacRect;\nuniform float tacOn;")
+            .replace("#include <map_fragment>", `vec4 sectionalColor = texture2D( map, vMapUv );
+        vec2 tacUv = ( vMapUv - tacRect.xy ) / ( tacRect.zw - tacRect.xy );
+        vec4 tacColor = texture2D( tacMap, clamp( tacUv, 0.0, 1.0 ) );
+        float onTac = tacOn * step( 0.0, tacUv.x ) * step( tacUv.x, 1.0 ) * step( 0.0, tacUv.y ) * step( tacUv.y, 1.0 );
+        diffuseColor *= mix( sectionalColor, tacColor, onTac );`);
+    };
+    const chart = new THREE.Mesh(ground, material);
     chart.renderOrder = -1;
     world.add(chart);
     // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
     // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
     const shelfTags = [];
+    const airportTags = [];
     let approachTags = [];
     let tagsOn = true;
     const addTag = (node, at, pri, live, list) => {
@@ -190,7 +216,7 @@ export async function build(host, data, label, raised) {
     const place = () => {
         const { clientWidth: w, clientHeight: h } = host;
         const taken = [];
-        for (const t of [...approachTags, ...shelfTags]) {
+        for (const t of [...approachTags, ...airportTags, ...shelfTags]) {
             let show = tagsOn && t.live();
             if (show) {
                 if (!t.w)
@@ -284,6 +310,15 @@ export async function build(host, data, label, raised) {
         }
     }
     shelfTags.sort((a, c) => a.pri - c.pri);
+    // Airports with procedures get a tag at the field; tapping it makes the airport current.
+    for (const a of data.airports) {
+        if (!a.procedures.length)
+            continue;
+        const node = el("button", "tag apt", a.id);
+        node.setAttribute("type", "button");
+        node.addEventListener("click", () => airport(a.id));
+        addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
+    }
     const tappable = lives.filter((l) => l.area.kind !== "E700" && l.area.kind !== "MODEC").sort((a, c) => a.size - c.size);
     const setKind = (kind) => raised(kind, lives.some((l) => l.area.kind === kind && l.goal === 1));
     const set = (l, on) => {
@@ -449,7 +484,8 @@ export async function build(host, data, label, raised) {
         const { origin, direction: d } = ray.ray;
         if (d.y >= 0)
             return null;
-        for (let s = 0, p = origin.clone(); s < 800; s++) {
+        // Steps of 0.5 NM, as far as the camera can be from the chart.
+        for (let s = 0, p = origin.clone(), steps = Math.ceil((controls.maxDistance + Math.max(width, depth)) / 0.5); s < steps; s++) {
             p.addScaledVector(d, 0.5);
             if (p.y > groundAt(p.x, p.z) * world.scale.y)
                 continue;
@@ -546,6 +582,7 @@ export async function build(host, data, label, raised) {
                 world.scale.y = sc.height;
             }
             tagsOn = sc.tags;
+            chartUniforms.tacOn.value = sc.chart === "tac" && tac ? 1 : 0;
             clearRoute();
             for (const a of procs) {
                 for (const p of a.paths) {
