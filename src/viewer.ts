@@ -132,7 +132,7 @@ export async function build(
   host.append(tagBox);
 
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, stencil: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   host.prepend(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -306,6 +306,11 @@ export async function build(
   const fat = (color: number, linewidth: number, dashed: boolean, opacity = 1) =>
     new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
 
+  // Each pixel takes one layer of airspace color: a depth-only pass finds the nearest surface, then only that surface draws.
+  // The FAA's shelves overlap their cores in one plane (Tucson's 4,200-6,600 shelf covers its surface area, both up to 6,600),
+  // and such ties would fight. So the depth pass sits just behind the surfaces, letting all tied ones through, and the first
+  // to reach a pixel marks it in the stencil so the rest skip it.
+  const oneLayer = { stencilWrite: true, stencilFunc: THREE.NotEqualStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp };
   // Every area stands in its own group, squashed into the ground while flat.
   const lives: Live[] = [];
   for (const area of data.areas) {
@@ -342,11 +347,11 @@ export async function build(
       const geo = new THREE.ExtrudeGeometry(shape, { depth: Math.max(nm(area.ceiling - floor), 0.01), bevelEnabled: false });
       geo.rotateX(-Math.PI / 2);
       geo.translate(0, nm(floor), 0);
-      const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide }));
+      const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
       pre.renderOrder = 1;
       group.add(pre);
-      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide });
-      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...(s.line === "hatch" ? { map: hatch } : {}) });
+      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...oneLayer });
+      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...oneLayer, ...(s.line === "hatch" ? { map: hatch } : {}) });
       const fill = new THREE.Mesh(geo, [roof, wall]);
       fill.renderOrder = 2;
       live.picks.push(fill);
