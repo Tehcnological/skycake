@@ -1,5 +1,6 @@
 // Airspace for the 3D view: FAA records mapped to chart types, altitudes in feet MSL, and
 // outlines clipped to the chart area. Built by scripts/build-area.ts; the browser only reads the result.
+import type { Airway, Waypoint } from "./airway.js";
 import type { Airport } from "./procedure.js";
 
 /** One toggle each. Order is the legend order. */
@@ -19,7 +20,13 @@ export type ChartName = "tac" | "sectional" | "area" | "low";
 export const chartsOf = (c: Charts): ChartName[] => [...(c.tac ? ["tac" as const] : []), "sectional", ...(c.low && c.area ? ["area" as const] : []), ...(c.low ? ["low" as const] : [])];
 /** The chart asked for if the area has it, else its first. */
 export const pickChart = (c: Charts, wanted?: ChartName): ChartName => (wanted && chartsOf(c).includes(wanted) ? wanted : chartsOf(c)[0]);
-export type AirspaceFile = { edition: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[] };
+/** VFR: the visual charts and all the airspace. IFR: the enroute charts, special use airspace, airways and their fixes. */
+export type Mode = "vfr" | "ifr";
+export const modeOf = (c: ChartName): Mode => (c === "area" || c === "low" ? "ifr" : "vfr");
+export const chartsIn = (c: Charts, m: Mode): ChartName[] => chartsOf(c).filter((x) => modeOf(x) === m);
+const SPECIAL_USE: readonly Kind[] = ["R", "P", "W", "MOA", "A"];
+export const shownIn = (m: Mode, k: Kind) => m === "vfr" || SPECIAL_USE.includes(k);
+export type AirspaceFile = { edition: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[]; airways: Airway[]; waypoints: Waypoint[] };
 
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;

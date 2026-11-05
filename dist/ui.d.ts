@@ -1,4 +1,4 @@
-import { type ChartName, type Kind } from "./airspace.js";
+import { type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
 import { type Scene } from "./scene.js";
 /** On-screen words. Each site can supply its own; these are placeholders. */
@@ -26,6 +26,9 @@ export type Labels = {
     view: string;
     /** Under the view: the charts shown and their edition. */
     caption: (edition: string, chart: ChartName) => string;
+    /** The VFR/IFR button's name in words, and its text in each mode. */
+    mode: string;
+    modes: Record<Mode, string>;
     /** The chart button's name in words, and its text for each chart. */
     chart: string;
     charts: Record<ChartName, string>;

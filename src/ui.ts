@@ -1,6 +1,6 @@
 // What a site embeds: mount() builds the view inside any element. The area's data loads at once; three.js and the
 // chart only when the element comes into sight. Styles are in style.css, which the site loads.
-import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind } from "./airspace.js";
+import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
 import { firstScene, type Scene } from "./scene.js";
 
@@ -29,6 +29,9 @@ export type Labels = {
   view: string;
   /** Under the view: the charts shown and their edition. */
   caption: (edition: string, chart: ChartName) => string;
+  /** The VFR/IFR button's name in words, and its text in each mode. */
+  mode: string;
+  modes: Record<Mode, string>;
   /** The chart button's name in words, and its text for each chart. */
   chart: string;
   charts: Record<ChartName, string>;
@@ -56,6 +59,8 @@ export const LABELS: Labels = {
   floor700: "Floor 700 AGL",
   view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
   caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
+  mode: "VFR or IFR",
+  modes: { vfr: "VFR", ifr: "IFR" },
   chart: "Chart",
   charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
 };
@@ -87,7 +92,7 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
-  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts } };
+  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
   const base = new URL(o.base, location.href);
   const url = (p: string) => new URL(p, base).href;
   const data: AirspaceFile = await fetch(url("area.json")).then((r) => {
