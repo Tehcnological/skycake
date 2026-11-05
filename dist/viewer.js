@@ -176,7 +176,8 @@ export async function build(host, data, label, raised) {
     const chart = new THREE.Mesh(ground, new THREE.MeshLambertMaterial({ map: tex, alphaMap: softEdge(), transparent: true }));
     chart.renderOrder = -1;
     world.add(chart);
-    // Tags follow their spot on screen. Highest priority first; one that would overlap a shown tag hides.
+    // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
+    // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
     const shelfTags = [];
     let approachTags = [];
     let tagsOn = true;

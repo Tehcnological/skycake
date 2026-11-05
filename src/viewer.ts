@@ -207,7 +207,8 @@ export async function build(
   chart.renderOrder = -1;
   world.add(chart);
 
-  // Tags follow their spot on screen. Highest priority first; one that would overlap a shown tag hides.
+  // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
+  // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
   const shelfTags: Tag[] = [];
   let approachTags: Tag[] = [];
   let tagsOn = true;

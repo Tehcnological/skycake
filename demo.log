@@ -1,0 +1,5 @@
+
+> skycake@0.2.0 demo
+> node scripts/demo.mjs
+
+skycake demo: http://localhost:5179/demo/

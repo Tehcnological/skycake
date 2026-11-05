@@ -108,6 +108,8 @@ html.skycake-full { overflow: hidden; }
 .skycake .tip .frac { width: fit-content; margin-top: 5px; font: 600 11px/1.25 var(--sc-mono); }
 .skycake .view .tags { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
 .skycake .view .tag { position: absolute; left: 0; top: 0; font: 600 11px/1.25 var(--sc-mono); white-space: nowrap; will-change: transform; }
+/* Procedure tags stack over airspace tags. */
+.skycake .view .tag.fix { z-index: 1; }
 .skycake .view .frac { padding: 2px 5px; border-radius: 4px; background: #fff; text-align: center; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); }
 .skycake .view .frac.b { color: #1f55d8; }
 .skycake .view .frac.m { color: #b02684; }
