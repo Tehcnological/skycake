@@ -36,7 +36,7 @@
   -webkit-user-select: none;
   user-select: none;
 }
-.skycake input { -webkit-user-select: text; user-select: text; }
+.skycake input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavior: none; }
 /* Open full screen, every gesture belongs to the view; only the lists still scroll. */
 .skycake.full { position: fixed; inset: 0; z-index: 100; border: 0; border-radius: 0; touch-action: none; }

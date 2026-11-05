@@ -646,6 +646,8 @@ airport = () => { }) {
         fingers.set(e.pointerId, at(e));
         most = Math.max(most, fingers.size);
         regrip();
+        // Every finger's lift must reach the view, even over the tab bar, or it stays counted as down.
+        el3d.setPointerCapture(e.pointerId);
     });
     // The spot on the ground under a point on screen. Near the horizon a finger has none to hold.
     const groundUnder = ([x, y]) => {
