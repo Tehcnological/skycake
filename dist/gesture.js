@@ -2,28 +2,42 @@
 const TILT_PX = 10;
 const PINCH_PX = 16;
 const WAIT_PX = 30;
+// A first guess can be wrong, so the last stretch of movement keeps judging it, and takes more to change it than to make it.
+const WINDOW_PX = 40;
+const SWITCH_TILT_PX = 24;
 const TAP_PX = 8;
 const TAP_MS = 500;
 /**
- * A gesture stays what it began as, so a pinch never slips into a tilt. Returns null until it shows which it is.
+ * Returns null until the gesture shows what it is, then what it is now, judged on the fingers' recent movement.
  * Call it with both fingers current, not per finger: each finger's move is its own event, and seen alone a two-finger
  * swipe looks like one finger pulling away from the other.
  */
 export function twoFingers(a0, b0) {
     let kind = null;
     let [pa, pb] = [a0, b0];
+    const recent = [[a0, b0]];
+    const travel = ([ra, rb], a, b) => Math.max(Math.hypot(a[0] - ra[0], a[1] - ra[1]), Math.hypot(b[0] - rb[0], b[1] - rb[1]));
     return (a, b) => {
+        recent.push([a, b]);
+        while (travel(recent[1], a, b) >= WINDOW_PX)
+            recent.shift();
+        const [ra, rb] = recent[0];
+        const [dax, day, dbx, dby] = [a[0] - ra[0], a[1] - ra[1], b[0] - rb[0], b[1] - rb[1]];
+        const [x, y] = [Math.abs(dax + dbx) / 2, Math.abs(day + dby) / 2]; // moved together
+        const apart = Math.hypot(dax - dbx, day - dby); // moved relative to each other
+        const swipe = y >= TILT_PX && y >= 2 * x && y >= 2 * apart;
         if (!kind) {
-            const [dax, day, dbx, dby] = [a[0] - a0[0], a[1] - a0[1], b[0] - b0[0], b[1] - b0[1]];
-            const [x, y] = [Math.abs(dax + dbx) / 2, Math.abs(day + dby) / 2]; // moved together
-            const apart = Math.hypot(dax - dbx, day - dby); // moved relative to each other
-            if (y >= TILT_PX && y >= 2 * x && y >= 2 * apart)
+            if (swipe)
                 kind = "tilt";
-            else if (apart >= PINCH_PX || Math.max(Math.hypot(dax, day), Math.hypot(dbx, dby)) >= WAIT_PX)
+            else if (apart >= PINCH_PX || travel(recent[0], a, b) >= WAIT_PX)
                 kind = "shape";
             else
                 return null;
         }
+        else if (kind === "shape" && swipe && y >= SWITCH_TILT_PX)
+            kind = "tilt";
+        else if (kind === "tilt" && apart >= PINCH_PX && apart >= y)
+            kind = "shape";
         const [qa, qb] = [pa, pb];
         [pa, pb] = [a, b];
         if (kind === "tilt")

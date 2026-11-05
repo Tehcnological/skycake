@@ -31,16 +31,43 @@ test("a twist across the left of the circle stays small, not nearly a full turn"
   assert.ok(Math.abs(m.twist) < 0.3, `twist ${m.twist}`);
 });
 
-test("both fingers moving up together tilt, and stay a tilt however they drift", () => {
-  const [a, b] = run([[100, 300], [200, 300]], [[100, 280], [200, 281]], [[100, 270], [230, 271]]);
+test("both fingers moving up together tilt, and stay a tilt through some drift", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[100, 280], [200, 281]], [[100, 270], [215, 271]]);
   assert.deepEqual(a, { kind: "tilt", dy: -19.5 });
   assert.deepEqual(b, { kind: "tilt", dy: -10 });
 });
 
-test("once a pinch, a gesture stays a pinch even if both fingers then move up", () => {
-  const [a, b] = run([[100, 300], [200, 300]], [[80, 300], [220, 300]], [[80, 250], [220, 250]]);
+test("a pinch moving a little with the hand stays a pinch", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[80, 300], [220, 300]], [[78, 285], [222, 285]]);
   assert.equal(a?.kind, "shape");
   assert.equal(b?.kind, "shape");
+});
+
+test("a swipe misread as a pinch at a jerky start corrects itself to a tilt", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[100, 270], [200, 295]], [[100, 240], [200, 262]]);
+  assert.equal(a?.kind, "shape");
+  assert.equal(b?.kind, "tilt");
+});
+
+test("a pinch that becomes a clear swipe becomes a tilt", () => {
+  const [a, b, c] = run([[100, 300], [200, 300]], [[80, 300], [220, 300]], [[80, 260], [220, 260]], [[80, 220], [220, 220]]);
+  assert.equal(a?.kind, "shape");
+  assert.equal(b?.kind, "tilt");
+  assert.deepEqual(c, { kind: "tilt", dy: -40 });
+});
+
+test("a tilt that spreads clearly apart becomes a pinch", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[100, 280], [200, 280]], [[70, 275], [230, 275]]);
+  assert.equal(a?.kind, "tilt");
+  assert.ok(b && b.kind === "shape");
+  near(b.zoom, 160 / 100);
+});
+
+test("reversing a tilt stays a tilt", () => {
+  const [a, b, c] = run([[100, 300], [200, 300]], [[100, 270], [200, 270]], [[100, 285], [200, 285]], [[100, 300], [200, 300]]);
+  assert.equal(a?.kind, "tilt");
+  assert.equal(b?.kind, "tilt");
+  assert.equal(c?.kind, "tilt");
 });
 
 test("fingers moving up at different ends of a pinch are a pinch, not a tilt", () => {

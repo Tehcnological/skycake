@@ -11,7 +11,7 @@ export type TwoFingerStep = {
     mid: Pt;
 };
 /**
- * A gesture stays what it began as, so a pinch never slips into a tilt. Returns null until it shows which it is.
+ * Returns null until the gesture shows what it is, then what it is now, judged on the fingers' recent movement.
  * Call it with both fingers current, not per finger: each finger's move is its own event, and seen alone a two-finger
  * swipe looks like one finger pulling away from the other.
  */
