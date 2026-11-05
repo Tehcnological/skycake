@@ -5,6 +5,9 @@ const WAIT_PX = 30;
 // A first guess can be wrong, so the last stretch of movement keeps judging it, and takes more to change it than to make it.
 const WINDOW_PX = 40;
 const SWITCH_TILT_PX = 24;
+const SWITCH_PINCH_PX = 30;
+// One finger leading a swipe reads as a turn, and a turn swings the whole map, so a turn has to be clear before it counts.
+const TWIST_RAD = (20 * Math.PI) / 180;
 const TAP_PX = 8;
 const TAP_MS = 500;
 /**
@@ -15,6 +18,8 @@ const TAP_MS = 500;
 export function twoFingers(a0, b0) {
     let kind = null;
     let [pa, pb] = [a0, b0];
+    let turned = 0;
+    let twisting = false;
     const recent = [[a0, b0]];
     const travel = ([ra, rb], a, b) => Math.max(Math.hypot(a[0] - ra[0], a[1] - ra[1]), Math.hypot(b[0] - rb[0], b[1] - rb[1]));
     return (a, b) => {
@@ -36,19 +41,21 @@ export function twoFingers(a0, b0) {
         }
         else if (kind === "shape" && swipe && y >= SWITCH_TILT_PX)
             kind = "tilt";
-        else if (kind === "tilt" && apart >= PINCH_PX && apart >= y)
+        else if (kind === "tilt" && apart >= SWITCH_PINCH_PX && apart >= y)
             kind = "shape";
         const [qa, qb] = [pa, pb];
         [pa, pb] = [a, b];
         if (kind === "tilt")
             return { kind, dy: (a[1] - qa[1] + b[1] - qb[1]) / 2 };
         const turn = Math.atan2(b[1] - a[1], b[0] - a[0]) - Math.atan2(qb[1] - qa[1], qb[0] - qa[0]);
+        // Clockwise on screen is positive; across the left of the circle atan2 jumps by a full turn.
+        const twist = Math.atan2(Math.sin(turn), Math.cos(turn));
+        turned += twist;
+        twisting ||= Math.abs(turned) >= TWIST_RAD;
         return {
             kind,
             zoom: Math.hypot(b[0] - a[0], b[1] - a[1]) / (Math.hypot(qb[0] - qa[0], qb[1] - qa[1]) || 1),
-            // Clockwise on screen is positive; across the left of the circle atan2 jumps by a full turn.
-            twist: Math.atan2(Math.sin(turn), Math.cos(turn)),
-            from: [(qa[0] + qb[0]) / 2, (qa[1] + qb[1]) / 2],
+            twist: twisting ? twist : 0,
             mid: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2],
         };
     };

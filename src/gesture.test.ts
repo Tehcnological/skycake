@@ -31,6 +31,26 @@ test("a twist across the left of the circle stays small, not nearly a full turn"
   assert.ok(Math.abs(m.twist) < 0.3, `twist ${m.twist}`);
 });
 
+test("a small turn from one finger leading a swipe doesn't turn the map", () => {
+  // Fingers close together, so a 16 px lead is nearly 15 degrees.
+  const [a] = run([[100, 300], [160, 300]], [[100, 280], [160, 296]]);
+  assert.ok(a && a.kind === "shape");
+  near(a.twist, 0);
+});
+
+test("a clear turn starts turning the map, without jumping by what was held back", () => {
+  const at = (deg: number): [Pt, Pt] => {
+    const [x, y] = [50 * Math.cos((deg * Math.PI) / 180), 50 * Math.sin((deg * Math.PI) / 180)];
+    return [[130 - x, 300 - y], [130 + x, 300 + y]];
+  };
+  const steps = run(at(0), at(12), at(24), at(36));
+  assert.deepEqual(steps.map((s) => s?.kind), ["shape", "shape", "shape"]);
+  const twists = steps.map((s) => (s && s.kind === "shape" ? s.twist : NaN));
+  near(twists[0], 0);
+  near(twists[1], (12 * Math.PI) / 180);
+  near(twists[2], (12 * Math.PI) / 180);
+});
+
 test("both fingers moving up together tilt, and stay a tilt through some drift", () => {
   const [a, b] = run([[100, 300], [200, 300]], [[100, 280], [200, 281]], [[100, 270], [215, 271]]);
   assert.deepEqual(a, { kind: "tilt", dy: -19.5 });
@@ -61,6 +81,12 @@ test("a tilt that spreads clearly apart becomes a pinch", () => {
   assert.equal(a?.kind, "tilt");
   assert.ok(b && b.kind === "shape");
   near(b.zoom, 160 / 100);
+});
+
+test("reversing a tilt while the fingers drift apart a little stays a tilt", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[100, 280], [200, 280]], [[100, 295], [218, 295]]);
+  assert.equal(a?.kind, "tilt");
+  assert.equal(b?.kind, "tilt");
 });
 
 test("reversing a tilt stays a tilt", () => {

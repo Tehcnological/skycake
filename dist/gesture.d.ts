@@ -1,5 +1,5 @@
 export type Pt = [x: number, y: number];
-/** tilt: both fingers moved up or down together, by dy. shape: a pinch and twist, with the fingers' midpoint moving from one spot to another. */
+/** tilt: both fingers moved up or down together, by dy. shape: a pinch and twist about the fingers' midpoint. */
 export type TwoFingerStep = {
     kind: "tilt";
     dy: number;
@@ -7,7 +7,6 @@ export type TwoFingerStep = {
     kind: "shape";
     zoom: number;
     twist: number;
-    from: Pt;
     mid: Pt;
 };
 /**

@@ -658,15 +658,14 @@ airport = () => { }) {
         const t = (controls.target.y - origin.y) / d.y;
         return t > 0 && t <= controls.maxDistance ? origin.clone().addScaledVector(d, t) : null;
     };
-    // Keeps the ground under a finger as it moves; returns that spot.
+    // Keeps the ground under a finger as it moves.
     const slide = (from, to) => {
         const [a, c] = [groundUnder(from), groundUnder(to)];
         if (!a || !c)
-            return null;
+            return;
         const shift = a.clone().sub(c);
         camera.position.add(shift);
         controls.target.add(shift);
-        return a;
     };
     const UP = new THREE.Vector3(0, 1, 0);
     const touchMoved = () => {
@@ -691,8 +690,8 @@ airport = () => { }) {
             view.orbit(0, (-step.dy / el3d.clientHeight) * Math.PI * 0.75);
         }
         else {
-            // About the spot under the fingers, so it stays under them.
-            const p = slide(step.from, step.mid) ?? controls.target.clone();
+            // About the spot under the fingers. Only one finger moves the map, so a misread tilt can't drag it.
+            const p = groundUnder(step.mid) ?? controls.target.clone();
             const off = camera.position.distanceTo(controls.target);
             const scale = THREE.MathUtils.clamp(off / step.zoom, controls.minDistance, controls.maxDistance) / off;
             for (const q of [camera.position, controls.target])
