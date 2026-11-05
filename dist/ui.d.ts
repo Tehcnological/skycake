@@ -1,5 +1,6 @@
 import { type Kind } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
+import { type Scene } from "./scene.js";
 /** On-screen words. Each site can supply its own. */
 export type Labels = {
     kinds: Record<Kind, string>;
@@ -23,7 +24,9 @@ export declare const LABELS: Labels;
 export type Options = {
     /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
     base: string;
-    /** Types raised at first. Default: Class B. */
+    /** Free roam's first scene. Default: every type raised, the whole chart in view. */
+    scene?: Scene;
+    /** Shorthand for a first scene: types raised at first. */
     types?: Kind[];
     /** Airport picked at first. Default: KPHX, else the first one. */
     airport?: string;

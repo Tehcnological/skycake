@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skycake demo</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { margin: 0; padding: 16px; background: #17191c; color: #d9dadc; font-family: system-ui, sans-serif; }
+  @media (max-width: 860px) { body { padding: 0; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="v"></div>
+<script type="module">
+  import { mount } from "../dist/index.js";
+  // ?scene={...} shows that scene first, for checking.
+  const scene = new URLSearchParams(location.search).get("scene");
+  mount(document.querySelector("#v"), { base: "/data/phoenix/", ...(scene ? { scene: JSON.parse(scene) } : {}) });
+</script>
+</body>
+</html>

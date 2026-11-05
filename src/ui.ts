@@ -3,6 +3,7 @@
 // loads only when the element comes into sight. Styles are in style.css, which the site loads.
 import { KINDS, type AirspaceFile, type Area, type Kind } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
+import { freeRoamScene, resolve, shorthand, type Scene } from "./scene.js";
 
 /** On-screen words. Each site can supply its own. */
 export type Labels = {
@@ -46,7 +47,9 @@ export const LABELS: Labels = {
 export type Options = {
   /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
   base: string;
-  /** Types raised at first. Default: Class B. */
+  /** Free roam's first scene. Default: every type raised, the whole chart in view. */
+  scene?: Scene;
+  /** Shorthand for a first scene: types raised at first. */
   types?: Kind[];
   /** Airport picked at first. Default: KPHX, else the first one. */
   airport?: string;
@@ -138,7 +141,25 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
     tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
   };
-  const v = await build(view, data, first, show, (kind, on) => chips.get(kind)?.setAttribute("aria-pressed", String(on)));
+  const v = await build(view, data, show, (kind, on) => chips.get(kind)?.setAttribute("aria-pressed", String(on)));
+  const start: Scene = o.scene ?? shorthand(o, data) ?? freeRoamScene(data);
+  const loaded = new Map<string, Promise<Procedure[]>>();
+  const procs = (id: string) => {
+    if (!loaded.has(id)) loaded.set(id, fetch(url(`procedures/${id}.json`)).then((r) => (r.ok ? r.json() : [])).catch(() => []));
+    return loaded.get(id)!;
+  };
+  let shown: Procedure | null = null;
+  const show3d = async (now = false) => {
+    const scene: Scene = { ...start, diagram: db.getAttribute("aria-pressed") === "true" ? (current?.id ?? null) : null };
+    if (shown) {
+      scene.procedures = [{ airport: shown.airport, name: shown.name }];
+      scene.camera = { frame: [{ procedure: { airport: shown.airport, name: shown.name } }] };
+    }
+    const resolved = resolve(scene, data);
+    const files = await Promise.all(resolved.procedures.map(async (r) => (await procs(r.airport)).find((p) => p.name === r.name)));
+    return v.apply(resolved, files.filter((p): p is Procedure => !!p), now);
+  };
+  await show3d(true);
 
   for (const [kind, b] of chips) b.addEventListener("click", () => v.raise(kind, b.getAttribute("aria-pressed") !== "true"));
   let scale = START_SCALE;
@@ -192,18 +213,14 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   });
 
   // Procedures load one airport at a time; the newest pick wins if an older load finishes after it.
-  const loaded = new Map<string, Promise<Procedure[]>>();
-  const procs = (id: string) => {
-    if (!loaded.has(id)) loaded.set(id, fetch(url(`procedures/${id}.json`)).then((r) => (r.ok ? r.json() : [])).catch(() => []));
-    return loaded.get(id)!;
-  };
   let ticket = 0;
   const choose = async () => {
     const mine = ++ticket;
     const [type, name] = pick.value.split("|");
     const a = pick.value && current ? ((await procs(current.id)).find((p) => p.type === type && p.name === name) ?? null) : null;
     if (mine !== ticket) return;
-    v.procedure(a);
+    shown = a;
+    show3d();
     const rows = { course: a?.course == null ? null : `${String(a.course).padStart(3, "0")}°`, glidepath: a?.glidepath == null ? null : `${a.glidepath.toFixed(2)}°`, fafToMap: a?.fafToMap == null ? null : `${a.fafToMap} NM` };
     info.hidden = Object.values(rows).every((r) => r === null);
     for (const [k, text] of Object.entries(rows)) {
@@ -218,14 +235,13 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     fillPicks();
     if (db.getAttribute("aria-pressed") === "true") {
       if (!current?.diagram) db.setAttribute("aria-pressed", "false");
-      v.diagram(current?.diagram ?? null);
     }
     choose();
   });
   db.addEventListener("click", () => {
     const on = db.getAttribute("aria-pressed") !== "true";
     db.setAttribute("aria-pressed", String(on));
-    v.diagram(on ? (current?.diagram ?? null) : null);
+    show3d();
   });
   pick.addEventListener("change", choose);
   if (pick.value) choose();
