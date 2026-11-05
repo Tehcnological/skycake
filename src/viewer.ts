@@ -53,9 +53,10 @@ function stripes(): THREE.Texture {
   return t;
 }
 
-// Fades the chart out toward its edge. Per pixel because canvas blur filters don't exist in every browser.
+// Fades the chart out toward its edge, over 2% of it so approaches near the edge stay on solid chart. Per pixel because
+// canvas blur filters don't exist in every browser.
 function softEdge(): THREE.Texture {
-  const S = 64;
+  const S = 256;
   const c = document.createElement("canvas");
   c.width = c.height = S;
   const g = c.getContext("2d")!;

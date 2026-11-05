@@ -356,6 +356,9 @@ test("built data: procedures for every airport on the chart, all inside it, with
       assert.ok(p.paths.length && p.paths.every((x) => x.pts.length >= 2), `${a.id} ${p.name}`);
       assert.ok(p.paths.every((x) => x.pts.every(([la, lo]) => la >= f.bounds.s - 1e-4 && la <= f.bounds.n + 1e-4 && lo >= f.bounds.w - 1e-4 && lo <= f.bounds.e + 1e-4)), `${a.id} ${p.name}`);
       if (p.type === "IAP") assert.ok(p.fixes.some((x) => x.role === "MAP") || p.paths.some((x) => x.seg === "final"), p.name);
+      // A clipped path ends exactly on the edge. Every approach fits whole; a new CIFP cycle can bring a longer one.
+      const onEdge = ([la, lo]: Point) => [la - f.bounds.s, f.bounds.n - la, lo - f.bounds.w, f.bounds.e - lo].some((d) => Math.abs(d) < 1e-4);
+      if (p.type === "IAP") assert.ok(!p.paths.some((x) => x.pts.some(onEdge)), `${a.id} ${p.name} runs off the map`);
     }
   }
   const dem = readFileSync(new URL(`../data/phoenix/${f.dem.url}`, import.meta.url));
