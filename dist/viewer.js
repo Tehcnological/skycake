@@ -538,7 +538,7 @@ export async function build(host, data, label, raised) {
                 set(l, on);
         },
         raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
-        apply: async (sc, procs, now = false) => {
+        apply: async (sc, procs, now = false, framing = []) => {
             for (const l of lives)
                 set(l, sc.raised.has(l.area.id));
             if (world.scale.y !== sc.height) {
@@ -592,12 +592,12 @@ export async function build(host, data, label, raised) {
                         tilt = 90;
                 }
                 else {
-                    spots = cam.frame.flatMap((t) => targetSpots(t, procs));
+                    spots = cam.frame.flatMap((t) => targetSpots(t, [...procs, ...framing]));
                     tilt = cam.tilt ?? 32;
                 }
                 if (!spots.length)
                     spots = whole();
-                framed = { spots, tilt, procedures: procs.length > 0 };
+                framed = { spots, tilt, procedures: procs.length + framing.length > 0 };
                 frame(spots, tilt, now);
             }
             dirty = true;

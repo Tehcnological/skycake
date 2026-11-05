@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { AirspaceFile } from "./airspace.js";
-import { SceneError, firstScene, freeRoamScene, resolve, shorthand } from "./scene.js";
+import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
 
@@ -52,4 +52,12 @@ test("camera targets are checked like every other name", () => {
   const said: string[] = [];
   assert.deepEqual(firstScene({ scene: { camera: { frame: [{ area: "gone" }] } } }, data, (m) => said.push(m)), freeRoamScene(data));
   assert.match(said[0], /gone/);
+});
+
+test("procedures the camera frames but the scene does not show are listed for loading", () => {
+  const ils = { airport: "KPHX", name: "ILS RWY 25L" }, eagul = { airport: "KPHX", name: "EAGUL6" };
+  assert.deepEqual(framedOnly({ camera: { frame: [{ procedure: ils }] } }), [ils]);
+  assert.deepEqual(framedOnly({ procedures: [ils], camera: { frame: [{ procedure: ils }, { procedure: eagul }, { diagram: "KPHX" }] } }), [eagul]);
+  assert.deepEqual(framedOnly({ camera: "fit" }), []);
+  assert.deepEqual(framedOnly({}), []);
 });

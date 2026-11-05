@@ -51,6 +51,8 @@ export type Resolved = {
 export declare class SceneError extends Error {
 }
 export declare function resolve(scene: Scene, data: AirspaceFile): Resolved;
+/** Procedures the camera frames that the scene does not show: their files load for framing only. */
+export declare function framedOnly(scene: Scene): ProcedureRef[];
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export declare function freeRoamScene(data: AirspaceFile): Scene;
 /** mount()'s older options as a first scene; undefined when none is given. */

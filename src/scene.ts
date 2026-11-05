@@ -54,6 +54,20 @@ function target(t: Target, data: AirspaceFile) {
   if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram) throw new SceneError(`no diagram for ${t.diagram}`);
 }
 
+/** Procedures the camera frames that the scene does not show: their files load for framing only. */
+export function framedOnly(scene: Scene): ProcedureRef[] {
+  const cam = scene.camera;
+  if (!cam || typeof cam !== "object" || !("frame" in cam)) return [];
+  const shown = scene.procedures ?? [];
+  const out: ProcedureRef[] = [];
+  for (const t of cam.frame) {
+    if (!("procedure" in t)) continue;
+    const { airport, name } = t.procedure;
+    if (![...shown, ...out].some((p) => p.airport === airport && p.name === name)) out.push({ airport, name });
+  }
+  return out;
+}
+
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export function freeRoamScene(data: AirspaceFile): Scene {
   return { camera: "fit", raise: KINDS.filter((k) => data.areas.some((a) => a.kind === k)) };

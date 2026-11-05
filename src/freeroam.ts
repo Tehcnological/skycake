@@ -4,7 +4,7 @@
 import { KINDS, type AirspaceFile, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram, type Roam } from "./roam.js";
-import { SceneError, resolve, type Scene } from "./scene.js";
+import { SceneError, framedOnly, resolve, type ProcedureRef, type Scene } from "./scene.js";
 import { search } from "./search.js";
 import type { Labels } from "./ui.js";
 import type { View } from "./viewer.js";
@@ -119,7 +119,8 @@ export function freeRoam(c: Context): Promise<void> {
   const refresh = async (now = false) => {
     const mine = ++ticket;
     const wanted = sceneOf(r);
-    const loaded = await Promise.all((wanted.procedures ?? []).map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+    const load = (refs: ProcedureRef[]) => Promise.all(refs.map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+    const [loaded, framing] = await Promise.all([load(wanted.procedures ?? []), load(framedOnly(wanted))]);
     if (mine !== ticket) return;
     // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
     const scene: Scene = { ...wanted, raise: raiseNow(c.first, shown ? v.raisedAreas() : null), tags: tagsOn, height: scale as 1 | 4 };
@@ -138,7 +139,7 @@ export function freeRoam(c: Context): Promise<void> {
     diagramButton.setAttribute("aria-pressed", String(r.diagram));
     tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
     shown = true;
-    await v.apply(resolved, files, now);
+    await v.apply(resolved, files, now, framing.filter((p): p is Procedure => !!p));
   };
 
   const drawChips = () => {

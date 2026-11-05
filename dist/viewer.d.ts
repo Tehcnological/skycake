@@ -21,8 +21,11 @@ export type View = {
     raiseArea(id: string, on: boolean): void;
     /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
     raisedAreas(): string[];
-    /** Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation. */
-    apply(scene: Resolved, procedures: Procedure[], now?: boolean): Promise<void>;
+    /**
+     * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
+     * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
+     */
+    apply(scene: Resolved, procedures: Procedure[], now?: boolean, framing?: Procedure[]): Promise<void>;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */

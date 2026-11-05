@@ -55,7 +55,8 @@ html.skycake-full { overflow: hidden; }
 /* Corners (desktop). */
 .skycake .sc-tl, .skycake .sc-tr, .skycake .sc-br { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
 .skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; }
-.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(380px, calc(100% - 320px)); }
+/* Above the view buttons; the shown procedures scroll when they do not fit. */
+.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(380px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 216px); }
 .skycake .sc-br { right: var(--sc-gap); bottom: var(--sc-gap); }
 .skycake .sc-kinds { display: none; flex-direction: column; gap: 2px; padding: 10px; max-height: calc(100% - 80px); overflow: auto; }
 .skycake.sc-open-kinds .sc-kinds { display: flex; }
@@ -65,12 +66,13 @@ html.skycake-full { overflow: hidden; }
 .skycake .sc-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--sc-muted); }
 .skycake .sc-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--sc-ink); font: 500 14px var(--sc-mono); outline: none; }
 .skycake .sc-search:focus-within { border-color: var(--sc-soft); }
-.skycake .sc-results { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; padding: 8px; }
+.skycake .sc-results { display: flex; flex-direction: column; max-height: 50vh; min-height: 0; overflow: auto; padding: 8px; }
 .skycake .sc-group { margin: 8px 8px 4px; font: 600 11px var(--sc-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--sc-muted); }
 .skycake .sc-none { margin: 8px; font-size: 14px; color: var(--sc-muted); }
 .skycake .sc-option { min-height: 44px; padding: 0 10px; border: 0; border-radius: var(--sc-r-row); background: none; color: var(--sc-ink); font: 500 14px var(--sc-sans); text-align: left; cursor: pointer; }
 .skycake .sc-option:hover, .skycake .sc-option:focus-visible { background: var(--sc-accent-bg); }
-.skycake .sc-chips { display: flex; flex-direction: column; gap: 8px; }
+.skycake .sc-chips { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.skycake .sc-search, .skycake .sc-chips > * { flex: none; }
 .skycake .sc-chip { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 4px 0 16px; box-sizing: border-box; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-pill); background: color-mix(in srgb, var(--sc-panel) 94%, transparent); }
 .skycake .sc-procedure .sc-chip { border: 0; background: none; }
 .skycake .sc-apt { font: 500 13px var(--sc-mono); color: var(--sc-muted); }
@@ -91,7 +93,8 @@ html.skycake-full { overflow: hidden; }
   .skycake .sc-tl .sc-pill { display: none; }
   .skycake .sc-tl { left: 0; right: 0; top: auto; bottom: 76px; width: auto; }
   .skycake .sc-kinds { border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; border-width: 1px 0 0; max-height: 60svh; background: var(--sc-panel); }
-  .skycake .sc-tr { left: var(--sc-gap); right: var(--sc-gap); width: auto; }
+  /* Search and the shown procedures take at most 60% of the view. */
+  .skycake .sc-tr { left: var(--sc-gap); right: var(--sc-gap); width: auto; max-height: calc((100% - 76px) * 0.6); }
   .skycake .sc-br { display: none; left: 0; right: 0; bottom: 76px; flex-direction: row; justify-content: center; gap: 12px; padding: 14px; border-top: 1px solid var(--sc-frame); border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; background: var(--sc-panel); }
   .skycake.sc-open-view .sc-br { display: flex; }
   .skycake .sc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 76px; flex: none; border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }

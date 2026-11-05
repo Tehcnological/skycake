@@ -3,7 +3,7 @@
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
 import { KINDS } from "./airspace.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
-import { SceneError, resolve } from "./scene.js";
+import { SceneError, framedOnly, resolve } from "./scene.js";
 import { search } from "./search.js";
 const SVG = "http://www.w3.org/2000/svg";
 function h(tag, attrs = {}, ...kids) {
@@ -99,7 +99,8 @@ export function freeRoam(c) {
     const refresh = async (now = false) => {
         const mine = ++ticket;
         const wanted = sceneOf(r);
-        const loaded = await Promise.all((wanted.procedures ?? []).map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+        const load = (refs) => Promise.all(refs.map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+        const [loaded, framing] = await Promise.all([load(wanted.procedures ?? []), load(framedOnly(wanted))]);
         if (mine !== ticket)
             return;
         // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
@@ -121,7 +122,7 @@ export function freeRoam(c) {
         diagramButton.setAttribute("aria-pressed", String(r.diagram));
         tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
         shown = true;
-        await v.apply(resolved, files, now);
+        await v.apply(resolved, files, now, framing.filter((p) => !!p));
     };
     const drawChips = () => {
         chips.replaceChildren(...r.procedures.map((p) => {
