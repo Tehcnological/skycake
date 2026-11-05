@@ -1,13 +1,14 @@
 /**
- * Builds one area's data for skycake from public domain FAA and USGS sources, into data/phoenix/:
- *   sectional.webp     the Phoenix sectional, cropped to BOUNDS and reprojected to plain lat/lon
- *   tac.webp           the Phoenix TAC over its own map area (TAC_AREA), the same way
+ * Builds each area's data for skycake from public domain FAA and USGS sources, into data/<area>/:
+ *   sectional.webp     the area's sectional, cropped to BOUNDS and reprojected to plain lat/lon
+ *   tac.webp           its TAC over the TAC's own map area (TAC_AREA), the same way
  *   dem.bin            USGS 3DEP terrain at the view's grid points over BOUNDS, 16-bit feet
  *   area.json          class airspace, Mode C veil, special use airspace inside BOUNDS, and the airports
  *   procedures/*.json  approaches, departures and arrivals of each airport inside BOUNDS, from the CIFP
  *   diagrams/*.webp    FAA airport diagrams (d-TPP), north up, placed by their own ticks
  *
- *   npm run data                     # current chart edition
+ *   npm run data                     # every area, current chart edition
+ *   npm run data -- miami            # one area
  *   npm run data -- 2026-10-29       # a given edition (effective date)
  *   npm run data -- --terrain-only
  *
@@ -25,33 +26,35 @@ import sharp from "sharp";
 import simplify from "simplify-js";
 import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp } from "../src/diagram.js";
-import { parseProcedures, type Airport } from "../src/procedure.js";
+import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
 const KNOWN_EDITION = Date.UTC(2026, 9, 29); // VFR charts repeat every 56 days.
-// Phoenix to Tucson on the Phoenix sectional. Every approach at the airports inside ends at least 2.7 NM from the edge,
-// past the chart's fade (viewer.ts).
-const BOUNDS: Bounds = { s: 31.8, w: -113, n: 34.25, e: -110.27 };
-// Inside the TAC's neatline (34°05' N, 32°47' N; its east and west edges lean slightly), so no collar shows.
-const TAC_AREA: Bounds = { s: 32.795, w: -112.845, n: 34.07, e: -111.195 };
-// Sky Harbor field elevation: where heights written above the ground start.
-const GROUND = 1135;
+// Each area: bounds holding every approach at its airports, clear of the chart's fade (viewer.ts); the TAC's map, inside
+// its neatline so no collar shows; the field elevation where heights written above the ground start; terrain cells
+// about 0.25 NM square; the FAA's name for its charts.
+type AreaSetup = { bounds: Bounds; tac: Bounds; ground: number; dem: { nx: number; ny: number }; charts: string; sea?: boolean };
+const AREAS: Record<string, AreaSetup> = {
+  // Phoenix to Tucson. The TAC's neatline is 34°05' N, 32°47' N; its east and west edges lean slightly.
+  phoenix: { bounds: { s: 31.8, w: -113, n: 34.25, e: -110.27 }, tac: { s: 32.795, w: -112.845, n: 34.07, e: -111.195 }, ground: 1135, dem: { nx: 548, ny: 587 }, charts: "Phoenix" },
+  // Key West to Palm Beach; Lantana's RNAV (GPS)-B sets the north edge and Opa-locka's transitions the east. The TAC stops
+  // at 25.49 N, above its Florida Keys inset, which is not drawn where the Keys are; the sectional shows them.
+  miami: { bounds: { s: 24.4, w: -82.03, n: 27.32, e: -79.55 }, tac: { s: 25.49, w: -81.16, n: 26.76, e: -79.55 }, ground: 9, dem: { nx: 537, ny: 702 }, charts: "Miami", sea: true },
+};
 // The longer side of each chart image; 4096 is the largest texture every phone takes.
 const SIDE = 4096;
-// Terrain cells about 0.25 NM square.
-const DEM = { nx: 548, ny: 587 };
 
-const date = process.argv.slice(2).find((a) => !a.startsWith("--"));
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const date = args.find((a) => !(a in AREAS));
 const now = date ? Date.parse(date) : Date.now();
 // The edition in effect on that date.
 const edition = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (56 * DAY)) * 56 * DAY);
 const [y, m, d] = edition.toISOString().slice(0, 10).split("-");
-const TAC_URL = `https://aeronav.faa.gov/visual/${m}-${d}-${y}/tac-files/Phoenix_TAC.zip`;
-const SECTIONAL_URL = `https://aeronav.faa.gov/visual/${m}-${d}-${y}/sectional-files/Phoenix.zip`;
 const ADDS = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services";
 const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
-const OUT = join(ROOT, "data", "phoenix");
+// The area being built.
+let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, OUT: string;
 
 async function download(url: string, dir = cache): Promise<Uint8Array> {
   const file = join(dir, url.split("/").pop()!);
@@ -226,7 +229,10 @@ async function terrain() {
   for (let n = Math.floor(BOUNDS.s) + 1; n <= Math.ceil(BOUNDS.n); n++) {
     for (let w = Math.ceil(-BOUNDS.e); w <= Math.ceil(-BOUNDS.w); w++) {
       const name = `n${n}w${String(w).padStart(3, "0")}`;
-      const tif = await fromUrl(`https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/${name}/USGS_1_${name}.tif`);
+      const url = `https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/1/TIFF/current/${name}/USGS_1_${name}.tif`;
+      // 3DEP has no tile for open sea.
+      if (SEA && (await fetch(url, { method: "HEAD" })).status === 404) continue;
+      const tif = await fromUrl(url);
       const full = await tif.getImage(0);
       const [ox, oy] = full.getOrigin(), [rx, ry] = full.getResolution();
       let img = full;
@@ -247,9 +253,11 @@ async function terrain() {
       if (c < 0 || r < 0 || c > t.w - 1 || r > t.h - 1) continue;
       const [c0, r0] = [Math.min(Math.floor(c), t.w - 2), Math.min(Math.floor(r), t.h - 2)];
       const [fc, fr] = [c - c0, r - r0];
-      const p = (dc: number, dr: number) => t.data[(r0 + dr) * t.w + c0 + dc];
+      // Tiles on the coast mark the sea with a no-data value far below zero.
+      const p = (dc: number, dr: number) => (SEA ? Math.max(0, t.data[(r0 + dr) * t.w + c0 + dc]) : t.data[(r0 + dr) * t.w + c0 + dc]);
       return (p(0, 0) * (1 - fc) + p(1, 0) * fc) * (1 - fr) + (p(0, 1) * (1 - fc) + p(1, 1) * fc) * fr;
     }
+    if (SEA) return 0;
     throw new Error(`no 3DEP tile covers ${lat}, ${lon}`);
   };
   const ft = new Int16Array(DEM.nx * DEM.ny);
@@ -271,12 +279,16 @@ const cycleDate = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (2
 async function procedures(): Promise<Airport[]> {
   const c = cycleDate.toISOString().slice(0, 10).split("-");
   const zip = unzipSync(await download(`https://aeronav.faa.gov/Upload_313-d/cifp/CIFP_${c[0].slice(2)}${c[1]}${c[2]}.zip`), { filter: (f) => f.name === "FAACIFP18" });
-  const { airports, procedures } = parseProcedures(Buffer.from(zip.FAACIFP18).toString("latin1"), BOUNDS);
+  const text = Buffer.from(zip.FAACIFP18).toString("latin1");
+  const off = airportsOffMap(text, BOUNDS);
+  if (off.size) console.log(`left out, an approach runs off the map: ${[...off].join(" ")}`);
+  const { airports, procedures } = parseProcedures(text, BOUNDS);
+  const kept = airports.filter((a) => !off.has(a.id));
   const dir = join(OUT, "procedures");
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
-  for (const a of airports) await writeFile(join(dir, `${a.id}.json`), JSON.stringify(procedures.filter((p) => p.airport === a.id)));
-  return airports;
+  for (const a of kept) await writeFile(join(dir, `${a.id}.json`), JSON.stringify(procedures.filter((p) => p.airport === a.id)));
+  return kept;
 }
 
 // ---- Airport diagrams from the d-TPP of the same cycle, placed by their own latitude and longitude ticks, turned
@@ -342,17 +354,23 @@ async function diagrams(airports: Airport[]) {
   }
 }
 
-if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-only")) {
-  await chart(SECTIONAL_URL, "SEC.tif", BOUNDS, "sectional.webp");
-  await chart(TAC_URL, "TAC.tif", TAC_AREA, "tac.webp");
+const named = args.filter((a) => a in AREAS);
+for (const name of named.length ? named : Object.keys(AREAS)) {
+  const area = AREAS[name];
+  console.log(name);
+  [BOUNDS, GROUND, DEM, SEA, OUT] = [area.bounds, area.ground, area.dem, !!area.sea, join(ROOT, "data", name)];
+  if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-only")) {
+    await chart(`https://aeronav.faa.gov/visual/${m}-${d}-${y}/sectional-files/${area.charts}.zip`, "SEC.tif", BOUNDS, "sectional.webp");
+    await chart(`https://aeronav.faa.gov/visual/${m}-${d}-${y}/tac-files/${area.charts}_TAC.zip`, "TAC.tif", area.tac, "tac.webp");
+  }
+  const ground = await terrain();
+  if (process.argv.includes("--terrain-only")) continue;
+  const areas = await airspace(ground);
+  const airports = await procedures();
+  await diagrams(airports);
+  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac } }, dem: { url: "dem.bin", ...DEM }, areas, airports };
+  await writeFile(join(OUT, "area.json"), JSON.stringify(file));
+  console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
+  for (const t of ["IAP", "SID", "STAR"]) console.log(`${t} ${airports.reduce((n, a) => n + a.procedures.filter((p) => p.type === t).length, 0)}`);
+  console.log(`${airports.length} airports, ${airports.filter((a) => a.diagram).length} diagrams`);
 }
-const ground = await terrain();
-if (process.argv.includes("--terrain-only")) process.exit(0);
-const areas = await airspace(ground);
-const airports = await procedures();
-await diagrams(airports);
-const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: TAC_AREA } }, dem: { url: "dem.bin", ...DEM }, areas, airports };
-await writeFile(join(OUT, "area.json"), JSON.stringify(file));
-console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
-for (const t of ["IAP", "SID", "STAR"]) console.log(`${t} ${airports.reduce((n, a) => n + a.procedures.filter((p) => p.type === t).length, 0)}`);
-console.log(`${airports.length} airports, ${airports.filter((a) => a.diagram).length} diagrams`);
