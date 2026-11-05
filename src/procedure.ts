@@ -380,6 +380,17 @@ export function parseProcedures(text: string, b: Bounds): { airports: Airport[];
   return { airports: airports.sort((a, c) => a.id.localeCompare(c.id)), procedures };
 }
 
+/**
+ * Airports inside the bounds with an approach that leaves them. An area leaves these out rather than show an approach
+ * cut, and rather than grow to fit it: in Florida each long approach reaches another airport, up to Gainesville.
+ */
+export function airportsOffMap(text: string, b: Bounds): Set<string> {
+  const { airports, procedures } = parseProcedures(text, { s: -90, w: -180, n: 90, e: 180 });
+  const inside = new Set(airports.filter((a) => a.lat >= b.s && a.lat <= b.n && a.lon >= b.w && a.lon <= b.e).map((a) => a.id));
+  const off = ([la, lo]: Point) => la < b.s || la > b.n || lo < b.w || lo > b.e;
+  return new Set(procedures.filter((p) => p.type === "IAP" && inside.has(p.airport) && p.paths.some((x) => x.pts.some(off))).map((p) => p.airport));
+}
+
 /** The departure end of a runway: the opposite threshold, at this one's elevation. */
 function departureEnd(rw: string, runways: Map<string, Point>): Point | null {
   const m = rw.match(/^RW(\d\d)([LRC]?)$/);

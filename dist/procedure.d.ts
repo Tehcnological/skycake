@@ -86,4 +86,9 @@ export declare function parseProcedures(text: string, b: Bounds): {
     airports: Airport[];
     procedures: Procedure[];
 };
+/**
+ * Airports inside the bounds with an approach that leaves them. An area leaves these out rather than show an approach
+ * cut, and rather than grow to fit it: in Florida each long approach reaches another airport, up to Gainesville.
+ */
+export declare function airportsOffMap(text: string, b: Bounds): Set<string>;
 export {};

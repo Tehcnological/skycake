@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
-import { clipPath, constraint, parseProcedures, type Point, type Procedure } from "./procedure.js";
+import { airportsOffMap, clipPath, constraint, parseProcedures, type Point, type Procedure } from "./procedure.js";
 import type { AirspaceFile, Bounds } from "./airspace.js";
 import { nm } from "./cifp.js";
 
@@ -340,31 +340,56 @@ test("BNYRD6 from KCHD: vectors from the field to BNYRD, where the coded route s
   assert.equal(seg(parseProcedures(SIDSTAR, WIDE).procedures.find((p) => p.name === "FYRBD1")!, "vectors").length, 0);
 });
 
-test("built data: procedures for every airport on the chart, all inside it, with terrain of the right size", () => {
-  const f: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
-  const phx = f.airports.find((a) => a.id === "KPHX")!;
-  const count = (t: string) => phx.procedures.filter((p) => p.type === t).length;
-  assert.equal(count("IAP"), 16);
-  assert.ok(count("SID") >= 10 && count("STAR") >= 8, `${count("SID")} SIDs, ${count("STAR")} STARs`);
-  assert.ok(f.airports.length >= 10);
+test("an airport with an approach off the map is named; one with all of them on it, or off the map itself, is not", () => {
+  assert.deepEqual([...airportsOffMap(CIFP, { ...WIDE, e: -111.65 })], ["KPHX"]);
+  assert.deepEqual([...airportsOffMap(CIFP, WIDE)], []);
+  assert.deepEqual([...airportsOffMap(CIFP, { ...WIDE, s: 34 })], []);
+});
+
+/** What every built area must hold: its procedures, all inside it, every approach whole and on solid chart. */
+function builtArea(name: string) {
+  const f: AirspaceFile = JSON.parse(readFileSync(new URL(`../data/${name}/area.json`, import.meta.url), "utf8"));
+  const { s, n, w, e } = f.bounds;
+  // The chart fades over its outer 5/256 (softEdge in viewer.ts). A new CIFP cycle can bring a longer approach.
+  const fade = 5 / 256;
+  const solid = ([la, lo]: Point) => la >= s + fade * (n - s) && la <= n - fade * (n - s) && lo >= w + fade * (e - w) && lo <= e - fade * (e - w);
   for (const a of f.airports) {
-    const url = new URL(`../data/phoenix/procedures/${a.id}.json`, import.meta.url);
+    const url = new URL(`../data/${name}/procedures/${a.id}.json`, import.meta.url);
     assert.ok(existsSync(url), a.id);
     const procs: Procedure[] = JSON.parse(readFileSync(url, "utf8"));
     assert.deepEqual(procs.map((p) => p.name), a.procedures.map((p) => p.name));
     for (const p of procs) {
       assert.ok(p.paths.length && p.paths.every((x) => x.pts.length >= 2), `${a.id} ${p.name}`);
-      assert.ok(p.paths.every((x) => x.pts.every(([la, lo]) => la >= f.bounds.s - 1e-4 && la <= f.bounds.n + 1e-4 && lo >= f.bounds.w - 1e-4 && lo <= f.bounds.e + 1e-4)), `${a.id} ${p.name}`);
-      if (p.type === "IAP") assert.ok(p.fixes.some((x) => x.role === "MAP") || p.paths.some((x) => x.seg === "final"), p.name);
-      // A clipped path ends exactly on the edge. Every approach fits whole; a new CIFP cycle can bring a longer one.
-      const onEdge = ([la, lo]: Point) => [la - f.bounds.s, f.bounds.n - la, lo - f.bounds.w, f.bounds.e - lo].some((d) => Math.abs(d) < 1e-4);
-      if (p.type === "IAP") assert.ok(!p.paths.some((x) => x.pts.some(onEdge)), `${a.id} ${p.name} runs off the map`);
+      assert.ok(p.paths.every((x) => x.pts.every(([la, lo]) => la >= s - 1e-4 && la <= n + 1e-4 && lo >= w - 1e-4 && lo <= e + 1e-4)), `${a.id} ${p.name}`);
+      if (p.type !== "IAP") continue;
+      assert.ok(p.fixes.some((x) => x.role === "MAP") || p.paths.some((x) => x.seg === "final"), p.name);
+      assert.ok(p.paths.every((x) => x.pts.every(solid)), `${a.id} ${p.name} runs off the map`);
     }
   }
-  const dem = readFileSync(new URL(`../data/phoenix/${f.dem.url}`, import.meta.url));
+  const dem = readFileSync(new URL(`../data/${name}/${f.dem.url}`, import.meta.url));
   assert.equal(dem.length, f.dem.nx * f.dem.ny * 2);
   const ft = new Int16Array(dem.buffer, dem.byteOffset, dem.length / 2);
+  return { f, lo: ft.reduce((a, b) => Math.min(a, b)), hi: ft.reduce((a, b) => Math.max(a, b)) };
+}
+
+test("built Phoenix data: procedures for every airport on the chart, with terrain of the right size", () => {
+  const { f, lo, hi } = builtArea("phoenix");
+  const phx = f.airports.find((a) => a.id === "KPHX")!;
+  const count = (t: string) => phx.procedures.filter((p) => p.type === t).length;
+  assert.equal(count("IAP"), 16);
+  assert.ok(count("SID") >= 10 && count("STAR") >= 8, `${count("SID")} SIDs, ${count("STAR")} STARs`);
+  assert.ok(f.airports.length >= 10);
   // Lowest and highest ground from Phoenix to Tucson (the Santa Catalinas reach about 9,150 ft), in feet.
-  const lo = ft.reduce((a, b) => Math.min(a, b)), hi = ft.reduce((a, b) => Math.max(a, b));
   assert.ok(lo > 300 && lo < 1100 && hi > 8000 && hi < 9500, `${lo} to ${hi}`);
+});
+
+test("built Miami data: the Keys up to Palm Beach, the sea at sea level, Fort Myers left out for its long approaches", () => {
+  const { f, lo, hi } = builtArea("miami");
+  const ids = f.airports.map((a) => a.id);
+  for (const id of ["KEYW", "KMTH", "KMIA", "KOPF", "KTMB", "KFLL", "KFXE", "KBCT", "KLNA", "KDJT", "F45"]) assert.ok(ids.includes(id), id);
+  assert.ok(!ids.includes("KRSW"));
+  assert.ok(f.airports.find((a) => a.id === "KMIA")!.procedures.filter((p) => p.type === "IAP").length >= 20);
+  assert.ok(lo === 0 && hi > 10 && hi < 400, `${lo} to ${hi}`);
+  // The TAC stops above its Florida Keys inset, which is not drawn where the Keys are.
+  assert.ok(f.charts.tac!.bounds.s > 25.478);
 });

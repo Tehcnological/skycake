@@ -2,7 +2,7 @@
 
 Everything in `data/` is built by `scripts/build-area.ts` from public domain US government sources:
 
-- FAA VFR raster charts (Phoenix TAC and Phoenix sectional), aeronav.faa.gov. Cropped and reprojected.
+- FAA VFR raster charts (the Phoenix and Miami TACs and sectionals), aeronav.faa.gov. Cropped and reprojected.
 - FAA airspace (Class_Airspace and Special_Use_Airspace) from the FAA's ADDS open data service.
 - FAA CIFP (Coded Instrument Flight Procedures), aeronav.faa.gov.
 - FAA d-TPP airport diagrams, aeronav.faa.gov. Placed on the map from their own latitude and longitude ticks.
