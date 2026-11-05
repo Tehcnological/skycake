@@ -1,4 +1,4 @@
-import { freeRoamScene, shorthand } from "./scene.js";
+import { firstScene } from "./scene.js";
 export const LABELS = {
     kinds: { B: "Class B", C: "Class C", D: "Class D", E: "Class E", E700: "E 700 ft", MODEC: "Mode C", R: "Restricted", P: "Prohibited", W: "Warning", MOA: "MOA", A: "Alert" },
     groups: { IAP: "Approaches", STAR: "Arrivals", SID: "Departures" },
@@ -97,5 +97,5 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    freeRoam({ fig, view: v, data, first: o.scene ?? shorthand(o, data) ?? freeRoamScene(data), airport, labels: L, procedures, startScale: START_SCALE });
+    await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE });
 }

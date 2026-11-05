@@ -14,4 +14,5 @@ export type Context = {
     procedures: (airport: string) => Promise<Procedure[]>;
     startScale: number;
 };
-export declare function freeRoam(c: Context): void;
+/** Resolves once the first scene is showing. */
+export declare function freeRoam(c: Context): Promise<void>;

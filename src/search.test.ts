@@ -25,3 +25,9 @@ test("nothing matches nothing", () => {
   assert.deepEqual(search("qqqq", airports), []); // not "zzz": IZZZO8 is a real departure
   assert.deepEqual(search("   ", airports), []);
 });
+
+test("an airport lists every one of its procedures", () => {
+  const kphx = airports.find((a) => a.id === "KPHX")!;
+  const hits = search("phx", airports).flatMap((g) => g.hits).filter((h) => h.procedure);
+  assert.equal(hits.length, kphx.procedures.length);
+});

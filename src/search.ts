@@ -25,7 +25,9 @@ export function search(query: string, airports: Airport[], limit = 30): Group[] 
   };
   const airport = airports.find((a) => a.id === q || a.id === `K${q}`);
   if (airport) {
+    // An airport lists every one of its procedures.
     out.push({ airport: airport.id, type: null, hits: [{ airport: airport.id }] });
+    left = Infinity;
     groups(airport, () => true);
     return out;
   }

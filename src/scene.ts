@@ -4,10 +4,12 @@ import { KINDS, type AirspaceFile, type Kind } from "./airspace.js";
 
 export type ProcedureRef = { airport: string; name: string };
 export type AreaRef = { area: string };
-export type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point: [lat: number, lon: number] };
+/** diagram: an airport diagram's area, by airport id. */
+export type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point: [lat: number, lon: number] } | { diagram: string };
 export type Camera = "fit" | "top" | { frame: Target[]; tilt?: number } | { azimuth: number; tilt: number; distance: number; target: [lat: number, lon: number] };
 export type Scene = {
-  camera?: Camera;
+  /** null: leave the camera where it is. */
+  camera?: Camera | null;
   /** Raised; everything else lies flat on the chart. */
   raise?: (Kind | AreaRef)[];
   /** Any number at once. draw (leg by leg) plays in walkthroughs. */
@@ -18,7 +20,7 @@ export type Scene = {
   tags?: boolean;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
-export type Resolved = { camera: Camera; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean };
+export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean };
 
 export class SceneError extends Error {}
 
@@ -38,7 +40,7 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   });
   const diagram = scene.diagram ?? null;
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
-  return { camera: scene.camera ?? "fit", raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
 }
 
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
@@ -51,6 +53,25 @@ export function shorthand(o: { types?: Kind[]; airport?: string; approach?: stri
   if (!o.types && !o.airport && !o.approach) return undefined;
   const scene: Scene = { camera: "fit", raise: o.types ?? freeRoamScene(data).raise };
   const airport = o.airport ?? "KPHX";
-  if (o.approach) scene.procedures = [{ airport, name: o.approach }];
+  if (o.approach) {
+    scene.procedures = [{ airport, name: o.approach }];
+    scene.camera = { frame: [{ procedure: { airport, name: o.approach } }] };
+  }
   return scene;
+}
+
+/**
+ * The first scene from mount()'s options. A name the data no longer has (an FAA cycle renamed an approach, a typo)
+ * falls back to free roam's first view, and warn() says why, so the embed still works.
+ */
+export function firstScene(o: { scene?: Scene; types?: Kind[]; airport?: string; approach?: string }, data: AirspaceFile, warn: (message: string) => void): Scene {
+  const scene = o.scene ?? shorthand(o, data) ?? freeRoamScene(data);
+  try {
+    resolve(scene, data);
+    return scene;
+  } catch (e) {
+    if (!(e instanceof SceneError)) throw e;
+    warn(`skycake: ${e.message}; showing the whole chart instead`);
+    return freeRoamScene(data);
+  }
 }

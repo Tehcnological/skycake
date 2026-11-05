@@ -3,7 +3,7 @@
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
 import { KINDS } from "./airspace.js";
 import { add, pickAirport, remove, sceneOf, start, toggleDiagram } from "./roam.js";
-import { resolve } from "./scene.js";
+import { SceneError, resolve } from "./scene.js";
 import { search } from "./search.js";
 const SVG = "http://www.w3.org/2000/svg";
 function h(tag, attrs = {}, ...kids) {
@@ -41,11 +41,14 @@ const ICONS = {
     full: ["M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"],
     close: ["M6 6l12 12M18 6 6 18"],
 };
+/** Resolves once the first scene is showing. */
 export function freeRoam(c) {
     const { fig, view: v, data, labels: L } = c;
     const has = (a) => !!data.airports.find((x) => x.id === a)?.diagram;
     let r = start(c.first, c.airport ?? undefined);
     let kinds = (c.first.raise ?? []).filter((x) => typeof x === "string");
+    // Single areas the first scene raised stay raised; the type list only switches whole types.
+    const areaRefs = (c.first.raise ?? []).filter((x) => typeof x !== "string");
     let tagsOn = c.first.tags ?? true;
     let scale = c.first.height ?? c.startScale;
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
@@ -99,11 +102,22 @@ export function freeRoam(c) {
     let files = [];
     const refresh = async (now = false) => {
         const mine = ++ticket;
-        const scene = { ...sceneOf(r), raise: [...kinds], tags: tagsOn, height: scale };
-        const resolved = resolve(scene, data);
-        const loaded = await Promise.all(resolved.procedures.map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+        const wanted = sceneOf(r);
+        const loaded = await Promise.all((wanted.procedures ?? []).map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
         if (mine !== ticket)
             return;
+        // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
+        const scene = { ...wanted, raise: [...kinds, ...areaRefs], tags: tagsOn, height: scale };
+        let resolved;
+        try {
+            resolved = resolve(scene, data);
+        }
+        catch (e) {
+            if (!(e instanceof SceneError))
+                throw e;
+            console.warn(`skycake: ${e.message}`);
+            return;
+        }
         files = loaded.filter((p) => !!p);
         drawChips();
         const diagram = r.airport !== null && has(r.airport);
@@ -216,5 +230,5 @@ export function freeRoam(c) {
     };
     c.fig.addEventListener("skycake-raised", (e) => onRaised(e.detail.kind, e.detail.on));
     sheet(null);
-    refresh(true);
+    return refresh(true);
 }

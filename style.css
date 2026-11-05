@@ -97,8 +97,9 @@ html.skycake-full { overflow: hidden; }
   .skycake .sc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 76px; flex: none; border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
   .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; background: none; color: var(--sc-muted); font: 600 11px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
   .skycake .sc-tab[aria-pressed="true"] { color: var(--sc-ink); box-shadow: inset 0 3px 0 var(--sc-accent); }
-  .skycake .sc-caption { bottom: calc(76px + 8px); }
-  .skycake.sc-open-kinds .sc-caption, .skycake.sc-open-view .sc-caption { display: none; }
+  .skycake .sc-caption { bottom: calc(76px + 8px); z-index: 4; }
+  /* "Not for navigation" stays on screen: open sheets leave a strip at their foot for it. */
+  .skycake.sc-open-kinds .sc-kinds, .skycake.sc-open-view .sc-br { padding-bottom: 34px; }
 }
 
 /* The tooltip and the tags on the chart. Tags sit on the chart, so their colors don't change with the page theme. */

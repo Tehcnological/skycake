@@ -4,7 +4,7 @@
 import { KINDS, type AirspaceFile, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { add, pickAirport, remove, sceneOf, start, toggleDiagram, type Roam } from "./roam.js";
-import { resolve, type Scene } from "./scene.js";
+import { SceneError, resolve, type AreaRef, type Scene } from "./scene.js";
 import { search } from "./search.js";
 import type { Labels } from "./ui.js";
 import type { View } from "./viewer.js";
@@ -54,11 +54,14 @@ const ICONS = {
   close: ["M6 6l12 12M18 6 6 18"],
 };
 
-export function freeRoam(c: Context): void {
+/** Resolves once the first scene is showing. */
+export function freeRoam(c: Context): Promise<void> {
   const { fig, view: v, data, labels: L } = c;
   const has = (a: string) => !!data.airports.find((x) => x.id === a)?.diagram;
   let r: Roam = start(c.first, c.airport ?? undefined);
   let kinds: Kind[] = (c.first.raise ?? []).filter((x): x is Kind => typeof x === "string");
+  // Single areas the first scene raised stay raised; the type list only switches whole types.
+  const areaRefs: AreaRef[] = (c.first.raise ?? []).filter((x): x is AreaRef => typeof x !== "string");
   let tagsOn = c.first.tags ?? true;
   let scale = c.first.height ?? c.startScale;
   const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
@@ -119,10 +122,19 @@ export function freeRoam(c: Context): void {
   let files: Procedure[] = [];
   const refresh = async (now = false) => {
     const mine = ++ticket;
-    const scene: Scene = { ...sceneOf(r), raise: [...kinds], tags: tagsOn, height: scale as 1 | 4 };
-    const resolved = resolve(scene, data);
-    const loaded = await Promise.all(resolved.procedures.map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
+    const wanted = sceneOf(r);
+    const loaded = await Promise.all((wanted.procedures ?? []).map(async (p) => (await c.procedures(p.airport)).find((x) => x.name === p.name)));
     if (mine !== ticket) return;
+    // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
+    const scene: Scene = { ...wanted, raise: [...kinds, ...areaRefs], tags: tagsOn, height: scale as 1 | 4 };
+    let resolved;
+    try {
+      resolved = resolve(scene, data);
+    } catch (e) {
+      if (!(e instanceof SceneError)) throw e;
+      console.warn(`skycake: ${e.message}`);
+      return;
+    }
     files = loaded.filter((p): p is Procedure => !!p);
     drawChips();
     const diagram = r.airport !== null && has(r.airport);
@@ -232,5 +244,5 @@ export function freeRoam(c: Context): void {
   };
   c.fig.addEventListener("skycake-raised", (e) => onRaised((e as CustomEvent).detail.kind, (e as CustomEvent).detail.on));
   sheet(null);
-  refresh(true);
+  return refresh(true);
 }

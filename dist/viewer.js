@@ -426,6 +426,12 @@ export async function build(host, data, label, raised) {
             return procs.flatMap((p) => p.fixes).filter((f) => f.name === t.fix).slice(0, 1).map((f) => new THREE.Vector3(X(f.lon), nm(f.ft), Z(f.lat)));
         if ("procedure" in t)
             return procs.filter((p) => p.airport === t.procedure.airport && p.name === t.procedure.name).flatMap((p) => p.paths.flatMap((x) => x.pts.map(toLocal)));
+        if ("diagram" in t) {
+            const d = data.airports.find((a) => a.id === t.diagram)?.diagram;
+            if (!d)
+                return [];
+            return [[d.bounds.w, d.bounds.n], [d.bounds.e, d.bounds.n], [d.bounds.w, d.bounds.s], [d.bounds.e, d.bounds.s]].map(([lon, lat]) => new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat)));
+        }
         const [lat, lon] = t.point;
         return [new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat))];
     };
@@ -555,7 +561,12 @@ export async function build(host, data, label, raised) {
             approachTags.sort((x, y) => x.pri - y.pri);
             const plateDone = showDiagram(sc.diagram ? (data.airports.find((a) => a.id === sc.diagram)?.diagram ?? null) : null);
             const cam = sc.camera;
-            if (typeof cam === "object" && "azimuth" in cam) {
+            if (cam === null) {
+                // Leave the camera where it is; a procedure's height change still reframes what was framed.
+                if (framed)
+                    framed.procedures = procs.length > 0;
+            }
+            else if (typeof cam === "object" && "azimuth" in cam) {
                 // Placed directly: looking toward the azimuth (degrees true), tilt degrees above the horizon, distance in NM.
                 const [lat, lon] = cam.target;
                 const target = new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)) * world.scale.y, Z(lat));

@@ -2,7 +2,7 @@
 // chart only when the element comes into sight. Styles are in style.css, which the site loads.
 import type { AirspaceFile, Area, Kind } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
-import { freeRoamScene, shorthand, type Scene } from "./scene.js";
+import { firstScene, type Scene } from "./scene.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
@@ -135,5 +135,5 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  freeRoam({ fig, view: v, data, first: o.scene ?? shorthand(o, data) ?? freeRoamScene(data), airport, labels: L, procedures, startScale: START_SCALE });
+  await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE });
 }

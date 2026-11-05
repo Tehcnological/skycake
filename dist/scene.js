@@ -25,7 +25,7 @@ export function resolve(scene, data) {
     const diagram = scene.diagram ?? null;
     if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram)
         throw new SceneError(`no diagram for ${diagram}`);
-    return { camera: scene.camera ?? "fit", raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
+    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
 }
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export function freeRoamScene(data) {
@@ -37,7 +37,26 @@ export function shorthand(o, data) {
         return undefined;
     const scene = { camera: "fit", raise: o.types ?? freeRoamScene(data).raise };
     const airport = o.airport ?? "KPHX";
-    if (o.approach)
+    if (o.approach) {
         scene.procedures = [{ airport, name: o.approach }];
+        scene.camera = { frame: [{ procedure: { airport, name: o.approach } }] };
+    }
     return scene;
+}
+/**
+ * The first scene from mount()'s options. A name the data no longer has (an FAA cycle renamed an approach, a typo)
+ * falls back to free roam's first view, and warn() says why, so the embed still works.
+ */
+export function firstScene(o, data, warn) {
+    const scene = o.scene ?? shorthand(o, data) ?? freeRoamScene(data);
+    try {
+        resolve(scene, data);
+        return scene;
+    }
+    catch (e) {
+        if (!(e instanceof SceneError))
+            throw e;
+        warn(`skycake: ${e.message}; showing the whole chart instead`);
+        return freeRoamScene(data);
+    }
 }

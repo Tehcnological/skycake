@@ -39,3 +39,35 @@ test("a fix on two shown procedures gets one tag, the final's role and altitude 
   assert.equal(tags.filter((f) => f.name === "GIPSE").length, 1);
   assert.equal(tags.find((f) => f.name === "GIPSE")!.seg, "final");
 });
+
+test("the first scene's procedures and diagram are part of the state, with their own camera until something changes", () => {
+  const withIls: Scene = { raise: ["B"], camera: { frame: [{ procedure: ils }] }, procedures: [ils], diagram: "KPHX" };
+  let r = start(withIls);
+  assert.deepEqual(r.procedures, [ils]);
+  assert.equal(r.diagram, true);
+  assert.equal(r.airport, "KPHX");
+  assert.deepEqual(sceneOf(r).camera, withIls.camera);
+  r = add(r, eagul);
+  assert.deepEqual(sceneOf(r).procedures, [ils, eagul]);
+  r = remove(r, ils);
+  assert.deepEqual(sceneOf(r).procedures, [eagul]);
+  r = toggleDiagram(r, () => true);
+  assert.equal(sceneOf(r).diagram, undefined);
+});
+
+test("camera: an airport pick keeps it, the diagram frames itself, removing the last procedure goes back to the first view", () => {
+  const has = (a: string) => a === "KPHX";
+  let r = pickAirport(start(first), "KSDL", has);
+  assert.equal(sceneOf(r).camera, null);
+  r = toggleDiagram(pickAirport(r, "KPHX", has), has);
+  assert.deepEqual(sceneOf(r).camera, { frame: [{ diagram: "KPHX" }] });
+  r = remove(add(r, ils), ils);
+  assert.deepEqual(sceneOf(r).camera, "fit");
+});
+
+test("fix tags: the same runway fix name at two airports keeps both", () => {
+  const sdl: Procedure[] = JSON.parse(readFileSync(new URL("../data/phoenix/procedures/KSDL.json", import.meta.url), "utf8"));
+  const gyr: Procedure[] = JSON.parse(readFileSync(new URL("../data/phoenix/procedures/KGYR.json", import.meta.url), "utf8"));
+  const a = sdl.find((p) => p.fixes.some((f) => f.name === "RW03"))!, b = gyr.find((p) => p.fixes.some((f) => f.name === "RW03"))!;
+  assert.equal(fixTags([a, b]).filter((f) => f.name === "RW03").length, 2);
+});

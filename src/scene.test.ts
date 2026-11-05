@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { AirspaceFile } from "./airspace.js";
-import { SceneError, freeRoamScene, resolve, shorthand } from "./scene.js";
+import { SceneError, firstScene, freeRoamScene, resolve, shorthand } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
 
@@ -28,4 +28,18 @@ test("the old options still work as a first scene", () => {
   const s = shorthand({ types: ["B"], airport: "KSDL", approach: "RNAV (RNP) Z RWY 03" }, data)!;
   assert.deepEqual(s.raise, ["B"]);
   assert.deepEqual(s.procedures, [{ airport: "KSDL", name: "RNAV (RNP) Z RWY 03" }]);
+});
+
+test("the approach shorthand frames the approach", () => {
+  const s = shorthand({ approach: "ILS RWY 25L" }, data)!;
+  assert.deepEqual(s.camera, { frame: [{ procedure: { airport: "KPHX", name: "ILS RWY 25L" } }] });
+});
+
+test("a first scene with a name the data no longer has falls back to free roam and says why", () => {
+  const said: string[] = [];
+  const s = firstScene({ approach: "ILS OR LOC RWY 25L" }, data, (m) => said.push(m));
+  assert.deepEqual(s, freeRoamScene(data));
+  assert.match(said[0], /ILS OR LOC RWY 25L/);
+  assert.deepEqual(firstScene({ types: ["D"] }, data, () => assert.fail("no warning")).raise, ["D"]);
+  assert.equal(resolve({ camera: null }, data).camera, null);
 });
