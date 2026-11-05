@@ -54,11 +54,13 @@ html.skycake-full { overflow: hidden; }
 
 /* Corners (desktop). */
 .skycake .sc-tl, .skycake .sc-tr, .skycake .sc-br { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
-.skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; }
+/* A definite height (from the figure), so the airspace list can scroll inside it. */
+.skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; max-height: calc(100% - 2 * var(--sc-gap)); }
+.skycake .sc-tl .sc-pill { flex: none; }
 /* Above the view buttons; the shown procedures scroll when they do not fit. */
 .skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(380px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 216px); }
 .skycake .sc-br { right: var(--sc-gap); bottom: var(--sc-gap); }
-.skycake .sc-kinds { display: none; flex-direction: column; gap: 2px; padding: 10px; max-height: calc(100% - 80px); overflow: auto; }
+.skycake .sc-kinds { display: none; flex-direction: column; gap: 2px; padding: 10px; min-height: 0; overflow: auto; }
 .skycake.sc-open-kinds .sc-kinds { display: flex; }
 .skycake .sc-caption { position: absolute; left: var(--sc-gap); bottom: 12px; z-index: 2; margin: 0; font: 500 11px var(--sc-mono); color: var(--sc-soft); text-shadow: 0 1px 2px rgb(0 0 0 / 0.8); pointer-events: none; }
 
