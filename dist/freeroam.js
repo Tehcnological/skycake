@@ -233,6 +233,8 @@ export function freeRoam(c) {
     });
     chartButton.addEventListener("click", () => {
         chart = chart === "tac" ? "sectional" : "tac";
+        // Comparing the charts: the camera stays on what is being looked at.
+        r = { ...r, camera: null };
         chartButton.textContent = L.charts[chart];
         if (caption)
             caption.textContent = L.caption(data.edition, chart);

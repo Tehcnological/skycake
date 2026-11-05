@@ -100,7 +100,8 @@ airport = () => { }) {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.minDistance = 3;
-    controls.maxDistance = 300;
+    // Far enough back to see the whole area in a tall, narrow view.
+    controls.maxDistance = Math.max(300, 4 * Math.max(width, depth));
     controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the chart
     let dirty = true;
     controls.addEventListener("change", () => (dirty = true));
