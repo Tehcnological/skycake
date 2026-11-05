@@ -18,9 +18,11 @@ export type Scene = {
   diagram?: string | null;
   height?: 1 | 4;
   tags?: boolean;
+  /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere. */
+  chart?: "tac" | "sectional";
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
-export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean };
+export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean; chart: "tac" | "sectional" };
 
 export class SceneError extends Error {}
 
@@ -42,7 +44,7 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
-  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true };
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: data.charts.tac ? (scene.chart ?? "tac") : "sectional" };
 }
 
 function target(t: Target, data: AirspaceFile) {

@@ -24,7 +24,11 @@ export type Labels = {
     fafToMap: string;
     floor700: string;
     view: string;
-    caption: (edition: string) => string;
+    /** Under the view: the charts shown and their edition. */
+    caption: (edition: string, chart: "tac" | "sectional") => string;
+    /** The chart button's name in words, and its text for each chart. */
+    chart: string;
+    charts: Record<"tac" | "sectional", string>;
 };
 export declare const LABELS: Labels;
 export type Options = {

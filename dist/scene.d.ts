@@ -38,6 +38,8 @@ export type Scene = {
     diagram?: string | null;
     height?: 1 | 4;
     tags?: boolean;
+    /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere. */
+    chart?: "tac" | "sectional";
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
 export type Resolved = {
@@ -47,6 +49,7 @@ export type Resolved = {
     diagram: string | null;
     height: 1 | 4;
     tags: boolean;
+    chart: "tac" | "sectional";
 };
 export declare class SceneError extends Error {
 }

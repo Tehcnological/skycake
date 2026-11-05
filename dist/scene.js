@@ -29,7 +29,7 @@ export function resolve(scene, data) {
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
             target(t, data);
-    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true };
+    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: data.charts.tac ? (scene.chart ?? "tac") : "sectional" };
 }
 function target(t, data) {
     if ("area" in t && !data.areas.some((a) => a.id === t.area))

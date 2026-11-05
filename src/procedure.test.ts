@@ -361,6 +361,7 @@ test("built data: procedures for every airport on the chart, all inside it, with
   const dem = readFileSync(new URL(`../data/phoenix/${f.dem.url}`, import.meta.url));
   assert.equal(dem.length, f.dem.nx * f.dem.ny * 2);
   const ft = new Int16Array(dem.buffer, dem.byteOffset, dem.length / 2);
-  // Lowest and highest ground in the Phoenix area, in feet.
-  assert.ok(Math.min(...ft) > 300 && Math.min(...ft) < 1100 && Math.max(...ft) > 6000 && Math.max(...ft) < 9000);
+  // Lowest and highest ground from Phoenix to Tucson (the Santa Catalinas reach about 9,150 ft), in feet.
+  const lo = ft.reduce((a, b) => Math.min(a, b)), hi = ft.reduce((a, b) => Math.max(a, b));
+  assert.ok(lo > 300 && lo < 1100 && hi > 8000 && hi < 9500, `${lo} to ${hi}`);
 });

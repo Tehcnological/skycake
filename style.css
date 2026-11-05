@@ -46,7 +46,7 @@ html.skycake-full { overflow: hidden; }
 .skycake .sc-pill { display: flex; align-items: center; gap: 10px; align-self: flex-start; padding: 0 18px; font: 600 13px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
 .skycake .sc-pill[aria-expanded="true"], .skycake .sc-round[aria-pressed="true"] { background: var(--sc-accent-bg); }
 .skycake .sc-round { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
-.skycake .sc-round.sc-scale { font: 500 14px var(--sc-mono); }
+.skycake .sc-round.sc-scale, .skycake .sc-round.sc-chart { font: 500 14px var(--sc-mono); }
 .skycake .sc-row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--sc-r-row); font-size: 14px; color: var(--sc-soft); cursor: pointer; }
 .skycake .sc-row span { flex: 1; }
 .skycake .sc-row input { width: 18px; height: 18px; margin: 0; accent-color: var(--sc-accent); }
@@ -157,7 +157,7 @@ html.skycake-full { overflow: hidden; }
 
 /* Phones have no hover: the names sit under the buttons in the View sheet. */
 @media (max-width: 860px) {
-  .skycake .sc-br { gap: 28px; }
-  .skycake .sc-round[data-tip]::after { right: auto; left: 50%; top: calc(100% + 6px); width: 72px; transform: translateX(-50%); padding: 0; border: 0; background: none; color: var(--sc-muted); font: 600 10px/1.25 var(--sc-head); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; white-space: normal; opacity: 1; }
+  .skycake .sc-br { gap: 20px; }
+  .skycake .sc-round[data-tip]::after { right: auto; left: 50%; top: calc(100% + 6px); width: 64px; transform: translateX(-50%); padding: 0; border: 0; background: none; color: var(--sc-muted); font: 600 10px/1.25 var(--sc-head); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; white-space: normal; opacity: 1; }
   .skycake.sc-open-view .sc-br { padding-bottom: 66px; }
 }

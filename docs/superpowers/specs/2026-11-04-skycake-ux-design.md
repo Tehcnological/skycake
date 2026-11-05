@@ -46,7 +46,8 @@ The view fills the embed. Controls float over it in small panels with the site's
 
 - **Desktop (wider than 860 px):** panels sit in the corners: top left for the mode's main control, top right for search or leave, bottom for captions, players and answers.
 - **Phone:** the view takes everything above a 76 px bar along the bottom. In free roam that bar is the tab bar; in a walkthrough it is the player; in a quiz it is the answer area. Menus open as sheets above the bar.
-- **Caption line:** "FAA TAC <edition> · Not for navigation" stays on screen in every mode (placeholder wording).
+- **Caption line:** "FAA TAC and sectional <edition> · Not for navigation" (or "FAA sectional ...") stays on screen in every mode (placeholder wording).
+- **Area and charts** (Chris, 2026-11-05): Phoenix to Tucson. The TAC shows over its own map area and the Phoenix sectional outside it; a Chart button (View) switches to the sectional everywhere. Scenes take `chart: "tac" | "sectional"`.
 
 ## Free roam
 

@@ -20,7 +20,9 @@ export const LABELS = {
     fafToMap: "FAF to MAP",
     floor700: "Floor 700 AGL",
     view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
-    caption: (edition) => `FAA TAC ${edition} · Not for navigation`,
+    caption: (edition, chart) => `FAA ${chart === "tac" ? "TAC and sectional" : "sectional"} ${edition} · Not for navigation`,
+    chart: "Chart",
+    charts: { tac: "TAC", sectional: "SEC" },
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -37,7 +39,7 @@ function h(tag, attrs = {}, ...kids) {
 }
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host, o) {
-    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups } };
+    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts } };
     const base = new URL(o.base, location.href);
     const url = (p) => new URL(p, base).href;
     const data = await fetch(url("area.json")).then((r) => {
@@ -46,14 +48,14 @@ export async function mount(host, o) {
         return r.json();
     });
     // The viewer takes absolute URLs.
-    data.chart = url(data.chart);
+    data.charts = { sectional: url(data.charts.sectional), ...(data.charts.tac && { tac: { ...data.charts.tac, url: url(data.charts.tac.url) } }) };
     data.dem = { ...data.dem, url: url(data.dem.url) };
     for (const a of data.airports)
         if (a.diagram)
             a.diagram = { ...a.diagram, url: url(a.diagram.url) };
     const tip = h("div", { class: "tip", hidden: true });
     const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
-    const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition)));
+    const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, data.charts.tac ? "tac" : "sectional")));
     host.replaceChildren(fig);
     // three.js and the chart load only when the view comes into sight.
     await new Promise((done) => {

@@ -63,6 +63,8 @@ export function freeRoam(c: Context): Promise<void> {
   let shown = false;
   let tagsOn = c.first.tags ?? true;
   let scale = c.first.height ?? c.startScale;
+  // The TAC (over its map area, sectional outside it) or the sectional everywhere.
+  let chart: "tac" | "sectional" = data.charts.tac ? (c.first.chart ?? "tac") : "sectional";
   const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
 
   // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
@@ -88,8 +90,11 @@ export function freeRoam(c: Context): Promise<void> {
   const diagramButton = round(L.diagram, L.diagram, [icon(ICONS.diagram)]);
   const tagsButton = round(L.tags, L.tags, [icon(ICONS.tags)]);
   const scaleButton = round(L.heightScale(scale), L.height, [`${scale}×`], "sc-scale");
+  const chartButton = round(L.chart, L.chart, [L.charts[chart]], "sc-chart");
+  chartButton.hidden = !data.charts.tac;
   const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
-  const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, fullButton);
+  const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, chartButton, fullButton);
+  const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
   // Phone tab bar.
   const tab = (label: string, paths: string[]) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
@@ -124,7 +129,7 @@ export function freeRoam(c: Context): Promise<void> {
     const [loaded, framing] = await Promise.all([load(wanted.procedures ?? []), load(framedOnly(wanted))]);
     if (mine !== ticket) return;
     // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
-    const scene: Scene = { ...wanted, raise: raiseNow(c.first, shown ? v.raisedAreas() : null), tags: tagsOn, height: scale as 1 | 4 };
+    const scene: Scene = { ...wanted, raise: raiseNow(c.first, shown ? v.raisedAreas() : null), tags: tagsOn, height: scale as 1 | 4, chart };
     let resolved;
     try {
       resolved = resolve(scene, data);
@@ -176,6 +181,8 @@ export function freeRoam(c: Context): Promise<void> {
       for (const hit of g.hits) {
         results.append(option([hit.procedure.name], () => {
           r = add(r, { airport: hit.airport, name: hit.procedure.name }, has);
+          // The list follows the airport the diagram now follows.
+          if (browse !== null) browse = hit.airport;
           input.value = "";
           results.hidden = true;
           refresh();
@@ -239,6 +246,14 @@ export function freeRoam(c: Context): Promise<void> {
     scaleButton.setAttribute("aria-label", L.heightScale(scale));
     v.exaggerate(scale);
   });
+
+  chartButton.addEventListener("click", () => {
+    chart = chart === "tac" ? "sectional" : "tac";
+    chartButton.textContent = L.charts[chart];
+    if (caption) caption.textContent = L.caption(data.edition, chart);
+    refresh();
+  });
+  if (caption) caption.textContent = L.caption(data.edition, chart);
 
   // iPhone Safari has no element fullscreen, so the class fills the window and the real thing is added where it exists.
   const setFull = (on: boolean) => {

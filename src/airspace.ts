@@ -12,7 +12,9 @@ export type Bounds = { s: number; w: number; n: number; e: number };
 /** Terrain: rows north to south, 16-bit little-endian feet MSL. */
 export type Dem = { url: string; nx: number; ny: number };
 /** One area's data (area.json). URLs are relative to the area's folder; each airport's procedures are in procedures/<id>.json. */
-export type AirspaceFile = { edition: string; bounds: Bounds; ground: number; chart: string; dem: Dem; areas: Area[]; airports: Airport[] };
+/** The charts under the airspace: the sectional over the whole area, and the TAC over its own map area if it has one. */
+export type Charts = { sectional: string; tac?: { url: string; bounds: Bounds } };
+export type AirspaceFile = { edition: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[] };
 
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;

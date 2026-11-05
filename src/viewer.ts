@@ -205,10 +205,35 @@ export async function build(
     return geo;
   };
 
-  const tex = await new THREE.TextureLoader().loadAsync(data.chart);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  const chart = new THREE.Mesh(ground, new THREE.MeshLambertMaterial({ map: tex, alphaMap: softEdge(), transparent: true }));
+  // The sectional everywhere; the TAC, when on, over its own map area.
+  const load = async (url: string) => {
+    const t = await new THREE.TextureLoader().loadAsync(url);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return t;
+  };
+  const tac = data.charts.tac;
+  const [sectional, tacTex] = await Promise.all([load(data.charts.sectional), tac ? load(tac.url) : Promise.resolve(new THREE.Texture())]);
+  const span = (lo: number, hi: number, a: number, b: number) => [(lo - a) / (b - a), (hi - a) / (b - a)];
+  const [u0, u1] = tac ? span(tac.bounds.w, tac.bounds.e, b.w, b.e) : [0, 0];
+  const [v0, v1] = tac ? span(tac.bounds.s, tac.bounds.n, b.s, b.n) : [0, 0];
+  const chartUniforms = { tacMap: { value: tacTex }, tacRect: { value: new THREE.Vector4(u0, v0, u1, v1) }, tacOn: { value: tac ? 1 : 0 } };
+  const material = new THREE.MeshLambertMaterial({ map: sectional, alphaMap: softEdge(), transparent: true });
+  // Both charts are sampled everywhere and mixed, so mipmaps stay right along the TAC's edge.
+  material.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, chartUniforms);
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform sampler2D tacMap;\nuniform vec4 tacRect;\nuniform float tacOn;")
+      .replace(
+        "#include <map_fragment>",
+        `vec4 sectionalColor = texture2D( map, vMapUv );
+        vec2 tacUv = ( vMapUv - tacRect.xy ) / ( tacRect.zw - tacRect.xy );
+        vec4 tacColor = texture2D( tacMap, clamp( tacUv, 0.0, 1.0 ) );
+        float onTac = tacOn * step( 0.0, tacUv.x ) * step( tacUv.x, 1.0 ) * step( 0.0, tacUv.y ) * step( tacUv.y, 1.0 );
+        diffuseColor *= mix( sectionalColor, tacColor, onTac );`,
+      );
+  };
+  const chart = new THREE.Mesh(ground, material);
   chart.renderOrder = -1;
   world.add(chart);
 
@@ -571,6 +596,7 @@ export async function build(
         world.scale.y = sc.height;
       }
       tagsOn = sc.tags;
+      chartUniforms.tacOn.value = sc.chart === "tac" && tac ? 1 : 0;
       clearRoute();
       for (const a of procs) {
         for (const p of a.paths) {
