@@ -18,6 +18,8 @@ export const LABELS = {
     heightScale: (n) => `Height scale ${n}×`,
     height: "Height scale",
     fullScreen: "Full screen",
+    open: "Open 3D view",
+    close: "Close",
     finalCourse: "Final course",
     glidepath: "Glidepath",
     fafToMap: "FAF to MAP",

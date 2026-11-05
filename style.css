@@ -29,9 +29,18 @@
   background: var(--sc-side);
   color: var(--sc-ink);
   font-family: var(--sc-sans);
+  /* No double tap zoom on the controls, no selecting or long-press menus while using the map. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
-html.skycake-full { overflow: hidden; }
-.skycake.full { position: fixed; inset: 0; z-index: 100; border: 0; border-radius: 0; }
+.skycake input { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavior: none; }
+/* Open full screen, every gesture belongs to the view; only the lists still scroll. */
+.skycake.full { position: fixed; inset: 0; z-index: 100; border: 0; border-radius: 0; touch-action: none; }
+.skycake.full .sc-kinds, .skycake.full .sc-results, .skycake.full .sc-chips { touch-action: pan-y; }
 .skycake .view { position: relative; height: max(560px, calc(100svh - 200px)); cursor: grab; touch-action: none; overflow: hidden; }
 .skycake.full .view { flex: 1; height: auto; min-height: 0; }
 .skycake .view canvas { display: block; width: 100%; height: 100%; }
@@ -89,10 +98,14 @@ html.skycake-full { overflow: hidden; }
 
 /* Phone tab bar: hidden on desktop. */
 .skycake .sc-tabs { display: none; }
+/* The map in the page on a phone: one big button the page scrolls past. */
+.skycake .sc-open { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.skycake.sc-preview .sc-open { display: flex; }
+.skycake .sc-open .sc-pill { align-self: center; }
+.skycake.sc-preview .sc-tl, .skycake.sc-preview .sc-tr, .skycake.sc-preview .sc-br, .skycake.sc-preview .sc-tabs { display: none; }
 
 @media (max-width: 860px) {
   .skycake { --sc-gap: 12px; }
-  /* A swipe on the view orbits instead of scrolling, so leave room to scroll past it. */
   .skycake .view { height: 72svh; }
   .skycake .sc-tl .sc-pill { display: none; }
   .skycake .sc-tl { left: 0; right: 0; top: auto; bottom: 76px; width: auto; }
@@ -101,10 +114,13 @@ html.skycake-full { overflow: hidden; }
   .skycake .sc-tr { left: var(--sc-gap); right: var(--sc-gap); width: auto; max-height: calc((100% - 76px) * 0.6); }
   .skycake .sc-br { display: none; left: 0; right: 0; bottom: 76px; flex-direction: row; justify-content: center; gap: 12px; padding: 14px; border-top: 1px solid var(--sc-frame); border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; background: var(--sc-panel); }
   .skycake.sc-open-view .sc-br { display: flex; }
-  .skycake .sc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 76px; flex: none; border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
+  .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); height: 76px; flex: none; border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
   .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; background: none; color: var(--sc-soft); font: 600 11px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
   .skycake .sc-tab[aria-pressed="true"] { color: var(--sc-ink); box-shadow: inset 0 3px 0 var(--sc-accent); }
   .skycake .sc-caption { bottom: calc(76px + 8px); z-index: 4; }
+  .skycake.sc-preview .sc-caption { bottom: 12px; }
+  /* iPhone Safari zooms the page on focusing anything smaller. */
+  .skycake .sc-search input { font-size: 16px; }
   /* "Not for navigation" stays on screen: open sheets leave a strip at their foot for it. */
   .skycake.sc-open-kinds .sc-kinds, .skycake.sc-open-view .sc-br { padding-bottom: 34px; }
 }
@@ -144,6 +160,10 @@ html.skycake-full { overflow: hidden; }
 /* Airport tags: the field's id; a tap lists its procedures. */
 .skycake .view .tag.apt { padding: 2px 8px; border: 1.5px solid #ffffffcc; border-radius: 999px; background: #14171cf0; color: #fff; font: 700 11px/1.25 var(--sc-mono); pointer-events: auto; cursor: pointer; }
 .skycake .view .tag.apt:hover, .skycake .view .tag.apt:focus-visible { background: #2a3038; outline: none; }
+/* So a finger can start a drag on a tag. The viewer finds the tag on a tap. */
+@media (pointer: coarse) {
+  .skycake .view .tag.apt { pointer-events: none; }
+}
 
 /* The airport list and an airport's procedures in the results. */
 .skycake .sc-airport { display: flex; align-items: center; gap: 10px; }

@@ -1,6 +1,7 @@
 // 3D airspace over the FAA TAC: the chart, draped over real terrain, is the ground. Areas lie flat (the chart prints them)
 // until raised, then stand from floor to ceiling in the chart's own colors and line styles. Approaches draw over it.
-// Drag to orbit, scroll or pinch to zoom, hover or tap for a label, tap to raise or lower. Units are nautical miles;
+// Mouse: drag to orbit, scroll to zoom. Touch: one finger moves the map, pinch zooms, a twist turns, two fingers up or
+// down tilt. Hover or tap for a label, tap to raise or lower. Units are nautical miles;
 // heights are stretched (exaggerate) so shelves read. Draw order: terrain, then lines and approaches, then a depth-only
 // pass, then the fills, so only the nearest surface of a stack is tinted and shelves read as one piece of glass.
 import * as THREE from "three";
@@ -12,6 +13,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { clipRing, deepest, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Point, Procedure, Segment } from "./procedure.js";
+import { isTap, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import type { Resolved, Target } from "./scene.js";
 
@@ -142,6 +144,9 @@ export async function build(
   // Far enough back to see the whole area in a tall, narrow view.
   controls.maxDistance = Math.max(300, 4 * Math.max(width, depth));
   controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the chart
+  controls.screenSpacePanning = false; // a right drag slides over the chart, not up off it
+  controls.zoomToCursor = true;
+  controls.touches = { ONE: null, TWO: null }; // touch is handled below, as on a maps app
   let dirty = true;
   controls.addEventListener("change", () => (dirty = true));
 
@@ -456,6 +461,7 @@ export async function build(
   // degrees above the horizon (90 looks straight down with north up).
   let fly: { p0: THREE.Vector3; p1: THREE.Vector3; t0: THREE.Vector3; t1: THREE.Vector3; t: number } | null = null;
   const frame = (spots: THREE.Vector3[], tiltDeg = 32, now = false) => {
+    free = false;
     const box = new THREE.Box3();
     const scaled = spots.map((s) => new THREE.Vector3(s.x, s.y * world.scale.y, s.z));
     for (const s of scaled) box.expandByPoint(s);
@@ -490,6 +496,25 @@ export async function build(
   };
   // What is framed now, so a resize can frame it again.
   let framed: { spots: THREE.Vector3[]; tilt: number } | null = null;
+  // Once someone moves the view it is theirs: no fly-in finishes, no resize refits it (a phone's toolbar hiding is a
+  // resize), and they can't take it off the chart.
+  let free = false;
+  const takeOver = () => {
+    fly = null;
+    framed = null;
+    free = true;
+  };
+  controls.addEventListener("start", takeOver);
+  const keepOnChart = () => {
+    const { target } = controls;
+    const dx = THREE.MathUtils.clamp(target.x, -width / 2, width / 2) - target.x, dz = THREE.MathUtils.clamp(target.z, -depth / 2, depth / 2) - target.z;
+    if (!dx && !dz) return;
+    target.x += dx;
+    target.z += dz;
+    camera.position.x += dx;
+    camera.position.z += dz;
+    dirty = true;
+  };
   const whole = () => [new THREE.Vector3(-width / 2, 0, -depth / 2), new THREE.Vector3(width / 2, 0, depth / 2)];
   const ringSpots = (l: Live) => l.rings.flat().map(([x, z]) => new THREE.Vector3(x, nm(l.area.ceiling), z));
 
@@ -611,11 +636,109 @@ export async function build(
   el3d.addEventListener("pointermove", (e) => e.pointerType === "mouse" && !e.buttons && tell(pick(e), e));
   el3d.addEventListener("pointerleave", () => label(null, 0, 0));
   // A tap (not a drag): a flat area rises; a raised one is picked, then lowers on the next tap.
-  let down = [0, 0];
+  let down = [0, 0], downAt = 0, most = 0;
   let picked: Live | null = null;
-  el3d.addEventListener("pointerdown", (e) => (down = [e.clientX, e.clientY]));
+  const fingers = new Map<number, Pt>();
+  let two: ReturnType<typeof twoFingers> | null = null;
+  // Exactly two fingers on the view start a fresh gesture, also when a resting third one lifts.
+  const regrip = () => {
+    const [a, b] = [...fingers.values()];
+    two = fingers.size === 2 ? twoFingers(a, b) : null;
+  };
+  const at = (e: PointerEvent): Pt => {
+    const r = el3d.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  el3d.addEventListener("pointerdown", (e) => {
+    if (!fingers.size) {
+      down = [e.clientX, e.clientY];
+      downAt = performance.now();
+      most = 0;
+    }
+    if (e.pointerType !== "touch") {
+      most = 1;
+      return;
+    }
+    fingers.set(e.pointerId, at(e));
+    most = Math.max(most, fingers.size);
+    regrip();
+    // Every finger's lift must reach the view, even over the tab bar, or it stays counted as down.
+    el3d.setPointerCapture(e.pointerId);
+  });
+  // The spot on the ground under a point on screen. Near the horizon a finger has none to hold.
+  const groundUnder = ([x, y]: Pt): THREE.Vector3 | null => {
+    ray.setFromCamera(new THREE.Vector2((x / el3d.clientWidth) * 2 - 1, -(y / el3d.clientHeight) * 2 + 1), camera);
+    const { origin, direction: d } = ray.ray;
+    if (d.y > -0.02) return null;
+    const t = (controls.target.y - origin.y) / d.y;
+    return t > 0 && t <= controls.maxDistance ? origin.clone().addScaledVector(d, t) : null;
+  };
+  // Keeps the ground under a finger as it moves; returns that spot.
+  const slide = (from: Pt, to: Pt) => {
+    const [a, c] = [groundUnder(from), groundUnder(to)];
+    if (!a || !c) return null;
+    const shift = a.clone().sub(c);
+    camera.position.add(shift);
+    controls.target.add(shift);
+    return a;
+  };
+  const UP = new THREE.Vector3(0, 1, 0);
+  const touchMoved = () => {
+    label(null, 0, 0);
+    keepOnChart();
+    controls.update();
+    camera.updateMatrixWorld();
+    dirty = true;
+  };
+  // Run once a frame from the loop below, when both fingers' moves have arrived.
+  let twoMoved = false;
+  const readTwoFingers = () => {
+    twoMoved = false;
+    if (!two) return;
+    const [a, b] = [...fingers.values()];
+    const step = two(a, b);
+    if (!step) return;
+    takeOver();
+    if (step.kind === "tilt") {
+      view.orbit(0, (-step.dy / el3d.clientHeight) * Math.PI * 0.75);
+    } else {
+      // About the spot under the fingers, so it stays under them.
+      const p = slide(step.from, step.mid) ?? controls.target.clone();
+      const off = camera.position.distanceTo(controls.target);
+      const scale = THREE.MathUtils.clamp(off / step.zoom, controls.minDistance, controls.maxDistance) / off;
+      for (const q of [camera.position, controls.target]) q.sub(p).multiplyScalar(scale).applyAxisAngle(UP, step.twist).add(p);
+    }
+    touchMoved();
+  };
+  el3d.addEventListener("pointermove", (e) => {
+    const was = fingers.get(e.pointerId);
+    if (!was) return;
+    const now = at(e);
+    fingers.set(e.pointerId, now);
+    if (fingers.size !== 1) {
+      twoMoved = true;
+      return;
+    }
+    if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 3) return;
+    takeOver();
+    slide(was, now);
+    touchMoved();
+  });
+  el3d.addEventListener("pointercancel", (e) => {
+    fingers.delete(e.pointerId);
+    regrip();
+  });
   el3d.addEventListener("pointerup", (e) => {
-    if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return;
+    const touch = fingers.delete(e.pointerId);
+    regrip();
+    if (fingers.size) return;
+    if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 })) return;
+    // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
+    const tag = airportTags.find((t) => {
+      const r = t.el.getBoundingClientRect();
+      return t.el.style.visibility === "visible" && e.clientX > r.left - 6 && e.clientX < r.right + 6 && e.clientY > r.top - 6 && e.clientY < r.bottom + 6;
+    });
+    if (tag) return airport(tag.el.textContent!);
     const l = pick(e);
     if (l && l.goal === 1 && picked === l) {
       set(l, false);
@@ -662,14 +785,14 @@ export async function build(
       s.theta += azimuth;
       s.phi = Math.min(Math.max(s.phi + polar, Math.max(controls.minPolarAngle, 0.05)), controls.maxPolarAngle);
       camera.position.copy(controls.target).add(off.setFromSpherical(s));
-      fly = null;
+      takeOver();
       dirty = true;
     },
     zoom: (factor) => {
       const off = camera.position.clone().sub(controls.target);
       off.setLength(Math.min(Math.max(off.length() * factor, controls.minDistance), controls.maxDistance));
       camera.position.copy(controls.target).add(off);
-      fly = null;
+      takeOver();
       dirty = true;
     },
     raiseArea: (id, on) => {
@@ -710,6 +833,7 @@ export async function build(
         const [az, t] = [(cam.azimuth * Math.PI) / 180, (cam.tilt * Math.PI) / 180];
         const p1 = target.clone().add(new THREE.Vector3(-Math.sin(az) * Math.cos(t), Math.sin(t), Math.cos(az) * Math.cos(t)).multiplyScalar(cam.distance));
         framed = null;
+        free = false;
         if (now || still) {
           camera.position.copy(p1);
           controls.target.copy(target);
@@ -749,6 +873,7 @@ export async function build(
       l.group.visible = l.t > 0 && inMode(l);
       l.group.scale.y = Math.max(ease, 0.001);
     }
+    if (twoMoved) readTwoFingers();
     if (fly) {
       fly.t = Math.min(1, fly.t + dt / 0.7);
       const e = fly.t * fly.t * (3 - 2 * fly.t);
@@ -757,6 +882,7 @@ export async function build(
       dirty = true;
       if (fly.t === 1) fly = null;
     }
+    if (free) keepOnChart();
     controls.update();
     if (!dirty) return;
     dirty = false;
