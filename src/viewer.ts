@@ -507,7 +507,8 @@ export async function build(
     // March down the ray to the terrain; three's own raycast would test every triangle.
     const { origin, direction: d } = ray.ray;
     if (d.y >= 0) return null;
-    for (let s = 0, p = origin.clone(); s < 800; s++) {
+    // Steps of 0.5 NM, as far as the camera can be from the chart.
+    for (let s = 0, p = origin.clone(), steps = Math.ceil((controls.maxDistance + Math.max(width, depth)) / 0.5); s < steps; s++) {
       p.addScaledVector(d, 0.5);
       if (p.y > groundAt(p.x, p.z) * world.scale.y) continue;
       return tappable.find((l) => l.goal === 0 && l.rings.some((ring) => inRing([p.x, p.z], ring))) ?? null;

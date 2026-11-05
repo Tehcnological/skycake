@@ -152,7 +152,32 @@ function rings(g: Feature["geometry"]): Ring[] {
   );
 }
 
-async function airspace(): Promise<Area[]> {
+// The highest ground under a set of rings ([lat, lon]), from the terrain grid: the base of a Class E surface area, whose
+// top is drawn where the 700 ft floor around it starts.
+function highestGround(ft: Int16Array, rs: Ring[]): number {
+  let top = -Infinity;
+  for (const ring of rs) {
+    const lats = ring.map((p) => p[0]), lons = ring.map((p) => p[1]);
+    const j0 = Math.max(0, Math.floor(((BOUNDS.n - Math.max(...lats)) / (BOUNDS.n - BOUNDS.s)) * (DEM.ny - 1)));
+    const j1 = Math.min(DEM.ny - 1, Math.ceil(((BOUNDS.n - Math.min(...lats)) / (BOUNDS.n - BOUNDS.s)) * (DEM.ny - 1)));
+    const i0 = Math.max(0, Math.floor(((Math.min(...lons) - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * (DEM.nx - 1)));
+    const i1 = Math.min(DEM.nx - 1, Math.ceil(((Math.max(...lons) - BOUNDS.w) / (BOUNDS.e - BOUNDS.w)) * (DEM.nx - 1)));
+    for (let j = j0; j <= j1; j++) {
+      for (let i = i0; i <= i1; i++) {
+        const lat = BOUNDS.n - (j / (DEM.ny - 1)) * (BOUNDS.n - BOUNDS.s), lon = BOUNDS.w + (i / (DEM.nx - 1)) * (BOUNDS.e - BOUNDS.w);
+        let inside = false;
+        for (let k = 0, m = ring.length - 1; k < ring.length; m = k++) {
+          const [ya, xa] = ring[k], [yb, xb] = ring[m];
+          if (ya > lat !== yb > lat && lon < ((xb - xa) * (lat - ya)) / (yb - ya) + xa) inside = !inside;
+        }
+        if (inside) top = Math.max(top, ft[j * DEM.nx + i]);
+      }
+    }
+  }
+  return Number.isFinite(top) ? top : GROUND;
+}
+
+async function airspace(ground: Int16Array): Promise<Area[]> {
   const areas: Omit<Area, "id">[] = [];
   for (const f of await query("Class_Airspace")) {
     const p = f.properties;
@@ -162,8 +187,9 @@ async function airspace(): Promise<Area[]> {
     // Class E has no ceiling of its own (-9998): surface areas are drawn up to where the 700 ft floor starts,
     // and the 700 ft area is a sheet.
     const upper = Number(p.UPPER_VAL);
-    const ceiling = kind === "E" ? GROUND + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND));
-    areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
+    const rs = rings(f.geometry);
+    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND));
+    areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rs });
   }
   for (const f of await query("Special_Use_Airspace")) {
     const p = f.properties;
@@ -227,6 +253,7 @@ async function terrain() {
   await mkdir(OUT, { recursive: true });
   await writeFile(join(OUT, "dem.bin"), new Uint8Array(ft.buffer));
   console.log(`terrain ${DEM.nx}x${DEM.ny}, ${ft.reduce((a, b) => Math.min(a, b))} to ${ft.reduce((a, b) => Math.max(a, b))} ft`);
+  return ft;
 }
 
 // ---- Procedures from the current CIFP cycle (every 28 days, on the same dates as the charts): approaches, departures
@@ -310,9 +337,9 @@ if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-on
   await chart(SECTIONAL_URL, "SEC.tif", BOUNDS, "sectional.webp");
   await chart(TAC_URL, "TAC.tif", TAC_AREA, "tac.webp");
 }
-await terrain();
+const ground = await terrain();
 if (process.argv.includes("--terrain-only")) process.exit(0);
-const areas = await airspace();
+const areas = await airspace(ground);
 const airports = await procedures();
 await diagrams(airports);
 const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: TAC_AREA } }, dem: { url: "dem.bin", ...DEM }, areas, airports };

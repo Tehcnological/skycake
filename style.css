@@ -57,8 +57,8 @@ html.skycake-full { overflow: hidden; }
 /* A definite height (from the figure), so the airspace list can scroll inside it. */
 .skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; max-height: calc(100% - 2 * var(--sc-gap)); }
 .skycake .sc-tl .sc-pill { flex: none; }
-/* Above the view buttons; the shown procedures scroll when they do not fit. */
-.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(380px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 216px); }
+/* Above the five view buttons (5 x 48 px and their gaps); the shown procedures scroll when they do not fit. */
+.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(380px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 272px); }
 .skycake .sc-br { right: var(--sc-gap); bottom: var(--sc-gap); }
 .skycake .sc-kinds { display: none; flex-direction: column; gap: 2px; padding: 10px; min-height: 0; overflow: auto; }
 .skycake.sc-open-kinds .sc-kinds { display: flex; }
