@@ -15,7 +15,8 @@ export function parseAirways(text, b) {
     // By area code too: one name can be two separate lists, with no leg between them.
     const routes = new Map();
     for (const l of lines) {
-        if (l.slice(4, 6) !== "ER")
+        // Column 39: 0 or 1 is the primary record, anything else a continuation with no fix of its own.
+        if (l.slice(4, 6) !== "ER" || !"01".includes(l[38]))
             continue;
         const key = l.slice(1, 4) + l.slice(13, 18);
         if (!routes.has(key))

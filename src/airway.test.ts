@@ -69,6 +69,13 @@ test("a leg with a fix that has no position, or that jumps the date line, draws 
   assert.deepEqual(airways, []);
 });
 
+test("a continuation record is not a fix: the leg runs on to the next primary record", () => {
+  const primary = leg("V1", 10, "ONEEE", "08000");
+  const continuation = primary.slice(0, 38) + "2" + primary.slice(39);
+  const { airways } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), primary, continuation, leg("V1", 20, "TWOOO", "", "", { desc: "EE  " }));
+  assert.deepEqual(airways[0].legs, [{ pts: [[31, -111], [32, -110]], ft: 8000 }]);
+});
+
 test("the same name under two area codes is one airway, without a leg between the two lists", () => {
   const { airways } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), fix("THREE", 33, -109), fix("FOURR", 33.5, -108.5), leg("A1", 10, "ONEEE", "08000", "", { area: "CAN" }), leg("A1", 20, "TWOOO", "", "", { area: "CAN" }), leg("A1", 10, "THREE", "09000"), leg("A1", 20, "FOURR", ""));
   assert.equal(airways.length, 1);
