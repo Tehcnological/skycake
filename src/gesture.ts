@@ -7,7 +7,11 @@ const DECIDE_PX = 10;
 const TAP_PX = 8;
 const TAP_MS = 500;
 
-/** A gesture stays what it began as, so a pinch never slips into a tilt. Returns null until it shows which it is. */
+/**
+ * A gesture stays what it began as, so a pinch never slips into a tilt. Returns null until it shows which it is.
+ * Call it with both fingers current, not per finger: each finger's move is its own event, and seen alone a two-finger
+ * swipe looks like one finger pulling away from the other.
+ */
 export function twoFingers(a0: Pt, b0: Pt): (a: Pt, b: Pt) => TwoFingerStep | null {
   let kind: TwoFingerStep["kind"] | null = null;
   let [pa, pb] = [a0, b0];

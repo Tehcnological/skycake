@@ -667,43 +667,52 @@ airport = () => { }) {
         return a;
     };
     const UP = new THREE.Vector3(0, 1, 0);
+    const touchMoved = () => {
+        label(null, 0, 0);
+        keepOnChart();
+        controls.update();
+        camera.updateMatrixWorld();
+        dirty = true;
+    };
+    // Run once a frame from the loop below, when both fingers' moves have arrived.
+    let twoMoved = false;
+    const readTwoFingers = () => {
+        twoMoved = false;
+        if (!two)
+            return;
+        const [a, b] = [...fingers.values()];
+        const step = two(a, b);
+        if (!step)
+            return;
+        takeOver();
+        if (step.kind === "tilt") {
+            view.orbit(0, (-step.dy / el3d.clientHeight) * Math.PI * 0.75);
+        }
+        else {
+            // About the spot under the fingers, so it stays under them.
+            const p = slide(step.from, step.mid) ?? controls.target.clone();
+            const off = camera.position.distanceTo(controls.target);
+            const scale = THREE.MathUtils.clamp(off / step.zoom, controls.minDistance, controls.maxDistance) / off;
+            for (const q of [camera.position, controls.target])
+                q.sub(p).multiplyScalar(scale).applyAxisAngle(UP, step.twist).add(p);
+        }
+        touchMoved();
+    };
     el3d.addEventListener("pointermove", (e) => {
         const was = fingers.get(e.pointerId);
         if (!was)
             return;
         const now = at(e);
         fingers.set(e.pointerId, now);
-        if (fingers.size === 1) {
-            if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 3)
-                return;
-            takeOver();
-            slide(was, now);
-        }
-        else if (two) {
-            const [a, b] = [...fingers.values()];
-            const step = two(a, b);
-            if (!step)
-                return;
-            takeOver();
-            if (step.kind === "tilt") {
-                view.orbit(0, (-step.dy / el3d.clientHeight) * Math.PI * 0.75);
-            }
-            else {
-                // About the spot under the fingers, so it stays under them.
-                const p = slide(step.from, step.mid) ?? controls.target.clone();
-                const off = camera.position.distanceTo(controls.target);
-                const scale = THREE.MathUtils.clamp(off / step.zoom, controls.minDistance, controls.maxDistance) / off;
-                for (const q of [camera.position, controls.target])
-                    q.sub(p).multiplyScalar(scale).applyAxisAngle(UP, step.twist).add(p);
-            }
-        }
-        else
+        if (fingers.size !== 1) {
+            twoMoved = true;
             return;
-        label(null, 0, 0);
-        keepOnChart();
-        controls.update();
-        camera.updateMatrixWorld();
-        dirty = true;
+        }
+        if (Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 3)
+            return;
+        takeOver();
+        slide(was, now);
+        touchMoved();
     });
     el3d.addEventListener("pointercancel", (e) => {
         fingers.delete(e.pointerId);
@@ -866,6 +875,8 @@ airport = () => { }) {
             l.group.visible = l.t > 0 && inMode(l);
             l.group.scale.y = Math.max(ease, 0.001);
         }
+        if (twoMoved)
+            readTwoFingers();
         if (fly) {
             fly.t = Math.min(1, fly.t + dt / 0.7);
             const e = fly.t * fly.t * (3 - 2 * fly.t);
