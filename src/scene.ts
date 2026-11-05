@@ -42,7 +42,7 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
-  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true };
 }
 
 function target(t: Target, data: AirspaceFile) {

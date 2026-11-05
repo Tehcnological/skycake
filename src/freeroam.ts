@@ -5,7 +5,7 @@ import { KINDS, type AirspaceFile, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram, type Roam } from "./roam.js";
 import { SceneError, framedOnly, resolve, type ProcedureRef, type Scene } from "./scene.js";
-import { search } from "./search.js";
+import { airportList, proceduresAt, search, type Group } from "./search.js";
 import type { Labels } from "./ui.js";
 import type { View } from "./viewer.js";
 
@@ -83,11 +83,12 @@ export function freeRoam(c: Context): Promise<void> {
   const topRight = h("div", { class: "sc-tr" }, h("label", { class: "sc-search" }, icon(ICONS.search), input), results, chips);
 
   // View buttons (desktop bottom right; phone: a sheet from the View tab).
-  const round = (label: string, kids: (Node | string)[], cls = "") => h("button", { type: "button", class: `sc-round ${cls}`, "aria-label": label }, ...kids);
-  const diagramButton = round(L.diagram, [icon(ICONS.diagram)]);
-  const tagsButton = round(L.tags, [icon(ICONS.tags)]);
-  const scaleButton = round(L.heightScale(scale), [`${scale}×`], "sc-scale");
-  const fullButton = round(L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
+  // data-tip: the name in words, shown on hover or focus (desktop) and under the button (phone).
+  const round = (label: string, tip: string, kids: (Node | string)[], cls = "") => h("button", { type: "button", class: `sc-round ${cls}`, "aria-label": label, "data-tip": tip }, ...kids);
+  const diagramButton = round(L.diagram, L.diagram, [icon(ICONS.diagram)]);
+  const tagsButton = round(L.tags, L.tags, [icon(ICONS.tags)]);
+  const scaleButton = round(L.heightScale(scale), L.height, [`${scale}×`], "sc-scale");
+  const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
   const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, fullButton);
 
   // Phone tab bar.
@@ -161,28 +162,52 @@ export function freeRoam(c: Context): Promise<void> {
     }));
   };
 
-  // Results: groups by airport and type; picking adds a procedure or makes an airport current.
-  const showResults = () => {
-    const q = input.value;
-    if (!q.trim()) {
-      results.hidden = true;
-      return;
-    }
-    const groups = search(q, data.airports);
-    results.replaceChildren();
-    if (!groups.length) results.append(h("p", { class: "sc-none" }, L.noMatches));
+  // Results. Typing finds procedures by name. With the box empty: the airport list, or, once an airport is picked
+  // (from the list or its tag on the chart), every procedure there.
+  let browse: string | null = null;
+  const option = (kids: (Node | string)[], pick: () => void, cls = "") => {
+    const opt = h("button", { type: "button", role: "option", class: `sc-option ${cls}` }, ...kids);
+    opt.addEventListener("click", pick);
+    return opt;
+  };
+  const listGroups = (groups: Group[]) => {
     for (const g of groups) {
-      if (g.type !== null) results.append(h("p", { class: "sc-group" }, `${g.airport} · ${L.groups[g.type]}`));
+      results.append(h("p", { class: "sc-group" }, `${g.airport} · ${L.groups[g.type]}`));
       for (const hit of g.hits) {
-        const opt = h("button", { type: "button", role: "option", class: "sc-option" }, hit.procedure ? hit.procedure.name : hit.airport);
-        opt.addEventListener("click", () => {
-          r = hit.procedure ? add(r, { airport: hit.airport, name: hit.procedure.name }, has) : pickAirport(r, hit.airport, has);
-          input.value = hit.procedure ? "" : hit.airport;
+        results.append(option([hit.procedure.name], () => {
+          r = add(r, { airport: hit.airport, name: hit.procedure.name }, has);
+          input.value = "";
           results.hidden = true;
           refresh();
-        });
-        results.append(opt);
+        }));
       }
+    }
+  };
+  const showAirport = (id: string) => {
+    browse = id;
+    r = pickAirport(r, id, has);
+    input.value = "";
+    showResults();
+    refresh();
+  };
+  const showResults = () => {
+    const q = input.value;
+    results.replaceChildren();
+    const at = browse === null ? undefined : data.airports.find((a) => a.id === browse);
+    if (q.trim()) {
+      const groups = search(q, data.airports);
+      if (!groups.length) results.append(h("p", { class: "sc-none" }, L.noMatches));
+      listGroups(groups);
+    } else if (at) {
+      results.append(option([L.airports], () => {
+        browse = null;
+        showResults();
+        input.focus();
+      }, "sc-back"));
+      listGroups(proceduresAt(at));
+    } else {
+      results.append(h("p", { class: "sc-group" }, L.airports));
+      for (const a of airportList(data.airports)) results.append(option([h("b", {}, a.id), h("span", {}, a.name)], () => showAirport(a.id), "sc-airport"));
     }
     results.hidden = false;
   };
@@ -209,7 +234,7 @@ export function freeRoam(c: Context): Promise<void> {
   });
   setTags();
   scaleButton.addEventListener("click", () => {
-    scale = scale === c.startScale ? 1 : c.startScale;
+    scale = scale === 1 ? 4 : 1;
     scaleButton.textContent = `${scale}×`;
     scaleButton.setAttribute("aria-label", L.heightScale(scale));
     v.exaggerate(scale);
@@ -231,7 +256,11 @@ export function freeRoam(c: Context): Promise<void> {
     if (!document.fullscreenElement) setFull(false);
   });
 
-  if (c.airport) input.value = c.airport;
+  // A tap on an airport's tag on the chart lists its procedures.
+  c.fig.addEventListener("skycake-airport", (e) => {
+    sheet(null);
+    showAirport((e as CustomEvent).detail.airport);
+  });
   // The chip and type list state follows the viewer, including areas raised by tapping the chart.
   const onRaised = (kind: Kind, on: boolean) => {
     const x = rows.get(kind);

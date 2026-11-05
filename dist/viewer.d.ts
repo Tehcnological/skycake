@@ -9,7 +9,7 @@ type Style = {
     walls: boolean;
 };
 export declare const STYLE: Record<Kind, Style>;
-export declare const START_SCALE = 4;
+export declare const START_SCALE = 1;
 /** Ceiling over floor, as the chart prints them. */
 export declare const fraction: (a: Area, ground: number) => HTMLElement;
 export type View = {
@@ -31,5 +31,7 @@ export type View = {
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
 };
-export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void): Promise<View>;
+export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void, 
+/** A tap on an airport's tag on the chart. */
+airport?: (id: string) => void): Promise<View>;
 export {};

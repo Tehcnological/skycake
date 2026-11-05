@@ -38,7 +38,7 @@ export const STYLE: Record<Kind, Style> = {
 // Radar vectors between the field and a departure or arrival: white and black dashes.
 const PATH: Record<Segment, number> = { transition: 0xffffff, final: 0x22d36b, common: 0x22d36b, missed: 0xffc21a, vectors: 0xffffff };
 const RAISE_SECONDS = 0.35;
-export const START_SCALE = 4;
+export const START_SCALE = 1;
 
 // Vertical stripes for hatched walls.
 function stripes(): THREE.Texture {
@@ -106,6 +106,8 @@ export async function build(
   data: AirspaceFile,
   label: (a: Area | null, x: number, y: number) => void,
   raised: (kind: Kind, on: boolean) => void,
+  /** A tap on an airport's tag on the chart. */
+  airport: (id: string) => void = () => {},
 ): Promise<View> {
   const { bounds: b } = data;
   const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
@@ -213,6 +215,7 @@ export async function build(
   // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
   // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
   const shelfTags: Tag[] = [];
+  const airportTags: Tag[] = [];
   let approachTags: Tag[] = [];
   let tagsOn = true;
   const addTag = (node: HTMLElement, at: THREE.Vector3, pri: number, live: () => boolean, list: Tag[]) => {
@@ -224,7 +227,7 @@ export async function build(
   const place = () => {
     const { clientWidth: w, clientHeight: h } = host;
     const taken: number[][] = [];
-    for (const t of [...approachTags, ...shelfTags]) {
+    for (const t of [...approachTags, ...airportTags, ...shelfTags]) {
       let show = tagsOn && t.live();
       if (show) {
         if (!t.w) [t.w, t.h] = [t.el.offsetWidth, t.el.offsetHeight];
@@ -317,6 +320,14 @@ export async function build(
     }
   }
   shelfTags.sort((a, c) => a.pri - c.pri);
+  // Airports with procedures get a tag at the field; tapping it makes the airport current.
+  for (const a of data.airports) {
+    if (!a.procedures.length) continue;
+    const node = el("button", "tag apt", a.id);
+    node.setAttribute("type", "button");
+    node.addEventListener("click", () => airport(a.id));
+    addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
+  }
   const tappable = lives.filter((l) => l.area.kind !== "E700" && l.area.kind !== "MODEC").sort((a, c) => a.size - c.size);
 
   const setKind = (kind: Kind) => raised(kind, lives.some((l) => l.area.kind === kind && l.goal === 1));

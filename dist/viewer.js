@@ -34,7 +34,7 @@ export const STYLE = {
 // Radar vectors between the field and a departure or arrival: white and black dashes.
 const PATH = { transition: 0xffffff, final: 0x22d36b, common: 0x22d36b, missed: 0xffc21a, vectors: 0xffffff };
 const RAISE_SECONDS = 0.35;
-export const START_SCALE = 4;
+export const START_SCALE = 1;
 // Vertical stripes for hatched walls.
 function stripes() {
     const c = document.createElement("canvas");
@@ -71,7 +71,9 @@ function el(tag, cls, ...kids) {
 }
 /** Ceiling over floor, as the chart prints them. */
 export const fraction = (a, ground) => el("div", `frac ${STYLE[a.kind].color === MAGENTA ? "m" : "b"}`, el("b", "", hundreds(a.ceiling, ground)), el("b", "", hundreds(a.floor, ground)));
-export async function build(host, data, label, raised) {
+export async function build(host, data, label, raised, 
+/** A tap on an airport's tag on the chart. */
+airport = () => { }) {
     const { bounds: b } = data;
     const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
     const k = Math.cos((lat0 * Math.PI) / 180);
@@ -179,6 +181,7 @@ export async function build(host, data, label, raised) {
     // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
     // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
     const shelfTags = [];
+    const airportTags = [];
     let approachTags = [];
     let tagsOn = true;
     const addTag = (node, at, pri, live, list) => {
@@ -190,7 +193,7 @@ export async function build(host, data, label, raised) {
     const place = () => {
         const { clientWidth: w, clientHeight: h } = host;
         const taken = [];
-        for (const t of [...approachTags, ...shelfTags]) {
+        for (const t of [...approachTags, ...airportTags, ...shelfTags]) {
             let show = tagsOn && t.live();
             if (show) {
                 if (!t.w)
@@ -284,6 +287,15 @@ export async function build(host, data, label, raised) {
         }
     }
     shelfTags.sort((a, c) => a.pri - c.pri);
+    // Airports with procedures get a tag at the field; tapping it makes the airport current.
+    for (const a of data.airports) {
+        if (!a.procedures.length)
+            continue;
+        const node = el("button", "tag apt", a.id);
+        node.setAttribute("type", "button");
+        node.addEventListener("click", () => airport(a.id));
+        addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
+    }
     const tappable = lives.filter((l) => l.area.kind !== "E700" && l.area.kind !== "MODEC").sort((a, c) => a.size - c.size);
     const setKind = (kind) => raised(kind, lives.some((l) => l.area.kind === kind && l.goal === 1));
     const set = (l, on) => {

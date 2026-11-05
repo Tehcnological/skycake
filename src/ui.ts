@@ -10,6 +10,7 @@ export type Labels = {
   groups: Record<ProcType, string>;
   airspace: string;
   search: string;
+  airports: string;
   noMatches: string;
   remove: (name: string) => string;
   procedureTab: string;
@@ -18,6 +19,8 @@ export type Labels = {
   diagram: string;
   tags: string;
   heightScale: (n: number) => string;
+  /** The height button's name in words, on hover and on phones. */
+  height: string;
   fullScreen: string;
   finalCourse: string;
   glidepath: string;
@@ -32,6 +35,7 @@ export const LABELS: Labels = {
   groups: { IAP: "Approaches", STAR: "Arrivals", SID: "Departures" },
   airspace: "Airspace",
   search: "Airport or procedure",
+  airports: "Airports",
   noMatches: "No matches",
   remove: (name) => `Remove ${name}`,
   procedureTab: "Procedure",
@@ -40,6 +44,7 @@ export const LABELS: Labels = {
   diagram: "Diagram",
   tags: "Tags",
   heightScale: (n) => `Height scale ${n}×`,
+  height: "Height scale",
   fullScreen: "Full screen",
   finalCourse: "Final course",
   glidepath: "Glidepath",
@@ -109,7 +114,13 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
     tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
   };
-  const v = await build(view, data, show, (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })));
+  const v = await build(
+    view,
+    data,
+    show,
+    (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })),
+    (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })),
+  );
 
   // Keyboard: arrows turn the view, + and - zoom, only while the view has focus.
   const STEP = Math.PI / 24;

@@ -7,6 +7,7 @@ export type Labels = {
     groups: Record<ProcType, string>;
     airspace: string;
     search: string;
+    airports: string;
     noMatches: string;
     remove: (name: string) => string;
     procedureTab: string;
@@ -15,6 +16,8 @@ export type Labels = {
     diagram: string;
     tags: string;
     heightScale: (n: number) => string;
+    /** The height button's name in words, on hover and on phones. */
+    height: string;
     fullScreen: string;
     finalCourse: string;
     glidepath: string;

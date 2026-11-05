@@ -10,7 +10,7 @@ test("free roam starts with every type in the area raised, framed on the whole c
   const r = resolve(freeRoamScene(data), data);
   assert.equal(r.camera, "fit");
   assert.equal(r.raised.size, data.areas.length);
-  assert.deepEqual([r.diagram, r.height, r.tags, r.procedures], [null, 4, true, []]);
+  assert.deepEqual([r.diagram, r.height, r.tags, r.procedures], [null, 1, true, []]);
 });
 
 test("raise takes kinds and single areas; an unknown area, diagram or procedure throws", () => {
