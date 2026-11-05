@@ -26,7 +26,7 @@ test("a clockwise twist on screen is a positive turn, the same size as the finge
 });
 
 test("a twist across the left of the circle stays small, not nearly a full turn", () => {
-  const [, m] = run([[200, 100], [100, 100]], [[200, 100], [100, 90]], [[200, 100], [100, 110]]);
+  const [, m] = run([[300, 100], [100, 100]], [[300, 100], [100, 84]], [[300, 100], [100, 116]]);
   assert.ok(m && m.kind === "shape");
   assert.ok(Math.abs(m.twist) < 0.3, `twist ${m.twist}`);
 });
@@ -45,6 +45,29 @@ test("once a pinch, a gesture stays a pinch even if both fingers then move up", 
 
 test("fingers moving up at different ends of a pinch are a pinch, not a tilt", () => {
   const [a] = run([[100, 300], [100, 400]], [[100, 280], [100, 430]]);
+  assert.equal(a?.kind, "shape");
+});
+
+test("a swipe with one finger starting late still tilts, carrying the movement so far", () => {
+  const [a, b, c] = run([[100, 300], [200, 300]], [[100, 290], [200, 300]], [[100, 275], [200, 288]], [[100, 265], [200, 277]]);
+  assert.equal(a, null);
+  assert.equal(b, null);
+  assert.deepEqual(c, { kind: "tilt", dy: -29 });
+});
+
+test("a pinch drifting up with the hand stays a pinch", () => {
+  const [a, b] = run([[100, 300], [200, 300]], [[95, 288], [205, 288]], [[90, 278], [210, 278]]);
+  assert.equal(a, null);
+  assert.equal(b?.kind, "shape");
+});
+
+test("one finger moving alone, with the other held still, is a pinch", () => {
+  const [a] = run([[100, 300], [200, 300]], [[100, 280], [200, 300]]);
+  assert.equal(a?.kind, "shape");
+});
+
+test("two fingers sliding sideways together end the wait, as a move and not a tilt", () => {
+  const [a] = run([[100, 300], [200, 300]], [[135, 300], [235, 300]]);
   assert.equal(a?.kind, "shape");
 });
 
