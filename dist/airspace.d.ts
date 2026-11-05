@@ -1,3 +1,4 @@
+import type { Airway, Waypoint } from "./airway.js";
 import type { Airport } from "./procedure.js";
 /** One toggle each. Order is the legend order. */
 export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA", "A"];
@@ -43,6 +44,11 @@ export type ChartName = "tac" | "sectional" | "area" | "low";
 export declare const chartsOf: (c: Charts) => ChartName[];
 /** The chart asked for if the area has it, else its first. */
 export declare const pickChart: (c: Charts, wanted?: ChartName) => ChartName;
+/** VFR: the visual charts and all the airspace. IFR: the enroute charts, special use airspace, airways and their fixes. */
+export type Mode = "vfr" | "ifr";
+export declare const modeOf: (c: ChartName) => Mode;
+export declare const chartsIn: (c: Charts, m: Mode) => ChartName[];
+export declare const shownIn: (m: Mode, k: Kind) => boolean;
 export type AirspaceFile = {
     edition: string;
     bounds: Bounds;
@@ -51,6 +57,8 @@ export type AirspaceFile = {
     dem: Dem;
     areas: Area[];
     airports: Airport[];
+    airways: Airway[];
+    waypoints: Waypoint[];
 };
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export declare const TOP = 18000;

@@ -10,7 +10,7 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
-import { clipRing, deepest, hundreds, inRing } from "./airspace.js";
+import { clipRing, deepest, hundreds, inRing, modeOf, shownIn } from "./airspace.js";
 import { fixTags } from "./roam.js";
 const FT_PER_NM = 6076;
 const BLUE = 0x2f6bff;
@@ -33,6 +33,7 @@ export const STYLE = {
 // Approaches: white transitions, green final, yellow missed. Departures and arrivals: white transitions, green common route.
 // Radar vectors between the field and a departure or arrival: white and black dashes.
 const PATH = { transition: 0xffffff, final: 0x22d36b, common: 0x22d36b, missed: 0xffc21a, vectors: 0xffffff };
+const AIRWAY = 0x00a7c4;
 const RAISE_SECONDS = 0.35;
 export const START_SCALE = 1;
 // Vertical stripes for hatched walls.
@@ -243,6 +244,7 @@ airport = () => { }) {
     // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
     const shelfTags = [];
     const airportTags = [];
+    const airwayTags = [];
     let approachTags = [];
     let tagsOn = true;
     const addTag = (node, at, pri, live, list) => {
@@ -254,7 +256,7 @@ airport = () => { }) {
     const place = () => {
         const { clientWidth: w, clientHeight: h } = host;
         const taken = [];
-        for (const t of [...approachTags, ...airportTags, ...shelfTags]) {
+        for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags]) {
             let show = tagsOn && t.live();
             if (show) {
                 if (!t.w)
@@ -271,7 +273,11 @@ airport = () => { }) {
             t.el.style.visibility = show ? "visible" : "hidden";
         }
     };
+    const span2 = ([p, q]) => Math.hypot((q[1] - p[1]) * k, q[0] - p[0]);
     const fat = (color, linewidth, dashed, opacity = 1) => new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
+    // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
+    let mode = "vfr";
+    const inMode = (l) => shownIn(mode, l.area.kind);
     // Each pixel takes one layer of airspace color: a depth-only pass finds the nearest surface, then only that surface draws.
     // The FAA's shelves overlap their cores in one plane (Tucson's 4,200-6,600 shelf covers its surface area, both up to 6,600),
     // and such ties would fight. So the depth pass sits just behind the surfaces, letting all tied ones through, and the first
@@ -349,7 +355,7 @@ airport = () => { }) {
             const [x, z] = deepest(widest);
             const node = fraction(area, data.ground);
             node.classList.add("tag");
-            addTag(node, new THREE.Vector3(x, nm(area.ceiling), z), 5 - Math.min(4, Math.log10(live.size + 1)), () => live.t === 1, shelfTags);
+            addTag(node, new THREE.Vector3(x, nm(area.ceiling), z), 5 - Math.min(4, Math.log10(live.size + 1)), () => live.t === 1 && inMode(live), shelfTags);
         }
     }
     shelfTags.sort((a, c) => a.pri - c.pri);
@@ -363,6 +369,50 @@ airport = () => { }) {
         addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
     }
     const tappable = lives.filter((l) => l.area.kind !== "E700" && l.area.kind !== "MODEC").sort((a, c) => a.size - c.size);
+    // Airways stand at their minimum enroute altitude; a leg with none lies on the chart. A stem from the ground up to each
+    // fix shows its height and joins legs at different heights. Built once: only the mode shows or hides them.
+    const airways = new THREE.Group();
+    airways.visible = false;
+    world.add(airways);
+    const legs = [], stems = [];
+    const isIfr = () => mode === "ifr";
+    const usedLegs = new Set();
+    for (const a of data.airways) {
+        const longest = [...a.legs].sort((l, m) => span2(m.pts) - span2(l.pts));
+        // Each airway's name goes on its longest leg no other airway's name is on, so names on a shared route don't stack.
+        const home = longest.find((l) => !usedLegs.has(String(l.pts))) ?? longest[0];
+        usedLegs.add(String(home.pts));
+        for (const l of a.legs) {
+            const [[x0, z0], [x1, z1]] = l.pts.map(([lat, lon]) => [X(lon), Z(lat)]);
+            const up = (x, z) => (l.ft === null ? groundAt(x, z) + nm(100) : nm(l.ft));
+            // A leg on the chart follows the ground; one at altitude is straight.
+            const steps = l.ft === null ? Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0))) : 1;
+            for (let s = 0; s < steps; s++) {
+                const [xa, za, xb, zb] = [x0 + ((x1 - x0) * s) / steps, z0 + ((z1 - z0) * s) / steps, x0 + ((x1 - x0) * (s + 1)) / steps, z0 + ((z1 - z0) * (s + 1)) / steps];
+                legs.push(xa, up(xa, za), za, xb, up(xb, zb), zb);
+            }
+            if (l === home) {
+                const [x, z] = [(x0 + x1) / 2, (z0 + z1) / 2];
+                addTag(el("div", "tag awy", a.name), new THREE.Vector3(x, up(x, z), z), 0, isIfr, airwayTags);
+            }
+        }
+    }
+    for (const w of data.waypoints) {
+        const [x, z] = [X(w.lon), Z(w.lat)];
+        if (w.ft !== null)
+            stems.push(x, groundAt(x, z), z, x, nm(w.ft), z);
+        addTag(el("div", "tag wp", w.name), new THREE.Vector3(x, w.ft === null ? groundAt(x, z) + nm(100) : nm(w.ft), z), 1, isIfr, airwayTags);
+    }
+    if (legs.length) {
+        // As procedures: a black outline that writes no depth, under the color.
+        const under = new LineSegments2(new LineSegmentsGeometry().setPositions(legs), new LineMaterial({ color: 0x000000, linewidth: 4.2, transparent: true, depthWrite: false }));
+        under.renderOrder = 0.1;
+        const line = new LineSegments2(new LineSegmentsGeometry().setPositions(legs), new LineMaterial({ color: AIRWAY, linewidth: 3, transparent: true }));
+        line.renderOrder = 0.2;
+        airways.add(under, line);
+    }
+    if (stems.length)
+        airways.add(new LineSegments2(new LineSegmentsGeometry().setPositions(stems), fat(AIRWAY, 1.2, false, 0.8)));
     const setKind = (kind) => raised(kind, lives.some((l) => l.area.kind === kind && l.goal === 1));
     const set = (l, on) => {
         l.goal = on ? 1 : 0;
@@ -519,7 +569,7 @@ airport = () => { }) {
     const pick = (e) => {
         const r = renderer.domElement.getBoundingClientRect();
         ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-        const up = lives.filter((l) => l.goal === 1);
+        const up = lives.filter((l) => l.goal === 1 && inMode(l));
         const hit = ray.intersectObjects(up.flatMap((l) => l.picks))[0];
         if (hit)
             return up.find((l) => l.picks.includes(hit.object)) ?? null;
@@ -532,7 +582,7 @@ airport = () => { }) {
             p.addScaledVector(d, 0.5);
             if (p.y > groundAt(p.x, p.z) * world.scale.y)
                 continue;
-            return tappable.find((l) => l.goal === 0 && l.rings.some((ring) => inRing([p.x, p.z], ring))) ?? null;
+            return tappable.find((l) => l.goal === 0 && inMode(l) && l.rings.some((ring) => inRing([p.x, p.z], ring))) ?? null;
         }
         return null;
     };
@@ -615,6 +665,8 @@ airport = () => { }) {
         },
         raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
         apply: async (sc, procs, now = false, framing = []) => {
+            mode = modeOf(sc.chart);
+            airways.visible = mode === "ifr";
             for (const l of lives)
                 set(l, sc.raised.has(l.area.id));
             world.scale.y = sc.height;
@@ -659,7 +711,7 @@ airport = () => { }) {
                 let spots;
                 let tilt = 32;
                 if (cam === "fit" || cam === "top") {
-                    spots = lives.filter((l) => sc.raised.has(l.area.id)).flatMap(ringSpots);
+                    spots = lives.filter((l) => sc.raised.has(l.area.id) && inMode(l)).flatMap(ringSpots);
                     if (cam === "top")
                         tilt = 90;
                 }
@@ -687,7 +739,7 @@ airport = () => { }) {
                 dirty = true;
             }
             const ease = l.t * (2 - l.t);
-            l.group.visible = l.t > 0;
+            l.group.visible = l.t > 0 && inMode(l);
             l.group.scale.y = Math.max(ease, 0.001);
         }
         if (fly) {

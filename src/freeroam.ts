@@ -1,7 +1,7 @@
 // Free roam's controls, over the 3D view. Desktop: floating panels in the corners (Airspace top left, search top
 // right, view buttons bottom right). Phone: a tab bar along the bottom, menus as sheets above it. One DOM for both;
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
-import { KINDS, chartsOf, pickChart, type AirspaceFile, type Kind } from "./airspace.js";
+import { KINDS, chartsIn, modeOf, pickChart, shownIn, type AirspaceFile, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram, type Roam } from "./roam.js";
 import { SceneError, framedOnly, resolve, type ProcedureRef, type Scene } from "./scene.js";
@@ -63,9 +63,9 @@ export function freeRoam(c: Context): Promise<void> {
   let shown = false;
   let tagsOn = c.first.tags ?? true;
   let scale = c.first.height ?? c.startScale;
-  // Which chart is under the airspace; the button steps through what the area has.
-  const charts = chartsOf(data.charts);
+  // Which chart is under the airspace: VFR or IFR, then one of that mode's charts. Each mode keeps the last one picked.
   let chart = pickChart(data.charts, c.first.chart);
+  const lastIn: Partial<Record<Mode, ChartName>> = { [modeOf(chart)]: chart };
   const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
 
   // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
@@ -91,10 +91,11 @@ export function freeRoam(c: Context): Promise<void> {
   const diagramButton = round(L.diagram, L.diagram, [icon(ICONS.diagram)]);
   const tagsButton = round(L.tags, L.tags, [icon(ICONS.tags)]);
   const scaleButton = round(L.heightScale(scale), L.height, [`${scale}×`], "sc-scale");
-  const chartButton = round(L.chart, L.chart, [L.charts[chart]], "sc-chart");
-  chartButton.hidden = charts.length < 2;
+  const modeButton = round(L.mode, L.mode, [], "sc-mode");
+  modeButton.hidden = !chartsIn(data.charts, "ifr").length;
+  const chartButton = round(L.chart, L.chart, [], "sc-chart");
   const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
-  const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, chartButton, fullButton);
+  const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
   const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
   // Phone tab bar.
@@ -248,15 +249,33 @@ export function freeRoam(c: Context): Promise<void> {
     v.exaggerate(scale);
   });
 
-  chartButton.addEventListener("click", () => {
-    chart = charts[(charts.indexOf(chart) + 1) % charts.length];
+  const drawChart = () => {
+    const mode = modeOf(chart);
+    modeButton.textContent = L.modes[mode];
+    modeButton.setAttribute("aria-label", `${L.mode}: ${L.modes[mode]}`);
+    chartButton.textContent = L.charts[chart];
+    chartButton.setAttribute("aria-label", `${L.chart}: ${L.charts[chart]}`);
+    chartButton.hidden = chartsIn(data.charts, mode).length < 2;
+    for (const [k, { row }] of rows) row.hidden = !shownIn(mode, k);
+    if (caption) caption.textContent = L.caption(data.edition, chart);
+  };
+  const setChart = (next: ChartName) => {
+    chart = next;
+    lastIn[modeOf(chart)] = chart;
     // Comparing the charts: the camera stays on what is being looked at.
     r = { ...r, camera: null };
-    chartButton.textContent = L.charts[chart];
-    if (caption) caption.textContent = L.caption(data.edition, chart);
+    drawChart();
     refresh();
+  };
+  modeButton.addEventListener("click", () => {
+    const mode: Mode = modeOf(chart) === "vfr" ? "ifr" : "vfr";
+    setChart(lastIn[mode] ?? chartsIn(data.charts, mode)[0]);
   });
-  if (caption) caption.textContent = L.caption(data.edition, chart);
+  chartButton.addEventListener("click", () => {
+    const here = chartsIn(data.charts, modeOf(chart));
+    setChart(here[(here.indexOf(chart) + 1) % here.length]);
+  });
+  drawChart();
 
   // iPhone Safari has no element fullscreen, so the class fills the window and the real thing is added where it exists.
   const setFull = (on: boolean) => {

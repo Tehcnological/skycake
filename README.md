@@ -4,7 +4,7 @@ Interactive 3D airspace and instrument procedures over real FAA charts, with ter
 
 Named for the upside-down wedding cake every student pilot learns Class B as.
 
-Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's TAC, sectional, IFR area chart or IFR low, picked by a button (the sectional outside the TAC's map, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors, approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view; on phones a tab bar sits under it. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
+Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view; on phones a tab bar sits under it. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
 
 ## Use it on a site
 
@@ -36,7 +36,7 @@ mount(document.querySelector("#airspace")!, {
 
 ## Data
 
-`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; rerun it then and commit the result. `npm run data -- miami` builds one area, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md).
+`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; rerun it then and commit the result. `npm run data -- miami` builds one area, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md).
 
 ## Develop
 

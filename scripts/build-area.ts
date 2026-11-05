@@ -27,6 +27,7 @@ import proj4 from "proj4";
 import sharp from "sharp";
 import simplify from "simplify-js";
 import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
+import { parseAirways } from "../src/airway.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
 
@@ -298,7 +299,7 @@ async function terrain() {
 // ---- Procedures from the current CIFP cycle (every 28 days, on the same dates as the charts): approaches, departures
 // and arrivals for every airport on the chart, one file per airport so the page loads only the one picked.
 const cycleDate = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (28 * DAY)) * 28 * DAY);
-async function procedures(): Promise<Airport[]> {
+async function procedures() {
   const c = cycleDate.toISOString().slice(0, 10).split("-");
   const zip = unzipSync(await download(`https://aeronav.faa.gov/Upload_313-d/cifp/CIFP_${c[0].slice(2)}${c[1]}${c[2]}.zip`), { filter: (f) => f.name === "FAACIFP18" });
   const text = Buffer.from(zip.FAACIFP18).toString("latin1");
@@ -310,7 +311,7 @@ async function procedures(): Promise<Airport[]> {
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   for (const a of kept) await writeFile(join(dir, `${a.id}.json`), JSON.stringify(procedures.filter((p) => p.airport === a.id)));
-  return kept;
+  return { airports: kept, ...parseAirways(text, BOUNDS) };
 }
 
 // ---- Airport diagrams from the d-TPP of the same cycle, placed by their own latitude and longitude ticks, turned
@@ -418,11 +419,12 @@ for (const name of named.length ? named : Object.keys(AREAS)) {
   const ground = await terrain();
   if (process.argv.includes("--terrain-only")) continue;
   const areas = await airspace(ground);
-  const airports = await procedures();
+  const { airports, airways, waypoints } = await procedures();
   await diagrams(airports);
-  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports };
+  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints };
   await writeFile(join(OUT, "area.json"), JSON.stringify(file));
   console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
+  console.log(`airways ${airways.length}, legs ${airways.reduce((n, a) => n + a.legs.length, 0)}, no MEA ${airways.flatMap((a) => a.legs).filter((l) => l.ft === null).length}, waypoints ${waypoints.length}`);
   for (const t of ["IAP", "SID", "STAR"]) console.log(`${t} ${airports.reduce((n, a) => n + a.procedures.filter((p) => p.type === t).length, 0)}`);
   console.log(`${airports.length} airports, ${airports.filter((a) => a.diagram).length} diagrams`);
 }

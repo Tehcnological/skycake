@@ -24,6 +24,8 @@ export const LABELS = {
     floor700: "Floor 700 AGL",
     view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
     caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
+    mode: "VFR or IFR",
+    modes: { vfr: "VFR", ifr: "IFR" },
     chart: "Chart",
     charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
 };
@@ -42,7 +44,7 @@ function h(tag, attrs = {}, ...kids) {
 }
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host, o) {
-    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts } };
+    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
     const base = new URL(o.base, location.href);
     const url = (p) => new URL(p, base).href;
     const data = await fetch(url("area.json")).then((r) => {

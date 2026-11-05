@@ -4,6 +4,10 @@ export const KINDS = ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA",
 export const chartsOf = (c) => [...(c.tac ? ["tac"] : []), "sectional", ...(c.low && c.area ? ["area"] : []), ...(c.low ? ["low"] : [])];
 /** The chart asked for if the area has it, else its first. */
 export const pickChart = (c, wanted) => (wanted && chartsOf(c).includes(wanted) ? wanted : chartsOf(c)[0]);
+export const modeOf = (c) => (c === "area" || c === "low" ? "ifr" : "vfr");
+export const chartsIn = (c, m) => chartsOf(c).filter((x) => modeOf(x) === m);
+const SPECIAL_USE = ["R", "P", "W", "MOA", "A"];
+export const shownIn = (m, k) => m === "vfr" || SPECIAL_USE.includes(k);
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;
 /** NASR class airspace record to a kind. Class E with a 1,200 ft floor is everywhere and not drawn, as on the chart. */
