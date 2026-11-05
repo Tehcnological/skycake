@@ -25,7 +25,22 @@ export function resolve(scene, data) {
     const diagram = scene.diagram ?? null;
     if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram)
         throw new SceneError(`no diagram for ${diagram}`);
+    const camera = scene.camera;
+    if (camera && typeof camera === "object" && "frame" in camera)
+        for (const t of camera.frame)
+            target(t, data);
     return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 4, tags: scene.tags ?? true };
+}
+function target(t, data) {
+    if ("area" in t && !data.areas.some((a) => a.id === t.area))
+        throw new SceneError(`no area ${t.area}`);
+    if ("procedure" in t) {
+        const { airport, name } = t.procedure;
+        if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name))
+            throw new SceneError(`no procedure ${name} at ${airport}`);
+    }
+    if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram)
+        throw new SceneError(`no diagram for ${t.diagram}`);
 }
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export function freeRoamScene(data) {

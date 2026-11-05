@@ -86,6 +86,8 @@ export type View = {
   tags(on: boolean): void;
   /** Raises or lowers one area, by id. */
   raiseArea(id: string, on: boolean): void;
+  /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
+  raisedAreas(): string[];
   /** Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation. */
   apply(scene: Resolved, procedures: Procedure[], now?: boolean): Promise<void>;
   /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
@@ -546,6 +548,7 @@ export async function build(
       const l = lives.find((x) => x.area.id === id);
       if (l) set(l, on);
     },
+    raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
     apply: async (sc, procs, now = false) => {
       for (const l of lives) set(l, sc.raised.has(l.area.id));
       if (world.scale.y !== sc.height) {

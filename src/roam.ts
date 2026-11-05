@@ -1,7 +1,8 @@
 // Free-roam state: which procedures are shown (any number, from any airport), the current airport (the last one
 // searched or picked from), and whether its diagram is on. sceneOf() turns it into the scene the viewer shows.
 import type { Fix, Procedure, Segment } from "./procedure.js";
-import type { Camera, ProcedureRef, Scene } from "./scene.js";
+import type { Kind } from "./airspace.js";
+import type { AreaRef, Camera, ProcedureRef, Scene } from "./scene.js";
 
 /**
  * camera: the camera to use next. undefined: frame what is shown (the procedures, else the diagram); null: leave it
@@ -17,10 +18,10 @@ export function start(first: Scene, airport?: string): Roam {
   return { first, procedures, airport: first.diagram ?? airport ?? procedures[0]?.airport ?? null, diagram: !!first.diagram, camera: first.camera ?? "fit" };
 }
 
-/** Adds a procedure once; its airport becomes the current one. */
-export function add(r: Roam, p: ProcedureRef): Roam {
+/** Adds a procedure once and frames what is shown; its airport becomes the current one, its diagram on only if it has one. */
+export function add(r: Roam, p: ProcedureRef, hasDiagram: (airport: string) => boolean = () => true): Roam {
   const procedures = r.procedures.some((q) => same(q, p)) ? r.procedures : [...r.procedures, { airport: p.airport, name: p.name }];
-  return { ...r, procedures, airport: p.airport, camera: undefined };
+  return { ...r, procedures, airport: p.airport, diagram: r.diagram && hasDiagram(p.airport), camera: undefined };
 }
 
 /** Removing the last one goes back to the first view. */
@@ -35,9 +36,18 @@ export function pickAirport(r: Roam, airport: string, hasDiagram: (airport: stri
   return { ...r, airport, diagram: r.diagram && hasDiagram(airport), camera: null };
 }
 
+/** Turning it on frames the airport, even with procedures shown; turning it off leaves the camera. */
 export function toggleDiagram(r: Roam, hasDiagram: (airport: string) => boolean): Roam {
   const diagram = !r.diagram && r.airport !== null && hasDiagram(r.airport);
-  return { ...r, diagram, camera: diagram ? undefined : null };
+  return { ...r, diagram, camera: diagram ? { frame: [{ diagram: r.airport! }] } : null };
+}
+
+/**
+ * The raise to show: the first scene's until the viewer has shown it, then exactly what is raised on screen (raised:
+ * area ids), so areas raised or lowered by tapping the chart stay that way through later changes.
+ */
+export function raiseNow(first: Scene, raised: string[] | null): (Kind | AreaRef)[] {
+  return raised === null ? (first.raise ?? []) : raised.map((area) => ({ area }));
 }
 
 /** What the viewer shows now: the first scene, plus the diagram while on, plus the shown procedures framed. */

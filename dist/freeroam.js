@@ -2,7 +2,7 @@
 // right, view buttons bottom right). Phone: a tab bar along the bottom, menus as sheets above it. One DOM for both;
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
 import { KINDS } from "./airspace.js";
-import { add, pickAirport, remove, sceneOf, start, toggleDiagram } from "./roam.js";
+import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
 import { SceneError, resolve } from "./scene.js";
 import { search } from "./search.js";
 const SVG = "http://www.w3.org/2000/svg";
@@ -46,9 +46,8 @@ export function freeRoam(c) {
     const { fig, view: v, data, labels: L } = c;
     const has = (a) => !!data.airports.find((x) => x.id === a)?.diagram;
     let r = start(c.first, c.airport ?? undefined);
-    let kinds = (c.first.raise ?? []).filter((x) => typeof x === "string");
-    // Single areas the first scene raised stay raised; the type list only switches whole types.
-    const areaRefs = (c.first.raise ?? []).filter((x) => typeof x !== "string");
+    // Once the first scene is showing, every change keeps what is raised on screen.
+    let shown = false;
     let tagsOn = c.first.tags ?? true;
     let scale = c.first.height ?? c.startScale;
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
@@ -56,10 +55,7 @@ export function freeRoam(c) {
     const rows = new Map(present.map((k) => {
         const box = h("input", { type: "checkbox" });
         const row = h("label", { class: `sc-row s-${k}` }, h("i", { "aria-hidden": "true" }), h("span", {}, L.kinds[k]), box);
-        box.addEventListener("change", () => {
-            kinds = box.checked ? [...kinds, k] : kinds.filter((x) => x !== k);
-            v.raise(k, box.checked);
-        });
+        box.addEventListener("change", () => v.raise(k, box.checked));
         return [k, { row, box }];
     }));
     const kindList = h("div", { class: "sc-panel sc-kinds", id: "sc-kinds" }, ...[...rows.values()].map((x) => x.row));
@@ -107,7 +103,7 @@ export function freeRoam(c) {
         if (mine !== ticket)
             return;
         // The toggles are read now, after the files arrived, so one pressed during the load is not undone.
-        const scene = { ...wanted, raise: [...kinds, ...areaRefs], tags: tagsOn, height: scale };
+        const scene = { ...wanted, raise: raiseNow(c.first, shown ? v.raisedAreas() : null), tags: tagsOn, height: scale };
         let resolved;
         try {
             resolved = resolve(scene, data);
@@ -124,6 +120,7 @@ export function freeRoam(c) {
         diagramButton.hidden = tabs.diagram.hidden = !diagram;
         diagramButton.setAttribute("aria-pressed", String(r.diagram));
         tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
+        shown = true;
         await v.apply(resolved, files, now);
     };
     const drawChips = () => {
@@ -159,9 +156,7 @@ export function freeRoam(c) {
             for (const hit of g.hits) {
                 const opt = h("button", { type: "button", role: "option", class: "sc-option" }, hit.procedure ? hit.procedure.name : hit.airport);
                 opt.addEventListener("click", () => {
-                    if (hit.procedure)
-                        r = add(r, { airport: hit.airport, name: hit.procedure.name });
-                    r = pickAirport(r, hit.airport, has);
+                    r = hit.procedure ? add(r, { airport: hit.airport, name: hit.procedure.name }, has) : pickAirport(r, hit.airport, has);
                     input.value = hit.procedure ? "" : hit.airport;
                     results.hidden = true;
                     refresh();

@@ -536,6 +536,7 @@ export async function build(host, data, label, raised) {
             if (l)
                 set(l, on);
         },
+        raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
         apply: async (sc, procs, now = false) => {
             for (const l of lives)
                 set(l, sc.raised.has(l.area.id));

@@ -43,3 +43,13 @@ test("a first scene with a name the data no longer has falls back to free roam a
   assert.deepEqual(firstScene({ types: ["D"] }, data, () => assert.fail("no warning")).raise, ["D"]);
   assert.equal(resolve({ camera: null }, data).camera, null);
 });
+
+test("camera targets are checked like every other name", () => {
+  assert.throws(() => resolve({ camera: { frame: [{ area: "nope" }] } }, data), SceneError);
+  assert.throws(() => resolve({ camera: { frame: [{ diagram: "KDVT" }] } }, data), SceneError);
+  assert.throws(() => resolve({ camera: { frame: [{ procedure: { airport: "KPHX", name: "NOPE 1" } }] } }, data), SceneError);
+  assert.doesNotThrow(() => resolve({ camera: { frame: [{ area: "b-phoenix-class-b-sfc-90" }, { diagram: "KPHX" }, { point: [33.4, -112] }] } }, data));
+  const said: string[] = [];
+  assert.deepEqual(firstScene({ scene: { camera: { frame: [{ area: "gone" }] } } }, data, (m) => said.push(m)), freeRoamScene(data));
+  assert.match(said[0], /gone/);
+});

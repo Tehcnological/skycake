@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Procedure } from "./procedure.js";
 import type { Scene } from "./scene.js";
-import { add, fixTags, pickAirport, remove, sceneOf, start, toggleDiagram } from "./roam.js";
+import { add, fixTags, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
 
 const phx: Procedure[] = JSON.parse(readFileSync(new URL("../data/phoenix/procedures/KPHX.json", import.meta.url), "utf8"));
 const first: Scene = { raise: ["B", "C", "D"], camera: "fit" };
@@ -70,4 +70,24 @@ test("fix tags: the same runway fix name at two airports keeps both", () => {
   const gyr: Procedure[] = JSON.parse(readFileSync(new URL("../data/phoenix/procedures/KGYR.json", import.meta.url), "utf8"));
   const a = sdl.find((p) => p.fixes.some((f) => f.name === "RW03"))!, b = gyr.find((p) => p.fixes.some((f) => f.name === "RW03"))!;
   assert.equal(fixTags([a, b]).filter((f) => f.name === "RW03").length, 2);
+});
+
+test("adding a procedure frames it, and turns off a diagram its airport does not have", () => {
+  const has = (a: string) => a === "KPHX";
+  let r = toggleDiagram(pickAirport(start(first), "KPHX", has), has);
+  r = add(r, rnp, has);
+  assert.deepEqual(sceneOf(r).camera, { frame: [{ procedure: rnp }] });
+  assert.equal(r.airport, "KSDL");
+  assert.equal(r.diagram, false);
+});
+
+test("turning the diagram on frames the airport even with procedures shown", () => {
+  const r = toggleDiagram(add(start(first), ils), () => true);
+  assert.deepEqual(sceneOf(r).camera, { frame: [{ diagram: "KPHX" }] });
+});
+
+test("the raise to use: the first scene's at first, then whatever is raised on screen", () => {
+  assert.deepEqual(raiseNow(first, null), ["B", "C", "D"]);
+  assert.deepEqual(raiseNow(first, ["d-chandler-class-d"]), [{ area: "d-chandler-class-d" }]);
+  assert.deepEqual(raiseNow(first, []), []);
 });
