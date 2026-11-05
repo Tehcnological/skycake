@@ -1,4 +1,7 @@
-const DECIDE_PX = 10;
+// Fingers rarely start together, so a tilt only has to be clearly more together than apart, and a pinch waits a little.
+const TILT_PX = 10;
+const PINCH_PX = 16;
+const WAIT_PX = 30;
 const TAP_PX = 8;
 const TAP_MS = 500;
 /**
@@ -12,11 +15,14 @@ export function twoFingers(a0, b0) {
     return (a, b) => {
         if (!kind) {
             const [dax, day, dbx, dby] = [a[0] - a0[0], a[1] - a0[1], b[0] - b0[0], b[1] - b0[1]];
-            if (Math.max(Math.hypot(dax, day), Math.hypot(dbx, dby)) < DECIDE_PX)
+            const [x, y] = [Math.abs(dax + dbx) / 2, Math.abs(day + dby) / 2]; // moved together
+            const apart = Math.hypot(dax - dbx, day - dby); // moved relative to each other
+            if (y >= TILT_PX && y >= 2 * x && y >= 2 * apart)
+                kind = "tilt";
+            else if (apart >= PINCH_PX || Math.max(Math.hypot(dax, day), Math.hypot(dbx, dby)) >= WAIT_PX)
+                kind = "shape";
+            else
                 return null;
-            const upright = Math.abs(day) > 2 * Math.abs(dax) && Math.abs(dby) > 2 * Math.abs(dbx);
-            const together = day * dby > 0 && Math.min(Math.abs(day), Math.abs(dby)) >= Math.max(Math.abs(day), Math.abs(dby)) / 2;
-            kind = upright && together ? "tilt" : "shape";
         }
         const [qa, qb] = [pa, pb];
         [pa, pb] = [a, b];
