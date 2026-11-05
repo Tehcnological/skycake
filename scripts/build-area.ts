@@ -30,8 +30,9 @@ import { parseProcedures, type Airport } from "../src/procedure.js";
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
 const KNOWN_EDITION = Date.UTC(2026, 9, 29); // VFR charts repeat every 56 days.
-// Phoenix to Tucson: the Phoenix TAC's map area and south past Tucson, on the Phoenix sectional.
-const BOUNDS: Bounds = { s: 31.85, w: -112.85, n: 34.07, e: -110.6 };
+// Phoenix to Tucson on the Phoenix sectional. Every approach at the airports inside ends at least 2.7 NM from the edge,
+// past the chart's fade (viewer.ts).
+const BOUNDS: Bounds = { s: 31.8, w: -113, n: 34.25, e: -110.27 };
 // Inside the TAC's neatline (34°05' N, 32°47' N; its east and west edges lean slightly), so no collar shows.
 const TAC_AREA: Bounds = { s: 32.795, w: -112.845, n: 34.07, e: -111.195 };
 // Sky Harbor field elevation: where heights written above the ground start.
@@ -39,7 +40,7 @@ const GROUND = 1135;
 // The longer side of each chart image; 4096 is the largest texture every phone takes.
 const SIDE = 4096;
 // Terrain cells about 0.25 NM square.
-const DEM = { nx: 452, ny: 532 };
+const DEM = { nx: 548, ny: 587 };
 
 const date = process.argv.slice(2).find((a) => !a.startsWith("--"));
 const now = date ? Date.parse(date) : Date.now();

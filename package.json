@@ -1,6 +1,6 @@
 {
   "name": "skycake",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Interactive 3D airspace and instrument procedures over real FAA charts, with terrain and airport diagrams. Free roam, guided walkthroughs and a quiz engine for teaching airspace and IFR. Not for navigation.",
   "license": "AGPL-3.0-only",
   "author": "Christopher DeFoe",
