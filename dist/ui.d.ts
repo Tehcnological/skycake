@@ -1,18 +1,21 @@
-import { type Kind } from "./airspace.js";
+import type { Kind } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
 import { type Scene } from "./scene.js";
-/** On-screen words. Each site can supply its own. */
+/** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
     kinds: Record<Kind, string>;
-    airport: string;
-    procedure: string;
-    noProcedure: string;
     groups: Record<ProcType, string>;
+    airspace: string;
+    search: string;
+    noMatches: string;
+    remove: (name: string) => string;
+    procedureTab: string;
+    viewTab: string;
+    controls: string;
     diagram: string;
     tags: string;
     heightScale: (n: number) => string;
     fullScreen: string;
-    details: string;
     finalCourse: string;
     glidepath: string;
     fafToMap: string;
@@ -28,11 +31,11 @@ export type Options = {
     scene?: Scene;
     /** Shorthand for a first scene: types raised at first. */
     types?: Kind[];
-    /** Airport picked at first. Default: KPHX, else the first one. */
+    /** The airport current at first (search box, diagram). Default: KPHX when the area has it. */
     airport?: string;
-    /** Approach shown at first, by name. */
+    /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;
     labels?: Partial<Labels>;
 };
-/** Builds the view inside `host`. Resolves once the area's data has loaded and the controls are in place. */
+/** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export declare function mount(host: HTMLElement, o: Options): Promise<void>;
