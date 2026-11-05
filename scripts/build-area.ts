@@ -201,7 +201,15 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
     if (ceiling <= floor) continue;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
   }
-  const kept = areas.filter((a) => a.rings.length > 0);
+  // A shelf two airports share can come twice, once under each name (Tucson International and Davis-Monthan's
+  // Class C); the first one is kept.
+  const seen = new Set<string>();
+  const kept = areas.filter((a) => {
+    const key = `${a.kind}|${a.floor}|${a.ceiling}|${JSON.stringify(a.rings)}`;
+    if (a.rings.length === 0 || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const ids = areaIds(kept, GROUND);
   return kept.map((a, i) => ({ id: ids[i], ...a }));
 }
