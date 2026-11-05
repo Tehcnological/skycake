@@ -1,5 +1,6 @@
-import { type AirspaceFile, type Area, type Bounds, type Kind } from "./airspace.js";
+import { type AirspaceFile, type Area, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
+import type { Resolved } from "./scene.js";
 type Style = {
     color: number;
     wall: number;
@@ -16,17 +17,19 @@ export type View = {
     raise(kind: Kind, on: boolean): void;
     exaggerate(n: number): void;
     tags(on: boolean): void;
-    /** Shows a procedure, or null to go back to the first view. */
-    procedure(p: Procedure | null): void;
-    /** Lays an airport diagram over the chart and frames it, or takes it away. */
-    diagram(d: {
-        url: string;
-        bounds: Bounds;
-    } | null): Promise<void>;
+    /** Raises or lowers one area, by id. */
+    raiseArea(id: string, on: boolean): void;
+    /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
+    raisedAreas(): string[];
+    /**
+     * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
+     * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
+     */
+    apply(scene: Resolved, procedures: Procedure[], now?: boolean, framing?: Procedure[]): Promise<void>;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
 };
-export declare function build(host: HTMLElement, data: AirspaceFile, first: Kind[], label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void): Promise<View>;
+export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void): Promise<View>;
 export {};

@@ -4,7 +4,7 @@ Interactive 3D airspace and instrument procedures over real FAA charts, with ter
 
 Named for the upside-down wedding cake every student pilot learns Class B as.
 
-Today it is the free-roam view: the Phoenix TAC over USGS terrain, every airspace type raised in the chart's own colors, approaches, departures and arrivals for every airport on the chart, and FAA airport diagrams laid over the field. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
+Today it is the free-roam view: the Phoenix TAC over USGS terrain with every airspace type raised in the chart's own colors, approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view; on phones a tab bar sits under it. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
 
 ## Use it on a site
 
@@ -21,14 +21,18 @@ import { mount } from "skycake";
 
 mount(document.querySelector("#airspace")!, {
   base: "/skycake/phoenix/",
-  types: ["B"],            // raised at first (default Class B)
-  airport: "KPHX",         // picked at first
-  approach: "ILS RWY 25L", // shown at first
+  // The first scene. Default: every airspace type raised, the whole chart in view.
+  scene: {
+    raise: ["B", { area: "d-chandler-municipal-airport-class-d" }],
+    procedures: [{ airport: "KPHX", name: "EAGUL6" }, { airport: "KPHX", name: "ILS RWY 25L" }],
+    camera: "fit",          // or "top", { frame: [...] }, or a placed camera
+  },
+  airport: "KPHX",          // current at first, for the search box and diagram
   labels: { tags: "Tags" }, // any on-screen words to replace
 });
 ```
 
-three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens.
+`types` and `approach` still work as shorthand for a first scene. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens.
 
 ## Data
 
@@ -41,6 +45,7 @@ npm install
 npm test
 npm run typecheck
 npm run build   # dist/, committed, so sites can install straight from GitHub
+npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene
 ```
 
 Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/superpowers/specs/2026-11-03-3d-airspace-design.md).

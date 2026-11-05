@@ -12,6 +12,8 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { clipRing, deepest, hundreds, inRing, type AirspaceFile, type Area, type Bounds, type Kind } from "./airspace.js";
 import type { Point, Procedure, Segment } from "./procedure.js";
+import { fixTags } from "./roam.js";
+import type { Resolved, Target } from "./scene.js";
 
 const FT_PER_NM = 6076;
 const BLUE = 0x2f6bff;
@@ -82,10 +84,15 @@ export type View = {
   raise(kind: Kind, on: boolean): void;
   exaggerate(n: number): void;
   tags(on: boolean): void;
-  /** Shows a procedure, or null to go back to the first view. */
-  procedure(p: Procedure | null): void;
-  /** Lays an airport diagram over the chart and frames it, or takes it away. */
-  diagram(d: { url: string; bounds: Bounds } | null): Promise<void>;
+  /** Raises or lowers one area, by id. */
+  raiseArea(id: string, on: boolean): void;
+  /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
+  raisedAreas(): string[];
+  /**
+   * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
+   * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
+   */
+  apply(scene: Resolved, procedures: Procedure[], now?: boolean, framing?: Procedure[]): Promise<void>;
   /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
   orbit(azimuth: number, polar: number): void;
   /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
@@ -97,7 +104,6 @@ type Live = { area: Area; group: THREE.Group; rings: number[][][]; picks: THREE.
 export async function build(
   host: HTMLElement,
   data: AirspaceFile,
-  first: Kind[],
   label: (a: Area | null, x: number, y: number) => void,
   raised: (kind: Kind, on: boolean) => void,
 ): Promise<View> {
@@ -204,7 +210,8 @@ export async function build(
   chart.renderOrder = -1;
   world.add(chart);
 
-  // Tags follow their spot on screen. Highest priority first; one that would overlap a shown tag hides.
+  // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
+  // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
   const shelfTags: Tag[] = [];
   let approachTags: Tag[] = [];
   let tagsOn = true;
@@ -320,14 +327,15 @@ export async function build(
     dirty = true;
   };
 
-  // Eases the camera to a view of the given spots, from the south so the chart reads upright.
+  // Eases the camera to a view of the given spots, from the south so the chart reads upright, tilted the given
+  // degrees above the horizon (90 looks straight down with north up).
   let fly: { p0: THREE.Vector3; p1: THREE.Vector3; t0: THREE.Vector3; t1: THREE.Vector3; t: number } | null = null;
-  const frame = (spots: THREE.Vector3[], now = false) => {
+  const frame = (spots: THREE.Vector3[], tiltDeg = 32, now = false) => {
     const box = new THREE.Box3();
     const scaled = spots.map((s) => new THREE.Vector3(s.x, s.y * world.scale.y, s.z));
     for (const s of scaled) box.expandByPoint(s);
     const center = box.getCenter(new THREE.Vector3());
-    const tilt = (32 * Math.PI) / 180;
+    const tilt = (Math.min(tiltDeg, 89.9) * Math.PI) / 180;
     const back = new THREE.Vector3(0, Math.sin(tilt), Math.cos(tilt)), up = new THREE.Vector3(0, Math.cos(tilt), -Math.sin(tilt));
     const tv = Math.tan((camera.fov * Math.PI) / 360), th = tv * camera.aspect;
     // The nearest distance at which every spot is on screen, perspective included. Far spots look smaller, which
@@ -355,11 +363,10 @@ export async function build(
       dirty = true;
     } else fly = { p0: camera.position.clone(), p1, t0: controls.target.clone(), t1: center, t: 0 };
   };
-  let framed: THREE.Vector3[] | null = null;
-  const spotsOf = (kinds: Kind[]) => {
-    const spots = lives.filter((l) => kinds.includes(l.area.kind)).flatMap((l) => l.rings.flat().map(([x, z]) => new THREE.Vector3(x, nm(l.area.ceiling), z)));
-    return spots.length ? spots : [new THREE.Vector3(-width / 2, 0, -depth / 2), new THREE.Vector3(width / 2, 0, depth / 2)];
-  };
+  // What is framed now, so a resize or a height change can frame it again.
+  let framed: { spots: THREE.Vector3[]; tilt: number; procedures: boolean } | null = null;
+  const whole = () => [new THREE.Vector3(-width / 2, 0, -depth / 2), new THREE.Vector3(width / 2, 0, depth / 2)];
+  const ringSpots = (l: Live) => l.rings.flat().map(([x, z]) => new THREE.Vector3(x, nm(l.area.ceiling), z));
 
   // Procedures: each path outlined in black at a constant width on screen, the missed approach dashed yellow and black.
   // A curtain drops from the path to the ground so its height reads from any angle.
@@ -405,7 +412,52 @@ export async function build(
     approachTags = [];
   };
 
-  let plate: THREE.Mesh | null = null, plateSpots: THREE.Vector3[] = [], plateTicket = 0;
+  // An airport diagram draped a little above the ground, or none. The same one again is left as it is.
+  let plate: THREE.Mesh | null = null, plateUrl: string | null = null, plateTicket = 0;
+  const showDiagram = async (d: { url: string; bounds: Bounds } | null) => {
+    if ((d?.url ?? null) === plateUrl) return;
+    const ticket = ++plateTicket;
+    plateUrl = d?.url ?? null;
+    if (plate) {
+      world.remove(plate);
+      plate.geometry.dispose();
+      (plate.material as THREE.MeshBasicMaterial).map?.dispose();
+      (plate.material as THREE.Material).dispose();
+      plate = null;
+      dirty = true;
+    }
+    if (!d) return;
+    const map = await new THREE.TextureLoader().loadAsync(d.url).catch(() => null);
+    if (!map || ticket !== plateTicket) return map?.dispose();
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const [x0, x1, z0, z1] = [X(d.bounds.w), X(d.bounds.e), Z(d.bounds.n), Z(d.bounds.s)];
+    // The image's top is north.
+    const geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0, 24, 24);
+    geo.rotateX(-Math.PI / 2);
+    geo.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
+    const at = geo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < at.count; i++) at.setY(i, groundAt(at.getX(i), at.getZ(i)) + nm(40));
+    plate = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+    plate.renderOrder = 0.05;
+    world.add(plate);
+    dirty = true;
+  };
+
+  // Where a scene's target is: an area's outline at its ceiling, a fix on a shown procedure, a procedure's paths, a
+  // point on the ground.
+  const targetSpots = (t: Target, procs: Procedure[]): THREE.Vector3[] => {
+    if ("area" in t) return lives.filter((l) => l.area.id === t.area).flatMap(ringSpots);
+    if ("fix" in t) return procs.flatMap((p) => p.fixes).filter((f) => f.name === t.fix).slice(0, 1).map((f) => new THREE.Vector3(X(f.lon), nm(f.ft), Z(f.lat)));
+    if ("procedure" in t) return procs.filter((p) => p.airport === t.procedure.airport && p.name === t.procedure.name).flatMap((p) => p.paths.flatMap((x) => x.pts.map(toLocal)));
+    if ("diagram" in t) {
+      const d = data.airports.find((a) => a.id === t.diagram)?.diagram;
+      if (!d) return [];
+      return [[d.bounds.w, d.bounds.n], [d.bounds.e, d.bounds.n], [d.bounds.w, d.bounds.s], [d.bounds.e, d.bounds.s]].map(([lon, lat]) => new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat)));
+    }
+    const [lat, lon] = t.point;
+    return [new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat))];
+  };
 
   // Hover or tap shows the area under the pointer: a raised one first, else the flat one printed on the chart there.
   const ray = new THREE.Raycaster();
@@ -459,7 +511,7 @@ export async function build(
     camera.updateProjectionMatrix();
     dirty = true;
     // A new shape (full screen, a turned phone) would clip what was in view.
-    if (changed) frame(framed ?? (plate ? plateSpots : spotsOf(first)), true);
+    if (changed && framed) frame(framed.spots, framed.tilt, true);
   };
   new ResizeObserver(size).observe(host);
   size();
@@ -473,8 +525,8 @@ export async function build(
       controls.target.y *= n / world.scale.y;
       world.scale.y = n;
       dirty = true;
-      // An approach's far ends move on screen with its height, so keep all of it in view.
-      if (framed) frame(framed);
+      // A procedure's far ends move on screen with its height, so keep all of it in view.
+      if (framed?.procedures) frame(framed.spots, framed.tilt);
     },
     tags: (on) => {
       tagsOn = on;
@@ -496,60 +548,70 @@ export async function build(
       fly = null;
       dirty = true;
     },
-    procedure: (a) => {
-      clearRoute();
-      framed = null;
-      for (const l of lives) set(l, !a && first.includes(l.area.kind));
-      if (!a) return frame(plate ? plateSpots : spotsOf(first));
-      const paths = a.paths.map((p) => ({ seg: p.seg, pts: p.pts.map(toLocal) }));
-      for (const p of paths) {
-        const main = p.seg === "final" || p.seg === "common";
-        curtain(p.pts, PATH[p.seg], main ? 0.28 : p.seg === "vectors" ? 0.08 : 0.14);
-        path(p.pts, PATH[p.seg], p.seg === "missed" || p.seg === "vectors");
+    raiseArea: (id, on) => {
+      const l = lives.find((x) => x.area.id === id);
+      if (l) set(l, on);
+    },
+    raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
+    apply: async (sc, procs, now = false, framing = []) => {
+      for (const l of lives) set(l, sc.raised.has(l.area.id));
+      if (world.scale.y !== sc.height) {
+        controls.target.y *= sc.height / world.scale.y;
+        world.scale.y = sc.height;
       }
-      for (const f of a.fixes) {
+      tagsOn = sc.tags;
+      clearRoute();
+      for (const a of procs) {
+        for (const p of a.paths) {
+          const pts = p.pts.map(toLocal);
+          const main = p.seg === "final" || p.seg === "common";
+          curtain(pts, PATH[p.seg], main ? 0.28 : p.seg === "vectors" ? 0.08 : 0.14);
+          path(pts, PATH[p.seg], p.seg === "missed" || p.seg === "vectors");
+        }
+      }
+      for (const f of fixTags(procs)) {
         const cls = f.seg === "final" || f.seg === "common" ? "g" : f.seg === "missed" ? "y" : "w";
         const node = el("div", `tag fix ${cls}`, el("b", "", f.name, ...(f.role ? [el("i", "", f.role)] : [])), ...(f.alt ? [f.alt] : []));
         addTag(node, new THREE.Vector3(X(f.lon), nm(f.ft), Z(f.lat)), f.role === "FAF" || f.role === "MAP" ? 0 : f.role ? 1 : 2, () => true, approachTags);
       }
       approachTags.sort((x, y) => x.pri - y.pri);
-      dirty = true;
-      framed = paths.flatMap((p) => p.pts);
-      frame(framed);
-    },
-    diagram: async (d) => {
-      const ticket = ++plateTicket;
-      if (plate) {
-        world.remove(plate);
-        plate.geometry.dispose();
-        (plate.material as THREE.MeshBasicMaterial).map?.dispose();
-        (plate.material as THREE.Material).dispose();
-        plate = null;
-        dirty = true;
+      const plateDone = showDiagram(sc.diagram ? (data.airports.find((a) => a.id === sc.diagram)?.diagram ?? null) : null);
+      const cam = sc.camera;
+      if (cam === null) {
+        // Leave the camera where it is; a procedure's height change still reframes what was framed.
+        if (framed) framed.procedures = procs.length > 0;
+      } else if (typeof cam === "object" && "azimuth" in cam) {
+        // Placed directly: looking toward the azimuth (degrees true), tilt degrees above the horizon, distance in NM.
+        const [lat, lon] = cam.target;
+        const target = new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)) * world.scale.y, Z(lat));
+        const [az, t] = [(cam.azimuth * Math.PI) / 180, (cam.tilt * Math.PI) / 180];
+        const p1 = target.clone().add(new THREE.Vector3(-Math.sin(az) * Math.cos(t), Math.sin(t), Math.cos(az) * Math.cos(t)).multiplyScalar(cam.distance));
+        framed = null;
+        if (now || still) {
+          camera.position.copy(p1);
+          controls.target.copy(target);
+          fly = null;
+        } else fly = { p0: camera.position.clone(), p1, t0: controls.target.clone(), t1: target, t: 0 };
+      } else {
+        let spots: THREE.Vector3[];
+        let tilt = 32;
+        if (cam === "fit" || cam === "top") {
+          spots = lives.filter((l) => sc.raised.has(l.area.id)).flatMap(ringSpots);
+          if (cam === "top") tilt = 90;
+        } else {
+          spots = cam.frame.flatMap((t) => targetSpots(t, [...procs, ...framing]));
+          tilt = cam.tilt ?? 32;
+        }
+        if (!spots.length) spots = whole();
+        framed = { spots, tilt, procedures: procs.length + framing.length > 0 };
+        frame(spots, tilt, now);
       }
-      if (!d) return;
-      const map = await new THREE.TextureLoader().loadAsync(d.url).catch(() => null);
-      if (!map || ticket !== plateTicket) return map?.dispose();
-      map.colorSpace = THREE.SRGBColorSpace;
-      map.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      const [x0, x1, z0, z1] = [X(d.bounds.w), X(d.bounds.e), Z(d.bounds.n), Z(d.bounds.s)];
-      // Draped a little above the ground; the image's top is north.
-      const geo = new THREE.PlaneGeometry(x1 - x0, z1 - z0, 24, 24);
-      geo.rotateX(-Math.PI / 2);
-      geo.translate((x0 + x1) / 2, 0, (z0 + z1) / 2);
-      const at = geo.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < at.count; i++) at.setY(i, groundAt(at.getX(i), at.getZ(i)) + nm(40));
-      plate = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
-      plate.renderOrder = 0.05;
-      world.add(plate);
-      plateSpots = [[x0, z0], [x1, z0], [x0, z1], [x1, z1]].map(([x, z]) => new THREE.Vector3(x, groundAt(x, z), z));
       dirty = true;
-      if (!framed) frame(plateSpots);
+      await plateDone;
     },
   };
 
-  for (const l of lives) if (first.includes(l.area.kind)) set(l, true);
-  frame(spotsOf(first), true);
+  frame(whole(), 32, true);
 
   let last = performance.now();
   renderer.setAnimationLoop((now) => {
