@@ -20,6 +20,18 @@ export declare function labelValue(text: string): {
     kind: "lat" | "lon";
     value: number;
 } | null;
+/** A filled outline on the page: how many segments and contours it has, its box, and the center of its smallest contour. */
+export type Glyph = {
+    segs: number;
+    subs: number;
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+    hole?: [x: number, y: number];
+};
+/** Tick labels among outlines in drawing order, on a page with y running down: runs of touching characters that read as 33°26.5'N. */
+export declare function readOutlines(glyphs: Glyph[]): Label[];
 /**
  * Page position to latitude and longitude from the tick labels, or null when the labels don't make a trustworthy
  * north-aligned, true-scale map: too few, on the same axis, a label more than 100 ft off the fit, or the two scales

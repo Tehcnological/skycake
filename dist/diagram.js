@@ -6,6 +6,54 @@ export function labelValue(text) {
     const v = Number(m[1]) + Number(m[2]) / 60;
     return { kind: m[3] === "N" || m[3] === "S" ? "lat" : "lon", value: m[3] === "S" || m[3] === "W" ? -v : v };
 }
+// Many diagrams turn their text into outlines, one to a character. Same font every time, so each character has one
+// shape. A misread can't place a diagram: its label would miss the fit in fitLabels.
+const OUTLINES = {
+    "96/2": "0", "46/1": "2", "97/1": "3", "13/2": "4", "66/1": "5", "68/2": "6", "124/3": "8",
+    "32/2": "°", "4/1": "'", "16/1": ".", "8/1": "N", "10/1": "W",
+};
+const char = (g) => {
+    const w = g.x1 - g.x0, h = g.y1 - g.y0;
+    // 1 and 7 have the same segments; a 1 is much the narrower.
+    if (g.segs === 6 && g.subs === 1)
+        return Math.min(w, h) / Math.max(w, h) < 0.5 ? "1" : "7";
+    return OUTLINES[`${g.segs}/${g.subs}`] ?? "?";
+};
+/** Tick labels among outlines in drawing order, on a page with y running down: runs of touching characters that read as 33°26.5'N. */
+export function readOutlines(glyphs) {
+    const size = (g) => Math.max(g.x1 - g.x0, g.y1 - g.y0);
+    const center = (g) => [(g.x0 + g.x1) / 2, (g.y0 + g.y1) / 2];
+    const labels = [];
+    let start = 0;
+    for (let i = 1; i <= glyphs.length; i++) {
+        if (i < glyphs.length) {
+            const [ax, ay] = center(glyphs[i - 1]), [bx, by] = center(glyphs[i]);
+            if (Math.hypot(ax - bx, ay - by) <= 2 * Math.max(size(glyphs[i - 1]), size(glyphs[i])))
+                continue;
+        }
+        const run = glyphs.slice(start, i);
+        for (const m of run.map(char).join("").matchAll(/\d{1,3}°\d{1,2}(?:\.\d+)?'[NW]/g)) {
+            const box = run.slice(m.index, m.index + m[0].length);
+            // A 9 is a 6 turned over: the same outline with its hole at the top. Up is a quarter turn left of the reading direction.
+            const [fx, fy] = center(box[0]), [lx, ly] = center(box[box.length - 1]);
+            const text = [...m[0]].map((c, k) => {
+                const g = box[k];
+                if (c !== "6" || !g.hole)
+                    return c;
+                const [cx, cy] = center(g);
+                return (g.hole[0] - cx) * (ly - fy) - (g.hole[1] - cy) * (lx - fx) > 0 ? "9" : "6";
+            }).join("");
+            const round = (v) => Math.round(v * 1e3) / 1e3;
+            labels.push({
+                x: round((Math.min(...box.map((g) => g.x0)) + Math.max(...box.map((g) => g.x1))) / 2),
+                y: round((Math.min(...box.map((g) => g.y0)) + Math.max(...box.map((g) => g.y1))) / 2),
+                text,
+            });
+        }
+        start = i;
+    }
+    return labels;
+}
 function line(pts) {
     const values = new Set(pts.map((p) => p.value));
     if (values.size < 2)
