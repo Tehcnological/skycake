@@ -42,11 +42,13 @@ html.skycake-full { overflow: hidden; }
 
 /* Panels, buttons and rows. */
 .skycake .sc-panel { box-sizing: border-box; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-card); background: color-mix(in srgb, var(--sc-panel) 94%, transparent); }
-.skycake .sc-pill, .skycake .sc-round, .skycake .sc-search { box-sizing: border-box; height: 44px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-pill); background: color-mix(in srgb, var(--sc-panel) 94%, transparent); color: var(--sc-ink); }
+/* Controls sit on a busy chart: solid, with a bright edge for dark ground and a shadow for light. */
+.skycake .sc-pill, .skycake .sc-round, .skycake .sc-search { box-sizing: border-box; height: 44px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); background: var(--sc-panel); box-shadow: 0 2px 8px rgb(0 0 0 / 0.45); color: var(--sc-ink); }
 .skycake .sc-pill { display: flex; align-items: center; gap: 10px; align-self: flex-start; padding: 0 18px; font: 600 13px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
-.skycake .sc-pill[aria-expanded="true"], .skycake .sc-round[aria-pressed="true"] { background: var(--sc-accent-bg); }
+.skycake .sc-pill[aria-expanded="true"], .skycake .sc-round[aria-pressed="true"] { border-color: var(--sc-accent); background: color-mix(in srgb, var(--sc-accent) 38%, var(--sc-panel)); }
 .skycake .sc-round { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; }
-.skycake .sc-round.sc-scale, .skycake .sc-round.sc-chart { font: 500 14px var(--sc-mono); }
+.skycake .sc-round.sc-scale, .skycake .sc-round.sc-chart { font: 700 15px var(--sc-mono); }
+.skycake .sc-round svg[viewBox="0 0 24 24"] { stroke-width: 2.4; }
 .skycake .sc-row { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: var(--sc-r-row); font-size: 14px; color: var(--sc-soft); cursor: pointer; }
 .skycake .sc-row span { flex: 1; }
 .skycake .sc-row input { width: 18px; height: 18px; margin: 0; accent-color: var(--sc-accent); }
@@ -67,7 +69,7 @@ html.skycake-full { overflow: hidden; }
 /* Search, results and the shown procedures. */
 .skycake .sc-search { display: flex; align-items: center; gap: 10px; padding: 0 16px; color: var(--sc-muted); }
 .skycake .sc-search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--sc-ink); font: 500 14px var(--sc-mono); outline: none; }
-.skycake .sc-search:focus-within { border-color: var(--sc-soft); }
+.skycake .sc-search:focus-within { border-color: var(--sc-ink); }
 .skycake .sc-results { display: flex; flex-direction: column; max-height: 50vh; min-height: 0; overflow: auto; padding: 8px; }
 .skycake .sc-group { margin: 8px 8px 4px; font: 600 11px var(--sc-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--sc-muted); }
 .skycake .sc-none { margin: 8px; font-size: 14px; color: var(--sc-muted); }
@@ -100,7 +102,7 @@ html.skycake-full { overflow: hidden; }
   .skycake .sc-br { display: none; left: 0; right: 0; bottom: 76px; flex-direction: row; justify-content: center; gap: 12px; padding: 14px; border-top: 1px solid var(--sc-frame); border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; background: var(--sc-panel); }
   .skycake.sc-open-view .sc-br { display: flex; }
   .skycake .sc-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 76px; flex: none; border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
-  .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; background: none; color: var(--sc-muted); font: 600 11px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+  .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border: 0; background: none; color: var(--sc-soft); font: 600 11px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
   .skycake .sc-tab[aria-pressed="true"] { color: var(--sc-ink); box-shadow: inset 0 3px 0 var(--sc-accent); }
   .skycake .sc-caption { bottom: calc(76px + 8px); z-index: 4; }
   /* "Not for navigation" stays on screen: open sheets leave a strip at their foot for it. */
@@ -158,6 +160,6 @@ html.skycake-full { overflow: hidden; }
 /* Phones have no hover: the names sit under the buttons in the View sheet. */
 @media (max-width: 860px) {
   .skycake .sc-br { gap: 20px; }
-  .skycake .sc-round[data-tip]::after { right: auto; left: 50%; top: calc(100% + 6px); width: 64px; transform: translateX(-50%); padding: 0; border: 0; background: none; color: var(--sc-muted); font: 600 10px/1.25 var(--sc-head); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; white-space: normal; opacity: 1; }
+  .skycake .sc-round[data-tip]::after { right: auto; left: 50%; top: calc(100% + 6px); width: 64px; transform: translateX(-50%); padding: 0; border: 0; background: none; color: var(--sc-soft); font: 600 10px/1.25 var(--sc-head); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; white-space: normal; opacity: 1; }
   .skycake.sc-open-view .sc-br { padding-bottom: 66px; }
 }
