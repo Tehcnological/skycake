@@ -299,12 +299,17 @@ export function freeRoam(c: Context): Promise<void> {
     if (on) fig.requestFullscreen?.().catch(() => {});
     else if (document.fullscreenElement) document.exitFullscreen();
   };
-  fullButton.addEventListener("click", () => (c.close ? c.close() : goFull(!fig.classList.contains("full"))));
+  // The page scrolls again before the site's close runs, in case it stays on this page.
+  const leave = (close: () => void) => {
+    document.documentElement.classList.remove("skycake-full");
+    close();
+  };
+  fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
   openButton.addEventListener("click", () => goFull(true));
   tabs.close.addEventListener("click", () => {
     sheet(null);
     results.hidden = true;
-    if (c.close) c.close();
+    if (c.close) leave(c.close);
     else goFull(false);
   });
   phone.addEventListener("change", drawPhone);
