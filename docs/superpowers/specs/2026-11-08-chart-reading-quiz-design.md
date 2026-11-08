@@ -81,7 +81,6 @@ Where the chart and NASR could disagree (the chart's cutoff is weeks before its 
 | Sub | Shows | Asks | Answer from | Wrong choices from |
 |---|---|---|---|---|
 | table floor / ceiling | the area raised, the margin table beside the card | "What is the floor of QUAIL MOA?" | `LOWER_*`, `UPPER_*` (with TNI as the table writes it) | the same field of other SUA in the table |
-| table times | same | "When is BAGDAD 1 MOA in use?" | `TIMESOFUSE` | other areas' times |
 | table agency | same | "Who controls R-2301 E?" | `CONT_AGENT` | other agencies in the table |
 | kind | an area highlighted, no name | "What kind of special use airspace is this?" | area kind | other SUA kinds |
 | airplane in it | airplane at a lat, lon, altitude inside the footprint | "Is the airplane inside QUAIL MOA?" | floor and ceiling (TNI: the ceiling itself is outside) | Yes / No |
@@ -170,7 +169,7 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 - **`src/quiz.ts`:** `Generate` and Practice filters gain `symbols?: SymbolKind[]` and `seconds?: number`. One filter alone keeps to its side, as today: `symbols` alone asks only `symbol` and `hunt`; `kinds` naming only SUA kinds asks `find` and `sua`; `airports` alone also asks `block` about those airports.
 - **`src/quizui.ts`:** the countdown, the Table button and its full-screen sheet, time up, the hunt's numbered markers in accessibility mode.
 - **`src/ui.ts` `Options`:** `a11y?: boolean`.
-- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, date, utc)`, `ask.suaUtc(name, date)`, `ask.suaRules`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
+- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, date, utc)`, `ask.suaUtc(name, date)`, `ask.suaRules`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
 - **Validation (`src/validate.ts`):** authored questions may name a symbol by `id`; the validator checks it against `chart.json` as it does fixes and areas.
 
 ## Scaling
@@ -204,7 +203,7 @@ Settled with Chris (2026-11-08):
 - Highlight: a ring.
 - Hunt window: the same size as the normal map, with pan and zoom as usual.
 - The SUA rules sub is in.
-- All times in UTC.
+- All times in UTC, the table's times too: they are asked only by the "times in UTC" sub, never as the table prints them in local.
 - The margin table: a Table button opening a full-screen sheet with pan and zoom.
 - Accessibility mode: skycake gets one (host option and the Viewer's own toggle); in it the hunt uses numbered markers and no countdown.
 - Symbol data is rebuilt every 56 days with the chart.
