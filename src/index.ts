@@ -7,4 +7,4 @@ export type { Question } from "./question.js";
 export type { Generate, Quiz, QuizResult } from "./quiz.js";
 export type { QuestionType } from "./generate.js";
 export type { Step, Walkthrough } from "./walkthrough.js";
-export { validateWalkthrough } from "./validate.js";
+export { validateQuiz, validateWalkthrough } from "./validate.js";

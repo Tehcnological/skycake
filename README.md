@@ -110,6 +110,15 @@ A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) o
 
 **Results:** `onResult` is called after each answer with `{ quiz, item, right, ms }` (`item` is the question's `id`, or `generate:<type>:<n>`; `ms` runs from the question showing to the answer), and at the end of a quiz with `{ quiz, end: true, right, total }`. skycake stores nothing; the site decides what to keep. `demo/class-b-quiz.json` is a sample (`/demo/?quiz=class-b`, or `/demo/?quiz=practice&kinds=B,D`).
 
+#### Validating quizzes
+
+`validateQuiz(quiz, data, files, area)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks (names, prompt, choices, answer, tolerance, and an `answerArea` the data has). A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
+
+```ts
+import { validateQuiz } from "skycake";
+const problems = await validateQuiz(quiz, data, files, "phoenix");
+```
+
 ## Data
 
 `npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.

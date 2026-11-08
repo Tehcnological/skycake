@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
-import { validateWalkthrough } from "./validate.js";
+import type { Quiz } from "./quiz.js";
+import { validateQuiz, validateWalkthrough } from "./validate.js";
 import type { Walkthrough } from "./walkthrough.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync("data/phoenix/area.json", "utf8"));
@@ -35,4 +36,29 @@ test("catches bad captions, seconds, prompts, choice counts and tolerance; ignor
 test("a check's own scene and find answer are checked too", async () => {
   const bad = { ...good, steps: [{ caption: "a", scene: {}, check: { type: "find" as const, prompt: "?", answer: { fix: "ZZZZZ" }, scene: { highlight: [{ airport: "KZZZ" }] } } }] };
   assert.deepEqual(await validateWalkthrough(bad, data, files, "phoenix"), ["t step 1: no airport KZZZ", "t step 1: no fix ZZZZZ"]);
+});
+
+const goodQuiz: Quiz = { id: "q", title: "Q", area: "phoenix", items: [
+  { type: "find", prompt: "?", answer: { area: data.areas[0].id } },
+  { generate: "read", count: 2 },
+] };
+test("a good quiz has no problems", async () => assert.deepEqual(await validateQuiz(goodQuiz, data, files, "phoenix"), []));
+test("catches bad written items and impossible generate items", async () => {
+  const bad = { ...goodQuiz, items: [
+    { type: "find", prompt: "?", answer: { area: "nope" } },
+    { type: "read", prompt: "?", number: { answer: 5000, tolerance: -1 } },
+    { generate: "procedure", count: 2, airports: ["KZZZ"] },
+    { generate: "find", count: 0 },
+  ] } as Quiz;
+  assert.deepEqual(await validateQuiz(bad, data, files, "phoenix"), [
+    "q item 1: no area nope", "q item 2: tolerance is below 0", "q item 3: no airport KZZZ", "q item 4: count must be at least 1",
+  ]);
+});
+test("catches another area, an answerArea the data lacks, and filters that leave nothing to ask", async () => {
+  const bad = { ...goodQuiz, area: "miami", items: [
+    { type: "airplane", prompt: "?", choices: ["a", "b"], answer: 0, answerArea: "nope" },
+    { generate: "airplane", count: 1, kinds: ["MOA"] },
+    { generate: "read", count: 1, extra: "ignored" },
+  ] } as unknown as Quiz;
+  assert.deepEqual(await validateQuiz(bad, data, files, "phoenix"), ["q: area miami, data is phoenix", "q item 1: no area nope", "q item 2: nothing to ask with these filters"]);
 });

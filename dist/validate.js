@@ -1,3 +1,6 @@
+import { maker } from "./quiz.js";
+import { seeded } from "./generate.js";
+import { LABELS } from "./ui.js";
 import { usable } from "./scene.js";
 /** Problems with a scene, one per field that names something the data lacks. */
 function sceneProblems(scene, data, hasFix) {
@@ -10,6 +13,8 @@ export function questionProblems(q, data, hasFix) {
     const out = sceneProblems(q.scene, data, hasFix);
     if (q.type === "find")
         out.push(...sceneProblems({ highlight: [q.answer] }, data, hasFix));
+    if (q.answerArea !== undefined)
+        out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
     if (typeof q.prompt !== "string" || !q.prompt.trim())
         out.push("prompt is empty");
     if ("choices" in q) {
@@ -50,6 +55,29 @@ export async function validateWalkthrough(w, data, procedures, area) {
             problems.push("seconds must be above 0");
         problems.push(...sceneProblems(s.scene, data, hasFix), ...(s.check ? questionProblems(s.check, data, hasFix) : []));
         out.push(...problems.map((p) => at + p));
+    });
+    return out;
+}
+/** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. */
+export async function validateQuiz(q, data, procedures, area) {
+    const out = [];
+    if (q.area !== area)
+        out.push(`${q.id}: area ${q.area}, data is ${area}`);
+    const loaded = await Promise.all(data.airports.map((a) => procedures(a.id)));
+    const hasFix = await fixFinder(data, async (id) => loaded[data.airports.findIndex((a) => a.id === id)]);
+    const make = maker({ data, grid: null, procedures: loaded.flat(), ask: LABELS.ask }, seeded(0));
+    q.items.forEach((it, i) => {
+        const problems = [];
+        if (!("generate" in it))
+            problems.push(...questionProblems(it, data, hasFix));
+        else {
+            if (!(it.count >= 1))
+                problems.push("count must be at least 1");
+            problems.push(...sceneProblems({ highlight: (it.airports ?? []).map((airport) => ({ airport })) }, data, hasFix));
+            if (!problems.length && !make(it))
+                problems.push("nothing to ask with these filters");
+        }
+        out.push(...problems.map((p) => `${q.id} item ${i + 1}: ${p}`));
     });
     return out;
 }
