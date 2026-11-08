@@ -975,6 +975,22 @@ a11y = false) {
             takeOver();
             dirty = true;
         },
+        pan: (right, forward) => {
+            // The camera's facing, flattened onto the ground; looking straight down, up on screen is forward.
+            const off = controls.target.clone().sub(camera.position);
+            const ahead = new THREE.Vector3(off.x, 0, off.z);
+            if (ahead.lengthSq() < 1e-9)
+                ahead.set(0, 1, 0).applyQuaternion(camera.quaternion).setY(0);
+            ahead.normalize();
+            const side = new THREE.Vector3(-ahead.z, 0, ahead.x);
+            const shift = side.multiplyScalar(right).addScaledVector(ahead, forward).multiplyScalar(off.length());
+            camera.position.add(shift);
+            controls.target.add(shift);
+            keepOnChart();
+            controls.update();
+            takeOver();
+            dirty = true;
+        },
         raiseArea: (id, on) => {
             const l = lives.find((x) => x.area.id === id);
             if (l)

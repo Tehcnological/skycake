@@ -5,6 +5,7 @@ import { KINDS, chartsIn, modeOf, pickChart, shownIn } from "./airspace.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
 import { SceneError, framedOnly, resolve } from "./scene.js";
 import { airportList, proceduresAt, search } from "./search.js";
+import { pad } from "./pad.js";
 const SVG = "http://www.w3.org/2000/svg";
 export function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -95,6 +96,7 @@ export function freeRoam(c) {
     // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
     const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
     fig.querySelector(".view").after(openButton, topLeft, topRight, bottomRight);
+    fig.querySelector(".view").append(pad(c));
     fig.append(tabBar);
     const sheet = (name) => {
         fig.classList.toggle("sc-open-kinds", name === "kinds");

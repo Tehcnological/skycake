@@ -10,6 +10,7 @@ import { advance, answer, attempt, maker, practice, type Attempt, type Generate,
 import { stripPlayback, type Scene } from "./scene.js";
 import { scenes } from "./scenes.js";
 import type { QuizMode } from "./ui.js";
+import { pad } from "./pad.js";
 
 const TYPES: QuestionType[] = ["find", "read", "airplane", "procedure"];
 
@@ -27,6 +28,9 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   const say = (text: string) => live.replaceChildren(text);
   const box = h("div", { class: "sc-quiz" }, live);
   viewEl.after(top);
+  // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
+  const camera = pad(c);
+  viewEl.append(camera);
   fig.append(box);
   fig.classList.add("sc-quizzing");
   const unwake = wakeOnTap(c);
@@ -143,6 +147,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     open = null;
     top.remove();
     box.remove();
+    camera.remove();
     fig.classList.remove("sc-quizzing");
     viewEl.focus();
     explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));

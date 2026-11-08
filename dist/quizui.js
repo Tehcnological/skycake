@@ -9,6 +9,7 @@ import { locator, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice } from "./quiz.js";
 import { stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
+import { pad } from "./pad.js";
 const TYPES = ["find", "read", "airplane", "procedure"];
 /** Resolves once the first question shows. explore: leave into free roam from the scene on screen; the quiz's DOM is gone by then. */
 export async function quiz(c, mode, onResult, explore) {
@@ -23,6 +24,9 @@ export async function quiz(c, mode, onResult, explore) {
     const say = (text) => live.replaceChildren(text);
     const box = h("div", { class: "sc-quiz" }, live);
     viewEl.after(top);
+    // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
+    const camera = pad(c);
+    viewEl.append(camera);
     fig.append(box);
     fig.classList.add("sc-quizzing");
     const unwake = wakeOnTap(c);
@@ -139,6 +143,7 @@ export async function quiz(c, mode, onResult, explore) {
         open = null;
         top.remove();
         box.remove();
+        camera.remove();
         fig.classList.remove("sc-quizzing");
         viewEl.focus();
         explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));

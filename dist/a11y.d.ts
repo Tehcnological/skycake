@@ -8,3 +8,9 @@ export declare const initial: (option: boolean | undefined, s: Pick<Storage, "ge
 };
 /** localStorage, or null where touching it throws. */
 export declare function browserStorage(): Storage | null;
+/** One step of the keyboard and the camera pad: a turn or tilt (radians), a move (fraction of the camera's distance), a zoom. */
+export declare const STEPS: {
+    turn: number;
+    pan: number;
+    zoom: number;
+};

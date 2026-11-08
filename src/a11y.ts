@@ -32,3 +32,6 @@ export function browserStorage(): Storage | null {
     return null;
   }
 }
+
+/** One step of the keyboard and the camera pad: a turn or tilt (radians), a move (fraction of the camera's distance), a zoom. */
+export const STEPS = { turn: Math.PI / 24, pan: 0.15, zoom: 0.85 };

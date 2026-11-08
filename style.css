@@ -295,3 +295,26 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake:has(.sc-a11y-row) .sc-tr { max-height: calc((100% - 76px) * 0.6); }
   .skycake .sc-a11y-row { flex-basis: 100%; margin-top: 8px; box-shadow: none; }
 }
+
+/* Accessibility mode's camera pad: inside the view, bottom left, above the caption line. A ring of arrows around a centre
+   mark; zoom and Pan beside it. Over the phone's wake button; under the open sheets. */
+.skycake .sc-pad { display: none; position: absolute; z-index: 3; left: var(--sc-gap); bottom: 44px; align-items: flex-end; gap: 8px; }
+.skycake[data-a11y] .sc-pad { display: flex; }
+.skycake.sc-preview .sc-pad { display: none; }
+.skycake .sc-pad .sc-round { width: 44px; height: 44px; }
+.skycake .sc-pad-ring { display: grid; grid-template: repeat(3, 44px) / repeat(3, 44px); gap: 2px; }
+.skycake .sc-pad-ring .sc-pad-up { grid-area: 1 / 2; }
+.skycake .sc-pad-ring .sc-pad-left { grid-area: 2 / 1; }
+.skycake .sc-pad-mid { grid-area: 2 / 2; place-self: center; width: 10px; height: 10px; border: 2px solid var(--sc-soft); border-radius: 50%; background: var(--sc-panel); }
+.skycake .sc-pad-ring .sc-pad-right { grid-area: 2 / 3; }
+.skycake .sc-pad-ring .sc-pad-down { grid-area: 3 / 2; }
+.skycake .sc-pad-side { display: flex; flex-direction: column; gap: 6px; }
+/* Desktop quizzes: the card owns the bottom, so the pad sits under the count. */
+@media (min-width: 861px) {
+  .skycake.sc-quizzing .sc-pad { top: calc(var(--sc-gap) + 56px); bottom: auto; }
+}
+@media (max-width: 860px) {
+  .skycake .sc-pad { bottom: 40px; }
+  /* Above the wake pill (16px under it, 44px tall). */
+  .skycake.sc-quizzing .sc-pad { bottom: 68px; }
+}

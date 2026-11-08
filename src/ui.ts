@@ -6,7 +6,7 @@ import { firstScene, type Scene } from "./scene.js";
 import type { QuestionType } from "./generate.js";
 import type { Quiz, QuizResult } from "./quiz.js";
 import type { Walkthrough } from "./walkthrough.js";
-import { browserStorage, initial, store } from "./a11y.js";
+import { STEPS, browserStorage, initial, store } from "./a11y.js";
 import type { Context } from "./freeroam.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
@@ -70,6 +70,8 @@ export type Labels = {
   nothing: string;
   /** Accessibility mode's own switch, when the site does not drive it. */
   a11y: string;
+  /** Accessibility mode's camera pad: each button's name; with Pan pressed the arrows move the map instead. */
+  camera: { group: string; left: string; right: string; up: string; down: string; zoomIn: string; zoomOut: string; pan: string; panLeft: string; panRight: string; panUp: string; panDown: string };
   /** The generated questions' prompts and their Yes/No answers. */
   ask: {
     findArea: (name: string) => string;
@@ -142,6 +144,20 @@ export const LABELS: Labels = {
   result: (right, total) => `Placeholder: ${right} of ${total}`,
   nothing: "Placeholder: Nothing to ask here",
   a11y: "Placeholder: Accessibility mode",
+  camera: {
+    group: "Placeholder: Camera",
+    left: "Placeholder: Turn left",
+    right: "Placeholder: Turn right",
+    up: "Placeholder: Tilt up",
+    down: "Placeholder: Tilt down",
+    zoomIn: "Placeholder: Zoom in",
+    zoomOut: "Placeholder: Zoom out",
+    pan: "Placeholder: Pan",
+    panLeft: "Placeholder: Move left",
+    panRight: "Placeholder: Move right",
+    panUp: "Placeholder: Move forward",
+    panDown: "Placeholder: Move back",
+  },
   ask: {
     findArea: (name) => `Placeholder: Tap the ${name}`,
     findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
@@ -173,7 +189,7 @@ export type Options = {
   airport?: string;
   /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
   approach?: string;
-  labels?: Omit<Partial<Labels>, "ask"> & { ask?: Partial<Labels["ask"]> };
+  labels?: Omit<Partial<Labels>, "ask" | "camera"> & { ask?: Partial<Labels["ask"]>; camera?: Partial<Labels["camera"]> };
   /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
    * desktop: in place of Full screen) calls this. */
   close?: () => void;
@@ -202,7 +218,7 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
-  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
+  const L: Labels = { ...LABELS, ...o.labels, camera: { ...LABELS.camera, ...o.labels?.camera }, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
   const base = new URL(o.base, location.href);
   const url = (p: string) => new URL(p, base).href;
   const data: AirspaceFile = await fetch(url("area.json")).then((r) => {
@@ -215,7 +231,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   for (const a of data.airports) if (a.diagram) a.diagram = { ...a.diagram, url: url(a.diagram.url) };
 
   const tip = h("div", { class: "tip", hidden: true });
-  const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
+  const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view, "aria-keyshortcuts": "ArrowLeft ArrowRight ArrowUp ArrowDown Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown + -" }, tip);
   const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, chartsOf(data.charts)[0])));
   const storage = browserStorage();
   const a11y = initial(o.a11y, storage);
@@ -247,19 +263,26 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     a11y.on,
   );
 
-  // Keyboard: arrows turn the view, + and - zoom, only while the view has focus.
-  const STEP = Math.PI / 24;
+  // Keyboard: arrows turn the view, Shift and arrows move it, + and - zoom, only while the view has focus.
+  const { turn: STEP, pan: PAN, zoom: ZOOM } = STEPS;
   view.addEventListener("keydown", (e) => {
-    const act: Record<string, () => void> = {
+    const pan: Record<string, () => void> = {
+      ArrowLeft: () => v.pan(-PAN, 0),
+      ArrowRight: () => v.pan(PAN, 0),
+      ArrowUp: () => v.pan(0, PAN),
+      ArrowDown: () => v.pan(0, -PAN),
+    };
+    const act: Record<string, () => void> = e.shiftKey && pan[e.key] ? pan : {
       ArrowLeft: () => v.orbit(-STEP, 0),
       ArrowRight: () => v.orbit(STEP, 0),
       ArrowUp: () => v.orbit(0, -STEP),
       ArrowDown: () => v.orbit(0, STEP),
-      "+": () => v.zoom(0.85),
-      "=": () => v.zoom(0.85),
-      "-": () => v.zoom(1 / 0.85),
+      "+": () => v.zoom(ZOOM),
+      "=": () => v.zoom(ZOOM),
+      "-": () => v.zoom(1 / ZOOM),
     };
-    if (!act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
+    // Only the view's own keys: not an arrow pressed on the camera pad or a tag inside it.
+    if (e.target !== view || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
     e.preventDefault();
     act[e.key]();
   });

@@ -8,6 +8,7 @@ import { SceneError, framedOnly, resolve, type ProcedureRef, type Scene } from "
 import { airportList, proceduresAt, search, type Group } from "./search.js";
 import type { Labels } from "./ui.js";
 import type { View } from "./viewer.js";
+import { pad } from "./pad.js";
 
 export type Context = {
   fig: HTMLElement;
@@ -119,6 +120,7 @@ export function freeRoam(c: Context): Promise<void> {
   // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
   const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
   fig.querySelector(".view")!.after(openButton, topLeft, topRight, bottomRight);
+  fig.querySelector(".view")!.append(pad(c));
   fig.append(tabBar);
 
   const sheet = (name: "kinds" | "view" | null) => {

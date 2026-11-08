@@ -65,6 +65,21 @@ export type Labels = {
     nothing: string;
     /** Accessibility mode's own switch, when the site does not drive it. */
     a11y: string;
+    /** Accessibility mode's camera pad: each button's name; with Pan pressed the arrows move the map instead. */
+    camera: {
+        group: string;
+        left: string;
+        right: string;
+        up: string;
+        down: string;
+        zoomIn: string;
+        zoomOut: string;
+        pan: string;
+        panLeft: string;
+        panRight: string;
+        panUp: string;
+        panDown: string;
+    };
     /** The generated questions' prompts and their Yes/No answers. */
     ask: {
         findArea: (name: string) => string;
@@ -98,8 +113,9 @@ export type Options = {
     airport?: string;
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;
-    labels?: Omit<Partial<Labels>, "ask"> & {
+    labels?: Omit<Partial<Labels>, "ask" | "camera"> & {
         ask?: Partial<Labels["ask"]>;
+        camera?: Partial<Labels["camera"]>;
     };
     /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
      * desktop: in place of Full screen) calls this. */

@@ -118,6 +118,8 @@ export type View = {
   orbit(azimuth: number, polar: number): void;
   /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
   zoom(factor: number): void;
+  /** Keyboard and the camera pad: moves the map under the camera, right and forward on the ground, by these fractions of the camera's distance. */
+  pan(right: number, forward: number): void;
   /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
   dem(): Int16Array | null;
   /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
@@ -984,6 +986,21 @@ export async function build(
       const off = camera.position.clone().sub(controls.target);
       off.setLength(Math.min(Math.max(off.length() * factor, controls.minDistance), controls.maxDistance));
       camera.position.copy(controls.target).add(off);
+      takeOver();
+      dirty = true;
+    },
+    pan: (right, forward) => {
+      // The camera's facing, flattened onto the ground; looking straight down, up on screen is forward.
+      const off = controls.target.clone().sub(camera.position);
+      const ahead = new THREE.Vector3(off.x, 0, off.z);
+      if (ahead.lengthSq() < 1e-9) ahead.set(0, 1, 0).applyQuaternion(camera.quaternion).setY(0);
+      ahead.normalize();
+      const side = new THREE.Vector3(-ahead.z, 0, ahead.x);
+      const shift = side.multiplyScalar(right).addScaledVector(ahead, forward).multiplyScalar(off.length());
+      camera.position.add(shift);
+      controls.target.add(shift);
+      keepOnChart();
+      controls.update();
       takeOver();
       dirty = true;
     },

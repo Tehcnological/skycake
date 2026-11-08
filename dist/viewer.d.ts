@@ -46,6 +46,8 @@ export type View = {
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
+    /** Keyboard and the camera pad: moves the map under the camera, right and forward on the ground, by these fractions of the camera's distance. */
+    pan(right: number, forward: number): void;
     /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
     dem(): Int16Array | null;
     /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
