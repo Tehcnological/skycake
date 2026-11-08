@@ -259,7 +259,8 @@ airport = () => { }) {
         const { clientWidth: w, clientHeight: h } = host;
         const taken = [];
         for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags]) {
-            let show = tagsOn && t.live();
+            // The airplane's altitude stays with tags off: an airplane question is asked about it.
+            let show = (tagsOn || t.el.classList.contains("plane")) && t.live();
             if (show) {
                 if (!t.w)
                     [t.w, t.h] = [t.el.offsetWidth, t.el.offsetHeight];
@@ -891,6 +892,7 @@ airport = () => { }) {
     new ResizeObserver(size).observe(host);
     size();
     const view = {
+        dem: () => dem,
         raise: (kind, on) => {
             for (const l of lives)
                 if (l.area.kind === kind)

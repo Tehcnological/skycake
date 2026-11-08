@@ -40,12 +40,14 @@ export type View = {
     onScreen(): Candidate[];
     /** Outlines the area, or rings the fix or airport, as focused. */
     focus(c: Candidate | null): void;
-    /** Off: the tip and fix tags keep their names but not their altitudes, which would give an answer away. */
+    /** Off: the tip and fix tags keep their names but not their altitudes or roles, which would give an answer away. */
     hints(on: boolean): void;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
+    /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
+    dem(): Int16Array | null;
 };
 export type Candidate = {
     area: string;

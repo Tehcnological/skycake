@@ -41,6 +41,12 @@ export const LABELS = {
     next: "Next",
     explore: "Explore",
     stepOf: (n, total) => `${n}/${total}`,
+    count: (n, total, right) => `${n}/${total} · ${right}`,
+    practiceCount: (right, answered) => `${right}/${answered}`,
+    nextQuestion: "Next",
+    again: "Again",
+    result: (right, total) => `${right} of ${total}`,
+    nothing: "Nothing to ask here",
     ask: {
         findArea: (name) => `Tap the ${name}`,
         findFix: (fix) => `Tap ${fix}`,
@@ -150,6 +156,11 @@ export async function mount(host, o) {
     const mode = o.mode ?? "explore";
     if (mode === "explore")
         return freeRoam(context);
+    const explore = (from) => void freeRoam({ ...context, first: from });
+    if ("quiz" in mode) {
+        const { quiz } = await import("./quizui.js");
+        return quiz(context, mode, o.onResult ?? (() => { }), explore);
+    }
     const { player } = await import("./player.js");
-    await player(context, mode.walkthrough, mode.next, (from) => void freeRoam({ ...context, first: from }));
+    await player(context, mode.walkthrough, mode.next, explore);
 }

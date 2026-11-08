@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { seeded } from "./generate.js";
-import { advance, answer, attempt, practice, type Make, type Quiz } from "./quiz.js";
+import { readdirSync, readFileSync } from "node:fs";
+import type { AirspaceFile } from "./airspace.js";
+import type { Procedure } from "./procedure.js";
+import { LABELS } from "./ui.js";
+import { advance, answer, attempt, maker, practice, type Make, type Quiz } from "./quiz.js";
 import type { Question } from "./question.js";
 
 let n = 0;
@@ -48,4 +52,22 @@ test("practice passes the filters and picks among the allowed types", () => {
   for (let i = 0; i < 20; i++) a = advance(a, spy, seeded(i + 5));
   assert.ok(seen.every((s) => /^(find|airplane):D:KCHD$/.test(s)));
   assert.equal(new Set(seen.map((s) => s.split(":")[0])).size, 2);
+});
+test("maker: one filter alone keeps to its side; nothing to ask gives practice null", () => {
+  const data: AirspaceFile = JSON.parse(readFileSync("data/phoenix/area.json", "utf8"));
+  const dir = "data/phoenix/procedures/";
+  const procedures: Procedure[] = readdirSync(dir).flatMap((f) => JSON.parse(readFileSync(dir + f, "utf8")));
+  const m = maker({ data, grid: null, procedures, ask: LABELS.ask }, seeded(4));
+  const all = ["find", "read", "airplane", "procedure"] as const;
+  assert.equal(practice(m, [...all], { kinds: ["P"] }, seeded(1)), null);
+  assert.equal(practice(m, [...all], { airports: ["KNONE"] }, seeded(1)), null);
+  for (let i = 0; i < 20; i++) {
+    const d = m({ generate: "find", count: 1, kinds: ["D"] })!;
+    assert.ok("area" in (d as { answer: object }).answer, "kinds alone: no fix to tap");
+    const f = m({ generate: "find", count: 1, airports: ["KCHD"] })!;
+    assert.ok("fix" in (f as { answer: object }).answer, "airports alone: no area to tap");
+  }
+  assert.equal(m({ generate: "airplane", count: 1, airports: ["KCHD"] }), null);
+  assert.ok(m({ generate: "airplane", count: 1, kinds: ["B"] }));
+  assert.ok(m({ generate: "procedure", count: 1 }) && m({ generate: "read", count: 1 }));
 });

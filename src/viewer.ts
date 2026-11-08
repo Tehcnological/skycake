@@ -112,12 +112,14 @@ export type View = {
   onScreen(): Candidate[];
   /** Outlines the area, or rings the fix or airport, as focused. */
   focus(c: Candidate | null): void;
-  /** Off: the tip and fix tags keep their names but not their altitudes, which would give an answer away. */
+  /** Off: the tip and fix tags keep their names but not their altitudes or roles, which would give an answer away. */
   hints(on: boolean): void;
   /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
   orbit(azimuth: number, polar: number): void;
   /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
   zoom(factor: number): void;
+  /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
+  dem(): Int16Array | null;
 };
 export type Candidate = { area: string; name: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] };
 type Tag = { el: HTMLElement; at: THREE.Vector3; pri: number; live: () => boolean; w: number; h: number };
@@ -308,7 +310,8 @@ export async function build(
     const { clientWidth: w, clientHeight: h } = host;
     const taken: number[][] = [];
     for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags]) {
-      let show = tagsOn && t.live();
+      // The airplane's altitude stays with tags off: an airplane question is asked about it.
+      let show = (tagsOn || t.el.classList.contains("plane")) && t.live();
       if (show) {
         if (!t.w) [t.w, t.h] = [t.el.offsetWidth, t.el.offsetHeight];
         v.set(t.at.x, t.at.y * world.scale.y, t.at.z).project(camera);
@@ -910,6 +913,7 @@ export async function build(
   size();
 
   const view: View = {
+    dem: () => dem,
     raise: (kind, on) => {
       for (const l of lives) if (l.area.kind === kind) set(l, on);
       setKind(kind);

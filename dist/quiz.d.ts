@@ -1,5 +1,5 @@
 import type { Kind } from "./airspace.js";
-import type { QuestionType, Rng } from "./generate.js";
+import { type Gen, type QuestionType, type Rng } from "./generate.js";
 import type { Question } from "./question.js";
 export type Generate = {
     generate: QuestionType;
@@ -43,6 +43,11 @@ export type QuizResult = {
     right: number;
     total: number;
 };
+/**
+ * Make from the generators, each Generate's filters laid over gen. One filter alone keeps to its side: kinds alone asks
+ * about airspace only (no procedures, and the airplane only when kinds names a class), airports alone about procedures only.
+ */
+export declare const maker: (gen: Gen, rng: Rng) => Make;
 export declare function attempt(quiz: Quiz, make: Make, rng: Rng): Attempt;
 export declare function practice(make: Make, types: QuestionType[], filters: {
     kinds?: Kind[];

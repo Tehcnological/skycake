@@ -4,7 +4,7 @@ Interactive 3D airspace and instrument procedures over real FAA charts, with ter
 
 Named for the upside-down wedding cake every student pilot learns Class B as.
 
-Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view. On phones the map in the page opens full screen with a tap, with a tab bar under it; there one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
+Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view. On phones the map in the page opens full screen with a tap, with a tab bar under it; there one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. It also plays walkthroughs and asks quizzes, written or generated from the FAA data, with endless practice; their content lives on the sites that use skycake, not here.
 
 It is also its own app, SkyCake Viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
 
@@ -80,6 +80,36 @@ const problems = await validateWalkthrough(walkthrough, data, files, "phoenix");
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 ```
 
+### Quizzes
+
+A quiz mode asks questions on the shared question card: the count (question, total and right so far) top left, Explore top right, the card along the bottom (on phones, under the view). Each question shows its scene with the rest dimmed; the chart-reading types (`find`, `read`, `airplane`) start top-down so the chart can be read, and the camera stays free. Tags, and the floor, ceiling and fix altitudes in the tips, stay hidden until the answer; then the card says right or wrong with an icon and a word, shows the area's values and the explanation, and the view raises the answer in 3D. The end shows the score, **Again** (generated questions are drawn fresh) and **Explore**.
+
+```ts
+import { mount, type Quiz } from "skycake";
+
+const quiz: Quiz = {
+  id: "class-b",
+  title: "The Phoenix Class B",
+  area: "phoenix",
+  shuffle: false,                    // true asks the items in random order
+  items: [
+    { id: "find-zinga", type: "find", prompt: "Tap ZINGA.", answer: { fix: "ZINGA" }, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
+    { id: "floor", type: "read", prompt: "The floor of the highlighted shelf?", choices: ["40", "50", "60"], answer: 1, scene: { highlight: [{ area: "b-phoenix-class-b-50-90-4" }] }, explanation: "The bottom number, in hundreds of feet MSL." },
+    { id: "ceiling", type: "read", prompt: "Its ceiling, in feet MSL?", number: { answer: 3000, tolerance: 0, unit: "ft MSL" }, scene: { highlight: [{ area: "d-chandler-municipal-airport-class-d" }] } },
+    { id: "plane", type: "airplane", prompt: "What airspace is the airplane in?", choices: ["B", "C", "D", "E", "G"], answer: 0, scene: { airplane: { at: [33.4, -111.95, 4500] } } },
+    { id: "faf", type: "procedure", prompt: "Which fix is the FAF?", choices: ["FOWLE", "ZINGA", "AVONA"], answer: 1, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
+    { generate: "airplane", count: 2 }, // drawn from the data each attempt; also kinds and airports filters
+  ],
+};
+mount(element, { base: "/skycake/phoenix/", mode: { quiz }, onResult: (r) => console.log(r) });
+```
+
+A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) or by keyboard: Tab moves through what is on screen, Enter answers. `read`, `airplane` and `procedure` take 2 to 4 choices; a `read` can ask for a number with a tolerance instead. Generated questions (`find`, `read`, `airplane`, `procedure`) take every answer and wrong choice from `area.json`, the terrain and the procedure files, and carry no explanation; the card shows the data instead.
+
+**Practice:** `mode: { quiz: "practice", types?, kinds?, airports? }` asks generated questions without end, with the score as right of answered. `kinds` alone keeps to airspace questions, `airports` alone to procedure questions; when the filters leave nothing to ask, it says so and offers Explore.
+
+**Results:** `onResult` is called after each answer with `{ quiz, item, right, ms }` (`item` is the question's `id`, or `generate:<type>:<n>`; `ms` runs from the question showing to the answer), and at the end of a quiz with `{ quiz, end: true, right, total }`. skycake stores nothing; the site decides what to keep. `demo/class-b-quiz.json` is a sample (`/demo/?quiz=class-b`, or `/demo/?quiz=practice&kinds=B,D`).
+
 ## Data
 
 `npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
@@ -99,7 +129,7 @@ npm install
 npm test
 npm run typecheck
 npm run build   # dist/, committed, so sites can install straight from GitHub
-npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene, ?walkthrough=class-b to play one
+npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene, ?walkthrough=class-b to play one, ?quiz=class-b or ?quiz=practice to ask
 ```
 
 Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md) and [SkyCake Viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md), with the plan for F-Droid and iOS.

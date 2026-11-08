@@ -5,6 +5,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 ## Unreleased
 
 - Walkthroughs: `mount({ mode: { walkthrough, next } })` plays steps like a video, with captions, highlights, procedures drawn leg by leg, an airplane flying them and quick checks; Explore leaves into free roam. Scenes take `highlight` and `airplane`.
+- Quizzes: `mount({ mode: { quiz } })` asks written questions (find, read, airplane, procedure) and questions generated from the FAA data, with a running count, the answer revealed in 3D, and Again or Explore at the end. `quiz: "practice"` asks generated questions without end, filtered by `types`, `kinds` and `airports`. `onResult` reports each answer and the end; skycake stores nothing.
 
 - SkyCake Viewer (`app/`): a standalone web app for skycake.app. Start screen with the areas, offline saves with a current-through date, full screen maps.
 - Blue (`#3d7bc2`) is the default accent. Sites that set `--red` and `--redbg` keep their own, so instrumentready.com stays red.

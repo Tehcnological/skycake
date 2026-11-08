@@ -20,13 +20,19 @@
 <div id="v"></div>
 <script type="module">
   import { mount } from "../dist/index.js";
-  // ?scene={...} shows that scene first, for checking. ?walkthrough=class-b plays demo/class-b.json.
-  // The view is window.v (demo/viewer.js), e.g. v.timeline(0.5).
+  // ?scene={...} shows that scene first, for checking. ?walkthrough=class-b plays demo/class-b.json. ?quiz=class-b asks
+  // demo/class-b-quiz.json; ?quiz=practice practises, with optional kinds, types and airports (comma lists).
+  // Quiz results go to the console. The view is window.v (demo/viewer.js), e.g. v.timeline(0.5).
   const q = new URLSearchParams(location.search);
   const scene = q.get("scene");
   const walkthrough = q.get("walkthrough");
-  const mode = walkthrough ? { walkthrough: await fetch(`./${encodeURIComponent(walkthrough)}.json`).then((r) => r.json()), next: { label: "Quiz", href: "./" } } : "explore";
-  mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, ...(scene ? { scene: JSON.parse(scene) } : {}) });
+  const quiz = q.get("quiz");
+  const list = (k) => q.get(k)?.split(",");
+  const json = (name) => fetch(`./${encodeURIComponent(name)}.json`).then((r) => r.json());
+  const mode = quiz
+    ? { quiz: quiz === "practice" ? "practice" : await json(`${quiz}-quiz`), kinds: list("kinds"), types: list("types"), airports: list("airports") }
+    : walkthrough ? { walkthrough: await json(walkthrough), next: { label: "Quiz", href: "./?quiz=class-b" } } : "explore";
+  mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, onResult: (r) => console.log("skycake result", r), ...(scene ? { scene: JSON.parse(scene) } : {}) });
 </script>
 </body>
 </html>

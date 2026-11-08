@@ -148,8 +148,8 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* Highlighted fixes and airports; the airplane's altitude. */
 .skycake .view .tag.hl { border-color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 12px rgb(255 255 255 / 0.6); }
 .skycake .view .tag.plane { z-index: 2; padding: 2px 6px; border: 1.5px solid #fff; border-radius: 5px; background: #14171cf0; color: #fff; font-weight: 700; }
-/* While a question is open: names only, no altitudes. */
-.skycake .view.sc-no-hints .tip > :not(.name), .skycake .view.sc-no-hints .fix .alt { display: none; }
+/* While a question is open: names only: no altitudes, and no FAF or MAP on a fix. */
+.skycake .view.sc-no-hints .tip > :not(.name), .skycake .view.sc-no-hints .fix .alt, .skycake .view.sc-no-hints .fix i { display: none; }
 /* Airways' names and their fixes' names, in IFR. */
 .skycake .view .awy { padding: 1px 5px; border-radius: 3px; background: #00707f; color: #fff; font-weight: 700; }
 .skycake .view .wp { padding: 1px 4px; border-radius: 3px; background: #14171ce0; color: #dff6fa; font-weight: 500; font-size: 10px; }
@@ -242,4 +242,21 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   /* Above the bar and the caption line. */
   .skycake .sc-step, .skycake .sc-player .sc-card { position: absolute; left: var(--sc-gap); right: var(--sc-gap); bottom: calc(100% + 36px); max-height: 55svh; overflow: auto; border-width: 1px; border-radius: var(--sc-r-card); }
   .skycake .sc-big-play { top: calc(50% - 38px); }
+}
+
+/* The quiz. Desktop: the count top left (as the walkthrough's title), Explore top right, the card along the bottom
+   above the caption line. Phone: the card is the answer area under the view, at least the 76px bar, the caption
+   line between them. */
+.skycake .sc-score { font-family: var(--sc-mono); line-height: 20px; } /* 44px, as Explore beside it */
+/* Explore stays top right when there is no count (nothing to ask). */
+.skycake .sc-score + .sc-pill { margin-left: auto; }
+.skycake .sc-quiz { position: absolute; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); box-sizing: border-box; width: min(560px, calc(100% - 2 * var(--sc-gap))); }
+.skycake .sc-quiz .sc-card { position: static; transform: none; width: auto; }
+/* Short choices share rows, so the card stays low and what the question shows, framed in the middle, stays clear of it. */
+.skycake .sc-quiz .sc-choices { flex-flow: row wrap; }
+.skycake .sc-quiz .sc-choices .sc-choice { flex: 1 1 auto; text-align: center; }
+@media (max-width: 860px) {
+  .skycake .sc-quiz { position: static; transform: none; width: auto; flex: none; display: flex; flex-direction: column; min-height: 76px; }
+  .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
+  .skycake.sc-quizzing .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
 }

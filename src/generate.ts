@@ -41,7 +41,9 @@ function choose(right: string, wrong: string[], rng: Rng): { choices: string[]; 
 }
 
 const feetText = (ft: number, ground: number) => (ft <= ground ? "SFC" : ft.toLocaleString("en-US"));
-const factsOf = (g: Gen, a: Area) => (g.facts ?? LABELS.facts)(a.name, feetText(a.floor, g.data.ground), feetText(a.ceiling, g.data.ground));
+/** The answer card's line for an area: its name, floor and ceiling ("CHANDLER CLASS D · SFC to 3,900"). */
+export const areaFacts = (facts: Labels["facts"], data: AirspaceFile, a: Area) => facts(a.name, feetText(a.floor, data.ground), feetText(a.ceiling, data.ground));
+const factsOf = (g: Gen, a: Area) => areaFacts(g.facts ?? LABELS.facts, g.data, a);
 const allowed = (g: Gen) => g.data.areas.filter((a) => (g.kinds ?? KINDS).includes(a.kind));
 const procs = (g: Gen) => g.procedures.filter((p) => !g.airports || g.airports.includes(p.airport));
 const sceneOf = (p: Procedure) => ({ procedures: [{ airport: p.airport, name: p.name }] });

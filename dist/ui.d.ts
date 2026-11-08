@@ -1,6 +1,8 @@
 import { type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
 import { type Scene } from "./scene.js";
+import type { QuestionType } from "./generate.js";
+import type { Quiz, QuizResult } from "./quiz.js";
 import type { Walkthrough } from "./walkthrough.js";
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
@@ -49,6 +51,14 @@ export type Labels = {
     next: string;
     explore: string;
     stepOf: (n: number, total: number) => string;
+    /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
+     * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
+    count: (n: number, total: number, right: number) => string;
+    practiceCount: (right: number, answered: number) => string;
+    nextQuestion: string;
+    again: string;
+    result: (right: number, total: number) => string;
+    nothing: string;
     /** The generated questions' prompts and their Yes/No answers. */
     ask: {
         findArea: (name: string) => string;
@@ -87,14 +97,23 @@ export type Options = {
      * desktop: in place of Full screen) calls this. */
     close?: () => void;
     /** The view's one job. "explore" (default): free roam. A walkthrough plays instead; its Explore button leaves into
-     * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). */
+     * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). A quiz asks its items;
+     * "practice" asks generated questions without end, of `types` (default all) within `kinds` and `airports`. */
     mode?: "explore" | {
         walkthrough: Walkthrough;
         next?: {
             label: string;
             href: string;
         };
-    };
+    } | QuizMode;
+    /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
+    onResult?: (r: QuizResult) => void;
+};
+export type QuizMode = {
+    quiz: Quiz | "practice";
+    kinds?: Kind[];
+    types?: QuestionType[];
+    airports?: string[];
 };
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export declare function mount(host: HTMLElement, o: Options): Promise<void>;

@@ -3,6 +3,8 @@
 import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
 import { firstScene, type Scene } from "./scene.js";
+import type { QuestionType } from "./generate.js";
+import type { Quiz, QuizResult } from "./quiz.js";
 import type { Walkthrough } from "./walkthrough.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
@@ -52,6 +54,14 @@ export type Labels = {
   next: string;
   explore: string;
   stepOf: (n: number, total: number) => string;
+  /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
+   * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
+  count: (n: number, total: number, right: number) => string;
+  practiceCount: (right: number, answered: number) => string;
+  nextQuestion: string;
+  again: string;
+  result: (right: number, total: number) => string;
+  nothing: string;
   /** The generated questions' prompts and their Yes/No answers. */
   ask: {
     findArea: (name: string) => string;
@@ -111,6 +121,12 @@ export const LABELS: Labels = {
   next: "Next",
   explore: "Explore",
   stepOf: (n, total) => `${n}/${total}`,
+  count: (n, total, right) => `${n}/${total} · ${right}`,
+  practiceCount: (right, answered) => `${right}/${answered}`,
+  nextQuestion: "Next",
+  again: "Again",
+  result: (right, total) => `${right} of ${total}`,
+  nothing: "Nothing to ask here",
   ask: {
     findArea: (name) => `Tap the ${name}`,
     findFix: (fix) => `Tap ${fix}`,
@@ -146,9 +162,13 @@ export type Options = {
    * desktop: in place of Full screen) calls this. */
   close?: () => void;
   /** The view's one job. "explore" (default): free roam. A walkthrough plays instead; its Explore button leaves into
-   * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). */
-  mode?: "explore" | { walkthrough: Walkthrough; next?: { label: string; href: string } };
+   * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). A quiz asks its items;
+   * "practice" asks generated questions without end, of `types` (default all) within `kinds` and `airports`. */
+  mode?: "explore" | { walkthrough: Walkthrough; next?: { label: string; href: string } } | QuizMode;
+  /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
+  onResult?: (r: QuizResult) => void;
 };
+export type QuizMode = { quiz: Quiz | "practice"; kinds?: Kind[]; types?: QuestionType[]; airports?: string[] };
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string | boolean> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -240,6 +260,11 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
   const mode = o.mode ?? "explore";
   if (mode === "explore") return freeRoam(context);
+  const explore = (from: Scene) => void freeRoam({ ...context, first: from });
+  if ("quiz" in mode) {
+    const { quiz } = await import("./quizui.js");
+    return quiz(context, mode, o.onResult ?? (() => {}), explore);
+  }
   const { player } = await import("./player.js");
-  await player(context, mode.walkthrough, mode.next, (from) => void freeRoam({ ...context, first: from }));
+  await player(context, mode.walkthrough, mode.next, explore);
 }

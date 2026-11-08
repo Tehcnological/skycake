@@ -3,5 +3,7 @@ export { KINDS, type AirspaceFile, type Area, type Bounds, type ChartName, type 
 export type { Airport, Fix, Path, Point, ProcType, Procedure, Segment } from "./procedure.js";
 export type { Scene, Target } from "./scene.js";
 export type { Question } from "./question.js";
+export type { Generate, Quiz, QuizResult } from "./quiz.js";
+export type { QuestionType } from "./generate.js";
 export type { Step, Walkthrough } from "./walkthrough.js";
 export { validateWalkthrough } from "./validate.js";
