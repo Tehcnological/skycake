@@ -35,7 +35,8 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "tsx --test src/*.test.ts",
     "data": "tsx scripts/build-area.ts",
-    "demo": "node scripts/demo.mjs"
+    "demo": "node scripts/demo.mjs",
+    "app": "node scripts/app.mjs"
   },
   "peerDependencies": {
     "three": "0.180.0"
@@ -45,6 +46,7 @@
     "@types/node": "22.20.5",
     "@types/proj4": "2.5.5",
     "@types/three": "0.180.0",
+    "esbuild": "0.28.2",
     "fflate": "0.8.3",
     "geotiff": "2.1.3",
     "pdfjs-dist": "6.4.299",

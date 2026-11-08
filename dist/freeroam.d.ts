@@ -13,6 +13,8 @@ export type Context = {
     /** A procedure file by airport, cached by the caller. */
     procedures: (airport: string) => Promise<Procedure[]>;
     startScale: number;
+    /** See Options.close in ui.ts. */
+    close?: () => void;
 };
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;

@@ -78,7 +78,7 @@ export function freeRoam(c) {
     const modeButton = round(L.mode, L.mode, [], "sc-mode");
     modeButton.hidden = !chartsIn(data.charts, "ifr").length;
     const chartButton = round(L.chart, L.chart, [], "sc-chart");
-    const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
+    const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
     const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
     const caption = fig.querySelector(".sc-caption");
     // Phone tab bar.
@@ -284,14 +284,22 @@ export function freeRoam(c) {
         else if (document.fullscreenElement)
             document.exitFullscreen();
     };
-    fullButton.addEventListener("click", () => goFull(!fig.classList.contains("full")));
+    fullButton.addEventListener("click", () => (c.close ? c.close() : goFull(!fig.classList.contains("full"))));
     openButton.addEventListener("click", () => goFull(true));
     tabs.close.addEventListener("click", () => {
         sheet(null);
         results.hidden = true;
-        goFull(false);
+        if (c.close)
+            c.close();
+        else
+            goFull(false);
     });
     phone.addEventListener("change", drawPhone);
+    // A standalone app: the view fills the window from the start and only close leaves it.
+    if (c.close) {
+        fig.classList.add("full");
+        document.documentElement.classList.add("skycake-full");
+    }
     drawPhone();
     // CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms the page.
     const taken = () => !fig.classList.contains("sc-preview");
