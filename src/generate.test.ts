@@ -100,3 +100,16 @@ test("filters: kinds and airports are respected; nothing left gives null", () =>
   assert.equal(generate("procedure", { ...g, procedures: [] }, seeded(2)), null);
 });
 test("same seed, same questions", () => assert.deepEqual(generate("read", g, seeded(7)), generate("read", g, seeded(7))));
+test("find prompts name exactly one area or one fix of the shown procedure", () => {
+  const rng = seeded(11);
+  for (let i = 0; i < 400; i++) {
+    const q = generate("find", g, rng)! as Extract<Question, { type: "find" }>;
+    if ("area" in q.answer) {
+      const a = data.areas.find((x) => x.id === (q.answer as { area: string }).area)!;
+      assert.equal(data.areas.filter((x) => x.name === a.name).length, 1);
+    } else {
+      const r = q.scene!.procedures![0], p = procedures.find((x) => x.airport === r.airport && x.name === r.name)!;
+      assert.equal(p.fixes.filter((f) => f.name === (q.answer as { fix: string }).fix).length, 1);
+    }
+  }
+});

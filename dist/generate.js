@@ -35,10 +35,13 @@ const allowed = (g) => g.data.areas.filter((a) => (g.kinds ?? KINDS).includes(a.
 const procs = (g) => g.procedures.filter((p) => !g.airports || g.airports.includes(p.airport));
 const sceneOf = (p) => ({ procedures: [{ airport: p.airport, name: p.name }] });
 function find(g, rng) {
-    const areas = allowed(g), ps = procs(g).filter((p) => p.fixes.length);
+    // A name that repeats cannot be tapped by name: the score is by id.
+    const areas = allowed(g).filter((a) => g.data.areas.filter((o) => o.name === a.name).length === 1);
+    const ps = procs(g).filter((p) => p.fixes.some((f) => p.fixes.filter((o) => o.name === f.name).length === 1));
     if (ps.length && (!areas.length || rng() < 0.5)) {
         const p = ps[Math.floor(rng() * ps.length)];
-        const fix = p.fixes[Math.floor(rng() * p.fixes.length)].name;
+        const ones = p.fixes.filter((f) => p.fixes.filter((o) => o.name === f.name).length === 1);
+        const fix = ones[Math.floor(rng() * ones.length)].name;
         return { type: "find", prompt: g.ask.findFix(fix), answer: { fix }, scene: sceneOf(p), facts: null };
     }
     if (!areas.length)
