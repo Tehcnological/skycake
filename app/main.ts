@@ -98,7 +98,8 @@ if (area && Object.hasOwn(manifest.areas, area)) {
   } catch {
     console.warn("skycake: ignoring a scene that is not JSON");
   }
-  await mount(root, { base: `data/${area}/`, close: () => location.assign(location.pathname), ...(scene && { scene }) });
+  // replace, so Back after Close doesn't reopen the map.
+  await mount(root, { base: `data/${area}/`, close: () => location.replace(location.pathname), ...(scene && { scene }) });
 } else {
   await startScreen();
 }
