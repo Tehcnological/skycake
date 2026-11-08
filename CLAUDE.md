@@ -6,6 +6,8 @@ Standing instructions for Claude Code in this repo.
 
 3D airspace and instrument procedures over FAA charts, embedded by Chris DeFoe's sites (first instrumentready.com, repo `Tehcnological/instrumentready.com`). Modes: free roam (built), walkthroughs and quizzes (next). The engine lives here, public; Chris's walkthroughs and quiz questions stay private on the sites. Source of truth: Projects HQ in Notion, project row "skycake".
 
+Also its own app, SkyCake Viewer (`app/`, `npm run app`, hosted at skycake.app on Cloudflare Pages), and new FAA data every 28 days from `.github/workflows/data.yml`. Design, decisions and the F-Droid and iOS plan: `docs/superpowers/specs/2026-11-07-skycake-viewer-design.md`.
+
 ## Hard constraints
 
 - TypeScript. AGPL-3.0-only. Chris keeps sole copyright: no outside code without a copyright assignment.
@@ -13,6 +15,9 @@ Standing instructions for Claude Code in this repo.
 - Sites run on Cloudflare's free tier: keep each data file well under 25 MiB and the whole area small.
 - No secrets in the repo.
 - Not for navigation, said on screen.
+- Don't break the install path: `dist/` and `data/` stay committed, `www/` is never committed or in `files`, no `prepare` script.
+- The accent is blue by default. Keep `var(--red, ...)` in `style.css`: it is how instrumentready.com stays red.
+- Nothing that bills without Chris's say: free tiers, no R2 unless he agrees.
 
 ## How Chris works
 

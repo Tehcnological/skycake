@@ -6,6 +6,8 @@ Named for the upside-down wedding cake every student pilot learns Class B as.
 
 Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view. On phones the map in the page opens full screen with a tap, with a tab bar under it; there one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
 
+It is also its own app, SkyCake Viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
+
 ## Use it on a site
 
 ```sh
@@ -56,7 +58,7 @@ npm run build   # dist/, committed, so sites can install straight from GitHub
 npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene
 ```
 
-Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/superpowers/specs/2026-11-03-3d-airspace-design.md).
+Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md) and [SkyCake Viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md), with the plan for F-Droid and iOS.
 
 ## SkyCake Viewer (the app)
 
