@@ -27,12 +27,14 @@ function go(p: Play, w: Walkthrough, step: number): Play {
   return { ...p, step: done ? p.step : Math.max(0, step), t: 0, checking: false, moved: false, done, playing: p.playing && !done };
 }
 
-export function tick(p: Play, w: Walkthrough, dt: number): Play {
+/** hold (accessibility mode): a step with no check stops at its end; Play then goes on to the next. */
+export function tick(p: Play, w: Walkthrough, dt: number, hold = false): Play {
   if (!p.playing) return { ...p };
   const len = stepSeconds(w.steps[p.step]);
   const t = p.t + dt;
   if (t < len) return { ...p, t };
   if (w.steps[p.step].check) return { ...p, t: len, playing: false, checking: true };
+  if (hold && p.t < len) return { ...p, t: len, playing: false };
   return go(p, w, p.step + 1);
 }
 

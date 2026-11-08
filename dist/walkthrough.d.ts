@@ -27,7 +27,8 @@ export declare const begin: () => Play;
 /** Play resumes the current step from its start (after a drag), restarts a finished walkthrough, and waits out a check. */
 export declare function play(p: Play): Play;
 export declare const pause: (p: Play) => Play;
-export declare function tick(p: Play, w: Walkthrough, dt: number): Play;
+/** hold (accessibility mode): a step with no check stops at its end; Play then goes on to the next. */
+export declare function tick(p: Play, w: Walkthrough, dt: number, hold?: boolean): Play;
 export declare const next: (p: Play, w: Walkthrough) => Play;
 /** From the end, Back replays the last step. */
 export declare const back: (p: Play, w: Walkthrough) => Play;

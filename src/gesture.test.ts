@@ -142,3 +142,10 @@ test("a tap is one finger, barely moved, soon lifted", () => {
   assert.equal(isTap({ fingers: 1, moved: 3, ms: 900 }), false, "a long press");
   assert.equal(isTap({ fingers: 2, moved: 0, ms: 120 }), false, "the end of a pinch");
 });
+test("loose taps: further and without a time limit", () => {
+  assert.equal(isTap({ fingers: 1, moved: 12, ms: 100 }), false);
+  assert.equal(isTap({ fingers: 1, moved: 12, ms: 100 }, true), true);
+  assert.equal(isTap({ fingers: 1, moved: 4, ms: 2000 }, true), true);
+  assert.equal(isTap({ fingers: 1, moved: 17, ms: 100 }, true), false);
+  assert.equal(isTap({ fingers: 2, moved: 0, ms: 100 }, true), false);
+});
