@@ -24,9 +24,17 @@ function answerProblems(q, data, hasFix, loaded) {
     if (out.length)
         return out;
     const area = "area" in q.answer ? q.answer.area : null;
-    const kind = data.areas.find((a) => a.id === area)?.kind;
-    if (kind === "E700" || kind === "MODEC")
-        out.push(`area ${area} is ${kind}, which cannot be tapped`);
+    const also = q.also;
+    if (also !== undefined && (!Array.isArray(also) || !area))
+        return ["also must be a list of area ids, beside an area answer"];
+    const more = also ?? [];
+    out.push(...sceneProblems({ highlight: more.map((id) => ({ area: id })) }, data, hasFix));
+    const right = [area, ...more];
+    for (const id of right) {
+        const kind = data.areas.find((a) => a.id === id)?.kind;
+        if (kind === "E700" || kind === "MODEC")
+            out.push(`area ${id} is ${kind}, which cannot be tapped`);
+    }
     if ("fix" in q.answer && !fixesIn(data, loaded, questionScene(q))(q.answer.fix))
         out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
     return out;
@@ -38,8 +46,6 @@ export function questionProblems(q, data, hasFix, loaded) {
         out.push(...answerProblems(q, data, hasFix, loaded));
     else if (!("choices" in q) && !("number" in q))
         out.push("no choices or number");
-    if (q.type === "find" && q.also !== undefined)
-        out.push(...(Array.isArray(q.also) ? sceneProblems({ highlight: q.also.map((area) => ({ area })) }, data, hasFix) : ["also must be a list of area ids"]));
     if (q.answerArea !== undefined)
         out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
     if (typeof q.prompt !== "string" || !q.prompt.trim())

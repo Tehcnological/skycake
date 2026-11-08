@@ -62,8 +62,9 @@ function find(g: Gen, rng: Rng): Made | null {
   const name = areas[Math.floor(rng() * areas.length)];
   const pieces = tappable.filter((a) => a.name === name);
   const others = (xs: Area[], one: Area) => (xs.length > 1 ? { also: xs.filter((x) => x !== one).map((x) => x.id) } : {});
-  // A name in many pieces is asked two ways: any piece (beginner), or the piece at the altitudes the chart prints (advanced).
-  if (pieces.length === 1 || rng() < 0.5) {
+  // A name in many pieces is asked two ways: any piece (beginner), or, where the chart prints both altitudes (B, C), the
+  // piece at those altitudes (advanced).
+  if (pieces.length === 1 || !READS.floor.includes(pieces[0].kind) || rng() < 0.5) {
     const floor = Math.min(...pieces.map((x) => x.floor)), ceiling = Math.max(...pieces.map((x) => x.ceiling));
     return { type: "find", prompt: g.ask.findArea(name), answer: { area: pieces[0].id }, ...others(pieces, pieces[0]), facts: (g.facts ?? LABELS.facts)(name, feetText(floor, g.data.ground), feetText(ceiling, g.data.ground)) };
   }
