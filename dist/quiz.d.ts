@@ -59,7 +59,7 @@ export declare function practice(make: Make, types: QuestionType[], filters: {
 export declare const answer: (a: Attempt, right: boolean) => Attempt;
 /** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
 export declare const skip: (a: Attempt) => Attempt;
-/** A fixed quiz's count: question n of total, skips taken out. */
+/** A fixed quiz's count: question n of total, skips taken out; n stays on a question while its answer shows. */
 export declare const progress: (a: Attempt) => {
     n: number;
     total: number;

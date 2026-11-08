@@ -45,7 +45,7 @@ Every change skycake makes in accessibility mode, for sites that embed it. The m
 | Choices: choose, then Check (full width under the choices). Nothing is scored until Check | 3.2.2 |
 | Find questions: the numbered picker shows numbers only (it still asks the student to find the thing on the chart), a number field takes the badge's number, then Check | 2.1.1, 2.5.7 |
 | Skip on find questions: moves on, and the quiz's total drops by one | 2.1.1 |
-| The camera pad, as in free roam | 2.5.1, 2.5.7 |
+| The camera pad, as in free roam. It sits inside the map, so Tab reaches it with the map, after the count and Explore | 2.5.1, 2.5.7, 2.4.3 |
 | No time limit: `ms` is reported, never enforced | 2.2.1 |
 
 The chart reading hunt, once built, uses the same picker and Skip.

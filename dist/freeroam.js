@@ -105,19 +105,22 @@ export function freeRoam(c) {
     const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), close: tab(L.close, ICONS.close) };
     tabs.inView.classList.add("sc-inview-tab");
     const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
-    // The map in words, read by a screen reader on reaching the view; written as the view takes focus, so it is current.
+    // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
+    // and again as the view takes focus, so it is current.
     const viewEl = fig.querySelector(".view");
     const summary = h("p", { class: "sc-hidden", id: `sc-summary-${Math.random().toString(36).slice(2)}` });
     viewEl.after(summary);
     viewEl.setAttribute("aria-describedby", summary.id);
-    viewEl.addEventListener("focus", () => {
+    const writeSummary = () => {
         const raised = v.raisedAreas().flatMap((id) => data.areas.find((a) => a.id === id) ?? []);
         summary.textContent = describe({
             chart: `${L.charts[chart]} ${data.edition}`,
             areas: raised.map((a) => ({ name: a.name, floor: feetText(a.floor, data.ground), ceiling: feetText(a.ceiling, data.ground) })),
             procedures: r.procedures.map((p) => `${p.airport} ${p.name}`),
         }, L);
-    });
+    };
+    writeSummary();
+    viewEl.addEventListener("focus", writeSummary);
     // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
     const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
     fig.querySelector(".view").after(openButton, topLeft, topRight, bottomRight);

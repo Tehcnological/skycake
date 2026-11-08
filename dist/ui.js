@@ -163,8 +163,8 @@ export async function mount(host, o) {
             "=": () => v.zoom(ZOOM),
             "-": () => v.zoom(1 / ZOOM),
         };
-        // Only the view's own keys: not an arrow pressed on the camera pad or a tag inside it.
-        if (e.target !== view || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
+        // Not an arrow pressed on the camera pad (its own buttons move the camera) or in a text field.
+        if (e.target.closest(".sc-pad, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
             return;
         e.preventDefault();
         act[e.key]();

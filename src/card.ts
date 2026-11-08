@@ -138,7 +138,13 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
     field.placeholder = L.number;
     field.addEventListener("input", () => {
       const i = pickByNumber(field.value, p.list().length);
-      if (i !== null) chooseFind(toAnswer(p.list()[i]));
+      if (i !== null) return chooseFind(toAnswer(p.list()[i]));
+      // A number with no badge (or a half-typed one) chooses nothing, so Enter never scores an earlier pick.
+      if (answered) return;
+      chosen = null;
+      chosenKey = "";
+      check.disabled = true;
+      for (const b of p.el.querySelectorAll<HTMLElement>("button")) b.setAttribute("aria-pressed", "false");
     });
     field.addEventListener("keydown", (e) => e.key === "Enter" && !check.disabled && check.click());
     controls.push(field);

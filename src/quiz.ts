@@ -69,8 +69,8 @@ export function practice(make: Make, types: QuestionType[], filters: { kinds?: K
 export const answer = (a: Attempt, right: boolean): Attempt => ({ ...a, right: a.right + (right ? 1 : 0), answered: a.answered + 1 });
 /** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
 export const skip = (a: Attempt): Attempt => ({ ...a, skipped: a.skipped + 1 });
-/** A fixed quiz's count: question n of total, skips taken out. */
-export const progress = (a: Attempt): { n: number; total: number } => ({ n: a.answered + 1, total: a.items.length - a.skipped });
+/** A fixed quiz's count: question n of total, skips taken out; n stays on a question while its answer shows. */
+export const progress = (a: Attempt): { n: number; total: number } => ({ n: a.i - a.skipped + 1, total: a.items.length - a.skipped });
 
 export function advance(a: Attempt, make: Make, rng: Rng): Attempt {
   if (a.practice && a.pool) {

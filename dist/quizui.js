@@ -114,6 +114,7 @@ export async function quiz(c, mode, onResult, explore) {
                 return;
             a = skip(a);
             report({ quiz: id, item: it.key, right: false, ms: Math.round(performance.now() - shownAt), skipped: true });
+            k.remove(); // while it still owns the view, so its picker stops; the next card's put() would be too late
             next();
         };
         const find = !("choices" in it.q) && !("number" in it.q);

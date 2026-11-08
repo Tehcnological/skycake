@@ -76,17 +76,24 @@ const quiz5: Quiz = { id: "q5", title: "", area: "phoenix", items: ["a", "b", "c
 test("skip drops the total by one and scores nothing", () => {
   const rng = seeded(1);
   let a = attempt(quiz5, make, rng);
-  a = skip(a);
+  a = advance(skip(a), make, rng);
   assert.deepEqual(progress(a), { n: 1, total: 4 });
   assert.equal(a.right, 0);
-  a = advance(a, make, rng);
   a = answer(a, true);
-  assert.deepEqual(progress(a), { n: 2, total: 4 });
+  assert.deepEqual(progress(a), { n: 1, total: 4 }, "the count stays on the question while its answer shows");
+});
+test("the count never runs past the total", () => {
+  const rng = seeded(1);
+  let a = attempt(quiz5, make, rng);
+  assert.deepEqual(progress(answer(a, true)), { n: 1, total: 5 });
+  for (let i = 0; i < 5; i++) a = advance(answer(a, true), make, rng);
+  assert.equal(a.done, true);
+  assert.deepEqual(progress(a), { n: 5, total: 5 });
 });
 test("skipping every item ends with the skips taken out", () => {
   const rng = seeded(1);
   let a = attempt(quiz5, make, rng);
   for (let i = 0; i < 5; i++) a = advance(skip(a), make, rng);
   assert.equal(a.done, true);
-  assert.deepEqual(progress(a), { n: 1, total: 0 });
+  assert.deepEqual(progress(a), { n: 0, total: 0 });
 });

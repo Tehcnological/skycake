@@ -55,8 +55,8 @@ export function practice(make, types, filters, rng) {
 export const answer = (a, right) => ({ ...a, right: a.right + (right ? 1 : 0), answered: a.answered + 1 });
 /** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
 export const skip = (a) => ({ ...a, skipped: a.skipped + 1 });
-/** A fixed quiz's count: question n of total, skips taken out. */
-export const progress = (a) => ({ n: a.answered + 1, total: a.items.length - a.skipped });
+/** A fixed quiz's count: question n of total, skips taken out; n stays on a question while its answer shows. */
+export const progress = (a) => ({ n: a.i - a.skipped + 1, total: a.items.length - a.skipped });
 export function advance(a, make, rng) {
     if (a.practice && a.pool) {
         const next = draw(a.pool, make, rng, a.items.length);
