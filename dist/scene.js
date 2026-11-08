@@ -17,11 +17,22 @@ export function resolve(scene, data) {
             raised.add(r.area);
         }
     }
-    const procedures = (scene.procedures ?? []).map(({ airport, name }) => {
-        if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name))
-            throw new SceneError(`no procedure ${name} at ${airport}`);
-        return { airport, name };
+    const procedures = (scene.procedures ?? []).map(({ airport, name, draw }) => {
+        procedureOf({ airport, name }, data);
+        return { airport, name, draw: draw ?? false };
     });
+    const highlight = scene.highlight ?? [];
+    for (const t of highlight)
+        target(t, data);
+    const airplane = scene.airplane ?? null;
+    if (airplane && "along" in airplane)
+        procedureOf(airplane.along, data);
+    if (airplane && "at" in airplane) {
+        const [lat, lon] = airplane.at;
+        const b = data.bounds;
+        if (lat < b.s || lat > b.n || lon < b.w || lon > b.e)
+            throw new SceneError(`airplane at ${lat}, ${lon} is outside the area`);
+    }
     const diagram = scene.diagram ?? null;
     if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram)
         throw new SceneError(`no diagram for ${diagram}`);
@@ -29,18 +40,26 @@ export function resolve(scene, data) {
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
             target(t, data);
-    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+}
+function procedureOf({ airport, name }, data) {
+    if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name))
+        throw new SceneError(`no procedure ${name} at ${airport}`);
 }
 function target(t, data) {
     if ("area" in t && !data.areas.some((a) => a.id === t.area))
         throw new SceneError(`no area ${t.area}`);
-    if ("procedure" in t) {
-        const { airport, name } = t.procedure;
-        if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name))
-            throw new SceneError(`no procedure ${name} at ${airport}`);
-    }
+    if ("airport" in t && !data.airports.some((a) => a.id === t.airport))
+        throw new SceneError(`no airport ${t.airport}`);
+    if ("procedure" in t)
+        procedureOf(t.procedure, data);
     if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram)
         throw new SceneError(`no diagram for ${t.diagram}`);
+}
+/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+export function stripPlayback(scene) {
+    const { highlight, airplane, ...rest } = scene;
+    return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
 }
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export function framedOnly(scene) {

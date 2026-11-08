@@ -587,7 +587,7 @@ airport = () => { }) {
                 return [];
             return [[d.bounds.w, d.bounds.n], [d.bounds.e, d.bounds.n], [d.bounds.w, d.bounds.s], [d.bounds.e, d.bounds.s]].map(([lon, lat]) => new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat)));
         }
-        const [lat, lon] = t.point;
+        const [lat, lon] = "airport" in t ? ((a) => [a?.lat ?? 0, a?.lon ?? 0])(data.airports.find((x) => x.id === t.airport)) : t.point;
         return [new THREE.Vector3(X(lon), groundAt(X(lon), Z(lat)), Z(lat))];
     };
     // Hover or tap shows the area under the pointer: a raised one first, else the flat one printed on the chart there.

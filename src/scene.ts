@@ -4,8 +4,8 @@ import { KINDS, pickChart, type AirspaceFile, type ChartName, type Kind } from "
 
 export type ProcedureRef = { airport: string; name: string };
 export type AreaRef = { area: string };
-/** diagram: an airport diagram's area, by airport id. */
-export type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point: [lat: number, lon: number] } | { diagram: string };
+/** diagram: an airport diagram's area, by airport id. airport: an airport by id. */
+export type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point: [lat: number, lon: number] } | { diagram: string } | { airport: string };
 export type Camera = "fit" | "top" | { frame: Target[]; tilt?: number } | { azimuth: number; tilt: number; distance: number; target: [lat: number, lon: number] };
 export type Scene = {
   /** null: leave the camera where it is. */
@@ -14,6 +14,10 @@ export type Scene = {
   raise?: (Kind | AreaRef)[];
   /** Any number at once. draw (leg by leg) plays in walkthroughs. */
   procedures?: (ProcedureRef & { draw?: boolean })[];
+  /** Drawn emphasised. */
+  highlight?: Target[];
+  /** A fixed spot, or flying a procedure for `seconds`. */
+  airplane?: { at: [lat: number, lon: number, ft: number] } | { along: ProcedureRef; seconds: number };
   /** An airport id. */
   diagram?: string | null;
   height?: 1 | 4;
@@ -22,7 +26,7 @@ export type Scene = {
   chart?: ChartName;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
-export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: ProcedureRef[]; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName };
+export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: (ProcedureRef & { draw: boolean })[]; highlight: Target[]; airplane: Scene["airplane"] | null; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName };
 
 export class SceneError extends Error {}
 
@@ -36,24 +40,41 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
       raised.add(r.area);
     }
   }
-  const procedures = (scene.procedures ?? []).map(({ airport, name }) => {
-    if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name)) throw new SceneError(`no procedure ${name} at ${airport}`);
-    return { airport, name };
+  const procedures = (scene.procedures ?? []).map(({ airport, name, draw }) => {
+    procedureOf({ airport, name }, data);
+    return { airport, name, draw: draw ?? false };
   });
+  const highlight = scene.highlight ?? [];
+  for (const t of highlight) target(t, data);
+  const airplane = scene.airplane ?? null;
+  if (airplane && "along" in airplane) procedureOf(airplane.along, data);
+  if (airplane && "at" in airplane) {
+    const [lat, lon] = airplane.at;
+    const b = data.bounds;
+    if (lat < b.s || lat > b.n || lon < b.w || lon > b.e) throw new SceneError(`airplane at ${lat}, ${lon} is outside the area`);
+  }
   const diagram = scene.diagram ?? null;
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
-  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+}
+
+function procedureOf({ airport, name }: ProcedureRef, data: AirspaceFile) {
+  if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name)) throw new SceneError(`no procedure ${name} at ${airport}`);
 }
 
 function target(t: Target, data: AirspaceFile) {
   if ("area" in t && !data.areas.some((a) => a.id === t.area)) throw new SceneError(`no area ${t.area}`);
-  if ("procedure" in t) {
-    const { airport, name } = t.procedure;
-    if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name)) throw new SceneError(`no procedure ${name} at ${airport}`);
-  }
+  if ("airport" in t && !data.airports.some((a) => a.id === t.airport)) throw new SceneError(`no airport ${t.airport}`);
+  if ("procedure" in t) procedureOf(t.procedure, data);
   if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram) throw new SceneError(`no diagram for ${t.diagram}`);
+}
+
+/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+export function stripPlayback(scene: Scene): Scene {
+  const { highlight, airplane, ...rest } = scene;
+  return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
 }
 
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */

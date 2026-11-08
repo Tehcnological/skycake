@@ -6,7 +6,7 @@ export type ProcedureRef = {
 export type AreaRef = {
     area: string;
 };
-/** diagram: an airport diagram's area, by airport id. */
+/** diagram: an airport diagram's area, by airport id. airport: an airport by id. */
 export type Target = AreaRef | {
     fix: string;
 } | {
@@ -15,6 +15,8 @@ export type Target = AreaRef | {
     point: [lat: number, lon: number];
 } | {
     diagram: string;
+} | {
+    airport: string;
 };
 export type Camera = "fit" | "top" | {
     frame: Target[];
@@ -34,6 +36,15 @@ export type Scene = {
     procedures?: (ProcedureRef & {
         draw?: boolean;
     })[];
+    /** Drawn emphasised. */
+    highlight?: Target[];
+    /** A fixed spot, or flying a procedure for `seconds`. */
+    airplane?: {
+        at: [lat: number, lon: number, ft: number];
+    } | {
+        along: ProcedureRef;
+        seconds: number;
+    };
     /** An airport id. */
     diagram?: string | null;
     height?: 1 | 4;
@@ -45,7 +56,11 @@ export type Scene = {
 export type Resolved = {
     camera: Camera | null;
     raised: Set<string>;
-    procedures: ProcedureRef[];
+    procedures: (ProcedureRef & {
+        draw: boolean;
+    })[];
+    highlight: Target[];
+    airplane: Scene["airplane"] | null;
     diagram: string | null;
     height: 1 | 4;
     tags: boolean;
@@ -54,6 +69,8 @@ export type Resolved = {
 export declare class SceneError extends Error {
 }
 export declare function resolve(scene: Scene, data: AirspaceFile): Resolved;
+/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+export declare function stripPlayback(scene: Scene): Scene;
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export declare function framedOnly(scene: Scene): ProcedureRef[];
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */

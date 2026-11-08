@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chartsOf, type AirspaceFile } from "./airspace.js";
-import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand } from "./scene.js";
+import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand, stripPlayback } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
 
@@ -20,7 +20,7 @@ test("raise takes kinds and single areas; an unknown area, diagram or procedure 
   assert.throws(() => resolve({ raise: [{ area: "nope" }] }, data), SceneError);
   assert.throws(() => resolve({ diagram: "KLUF" }, data), SceneError);
   assert.throws(() => resolve({ procedures: [{ airport: "KPHX", name: "NOPE 1" }] }, data), SceneError);
-  assert.deepEqual(resolve({ procedures: [{ airport: "KPHX", name: "EAGUL6", draw: true }] }, data).procedures, [{ airport: "KPHX", name: "EAGUL6" }]);
+  assert.deepEqual(resolve({ procedures: [{ airport: "KPHX", name: "EAGUL6", draw: true }] }, data).procedures, [{ airport: "KPHX", name: "EAGUL6", draw: true }]);
 });
 
 test("the old options still work as a first scene", () => {
@@ -79,4 +79,22 @@ test("the IFR charts: asked for by name, in the button's order, and an area with
   assert.deepEqual(chartsOf({ sectional: "s.webp" }), ["sectional"]);
   // The area chart only covers its own map, so it needs the low around it.
   assert.deepEqual(chartsOf({ sectional: "s.webp", area: over }), ["sectional"]);
+});
+
+test("highlight and airplane resolve; unknown names in them throw", () => {
+  const r = resolve({ highlight: [{ area: "b-phoenix-class-b-sfc-90" }, { airport: "KPHX" }], airplane: { at: [33.43, -112.01, 4500] } }, data);
+  assert.deepEqual(r.highlight, [{ area: "b-phoenix-class-b-sfc-90" }, { airport: "KPHX" }]);
+  assert.deepEqual(r.airplane, { at: [33.43, -112.01, 4500] });
+  assert.throws(() => resolve({ highlight: [{ area: "nope" }] }, data), SceneError);
+  assert.throws(() => resolve({ highlight: [{ airport: "KZZZ" }] }, data), SceneError);
+  assert.throws(() => resolve({ airplane: { along: { airport: "KPHX", name: "NOPE" }, seconds: 10 } }, data), SceneError);
+  assert.throws(() => resolve({ airplane: { at: [0, 0, 4500] } }, data), SceneError); // outside the area's bounds
+});
+
+test("draw is kept per procedure and stripPlayback removes playback", () => {
+  const name = data.airports.find((a) => a.id === "KPHX")!.procedures[0].name;
+  const scene = { procedures: [{ airport: "KPHX", name, draw: true }], highlight: [{ airport: "KPHX" }], airplane: { at: [33.43, -112.01, 4500] as [number, number, number] } };
+  assert.equal(resolve(scene, data).procedures[0].draw, true);
+  assert.deepEqual(stripPlayback(scene), { procedures: [{ airport: "KPHX", name }] });
+  assert.equal(resolve({}, data).airplane, null);
 });
