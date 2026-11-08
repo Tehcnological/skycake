@@ -3,6 +3,9 @@
 import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
 import { firstScene, type Scene } from "./scene.js";
+import type { QuestionType } from "./generate.js";
+import type { Quiz, QuizResult } from "./quiz.js";
+import type { Walkthrough } from "./walkthrough.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
@@ -24,6 +27,8 @@ export type Labels = {
   fullScreen: string;
   /** On phones: the map in the page opens full screen, and the tab bar closes it. */
   open: string;
+  /** Walkthroughs and quizzes on a phone: the view in the page takes touches only after this is tapped. */
+  wake: string;
   close: string;
   finalCourse: string;
   glidepath: string;
@@ -38,6 +43,49 @@ export type Labels = {
   /** The chart button's name in words, and its text for each chart. */
   chart: string;
   charts: Record<ChartName, string>;
+  /** The question card: the result words, the number question's button, the next button, and a revealed area's name and altitudes. */
+  right: string;
+  wrong: string;
+  submit: string;
+  continue: string;
+  facts: (name: string, floor: string, ceiling: string) => string;
+  /** After a wrong answer: the right one. */
+  answerWas: (answer: string) => string;
+  /** The walkthrough player: its buttons, the button that leaves into free roam, and the step count ("4/8"). */
+  play: string;
+  pause: string;
+  back: string;
+  next: string;
+  explore: string;
+  stepOf: (n: number, total: number) => string;
+  /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
+   * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
+  count: (n: number, total: number, right: number) => string;
+  practiceCount: (right: number, answered: number) => string;
+  nextQuestion: string;
+  again: string;
+  result: (right: number, total: number) => string;
+  nothing: string;
+  /** The generated questions' prompts and their Yes/No answers. */
+  ask: {
+    findArea: (name: string) => string;
+    /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
+    findPiece: (name: string, floor: string, ceiling: string) => string;
+    findFix: (fix: string) => string;
+    floor: string;
+    ceiling: string;
+    cls: string;
+    airplaneClass: string;
+    clearance: string;
+    radio: string;
+    transponder: string;
+    yes: string;
+    no: string;
+    altAt: (fix: string) => string;
+    after: (fix: string) => string;
+    faf: string;
+    missed: string;
+  };
 };
 
 export const LABELS: Labels = {
@@ -57,6 +105,7 @@ export const LABELS: Labels = {
   height: "Height scale",
   fullScreen: "Full screen",
   open: "Open 3D view",
+  wake: "Placeholder: Tap to move the map",
   close: "Close",
   finalCourse: "Final course",
   glidepath: "Glidepath",
@@ -68,6 +117,44 @@ export const LABELS: Labels = {
   modes: { vfr: "VFR", ifr: "IFR" },
   chart: "Chart",
   charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
+  // Walkthrough and quiz words are the site's to write (instrumentready.com supplies them through `labels`); these defaults
+  // say Placeholder so any the site leaves out stand out on screen.
+  right: "Placeholder: Right",
+  wrong: "Placeholder: Wrong",
+  submit: "Placeholder: Check",
+  continue: "Placeholder: Continue",
+  facts: (name, floor, ceiling) => `Placeholder: ${name} · ${floor} to ${ceiling}`,
+  answerWas: (answer) => `Placeholder: Answer: ${answer}`,
+  play: "Placeholder: Play",
+  pause: "Placeholder: Pause",
+  back: "Placeholder: Back",
+  next: "Placeholder: Next",
+  explore: "Placeholder: Explore",
+  stepOf: (n, total) => `Placeholder: ${n}/${total}`,
+  count: (n, total, right) => `Placeholder: ${n}/${total} · ${right}`,
+  practiceCount: (right, answered) => `Placeholder: ${right}/${answered}`,
+  nextQuestion: "Placeholder: Next",
+  again: "Placeholder: Again",
+  result: (right, total) => `Placeholder: ${right} of ${total}`,
+  nothing: "Placeholder: Nothing to ask here",
+  ask: {
+    findArea: (name) => `Placeholder: Tap the ${name}`,
+    findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
+    findFix: (fix) => `Placeholder: Tap ${fix}`,
+    floor: "Placeholder: What is the floor of the highlighted airspace?",
+    ceiling: "Placeholder: What is its ceiling?",
+    cls: "Placeholder: What class is the highlighted airspace?",
+    airplaneClass: "Placeholder: What airspace is the airplane in?",
+    clearance: "Placeholder: Does the pilot need an ATC clearance here?",
+    radio: "Placeholder: Is two-way radio communication required here?",
+    transponder: "Placeholder: Is an altitude-reporting transponder required here?",
+    yes: "Placeholder: Yes",
+    no: "Placeholder: No",
+    altAt: (fix) => `Placeholder: What altitude is charted at ${fix}?`,
+    after: (fix) => `Placeholder: Which fix comes after ${fix}?`,
+    faf: "Placeholder: Which fix is the final approach fix?",
+    missed: "Placeholder: Which fix starts the missed approach?",
+  },
 };
 
 export type Options = {
@@ -81,11 +168,18 @@ export type Options = {
   airport?: string;
   /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
   approach?: string;
-  labels?: Partial<Labels>;
+  labels?: Omit<Partial<Labels>, "ask"> & { ask?: Partial<Labels["ask"]> };
   /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
    * desktop: in place of Full screen) calls this. */
   close?: () => void;
+  /** The view's one job. "explore" (default): free roam. A walkthrough plays instead; its Explore button leaves into
+   * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). A quiz asks its items;
+   * "practice" asks generated questions without end, of `types` (default all) within `kinds` and `airports`. */
+  mode?: "explore" | { walkthrough: Walkthrough; next?: { label: string; href: string } } | QuizMode;
+  /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
+  onResult?: (r: QuizResult) => void;
 };
+export type QuizMode = { quiz: Quiz | "practice"; kinds?: Kind[]; types?: QuestionType[]; airports?: string[] };
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string | boolean> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
@@ -100,7 +194,7 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
-  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
+  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
   const base = new URL(o.base, location.href);
   const url = (p: string) => new URL(p, base).href;
   const data: AirspaceFile = await fetch(url("area.json")).then((r) => {
@@ -130,7 +224,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     tip.hidden = !a;
     if (!a) return;
     tip.textContent = "";
-    tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
+    tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? h("span", {}, L.floor700) : fraction(a, data.ground));
     tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
   };
   const v = await build(
@@ -158,6 +252,16 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     act[e.key]();
   });
 
+  // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
+  // the page. sc-preview (free roam's map in the page on a phone) and sc-asleep (a walkthrough's or quiz's, until tapped)
+  // leave them to the page.
+  const taken = () => !fig.classList.contains("sc-preview") && !(fig.classList.contains("sc-asleep") && !fig.classList.contains("full"));
+  for (const t of ["gesturestart", "gesturechange", "gestureend"]) fig.addEventListener(t, (e) => taken() && e.preventDefault());
+  fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
+  fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
+  // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
+  if (matchMedia("(pointer: coarse)").matches) fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
+
   const loaded = new Map<string, Promise<Procedure[]>>();
   const procedures = (id: string) => {
     if (!loaded.has(id)) loaded.set(id, fetch(url(`procedures/${id}.json`)).then((r) => (r.ok ? r.json() : [])).catch(() => []));
@@ -165,5 +269,14 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
+  const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+  const mode = o.mode ?? "explore";
+  if (mode === "explore") return freeRoam(context);
+  const explore = (from: Scene) => void freeRoam({ ...context, first: from });
+  if ("quiz" in mode) {
+    const { quiz } = await import("./quizui.js");
+    return quiz(context, mode, o.onResult ?? (() => {}), explore);
+  }
+  const { player } = await import("./player.js");
+  await player(context, mode.walkthrough, mode.next, explore);
 }

@@ -102,6 +102,10 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* The map in the page on a phone: one big button the page scrolls past. */
 .skycake .sc-open { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
 .skycake.sc-preview .sc-open { display: flex; }
+/* A walkthrough's or quiz's view in the page on a phone, until tapped: the page scrolls past it. Full screen takes touches. */
+.skycake .sc-wake { display: none; position: absolute; inset: 0; z-index: 2; align-items: flex-end; justify-content: center; padding: 0 0 16px; border: 0; background: none; color: inherit; cursor: pointer; }
+.skycake.sc-asleep:not(.full) .sc-wake { display: flex; }
+.skycake .sc-wake .sc-pill { align-self: flex-end; }
 .skycake .sc-open .sc-pill { align-self: center; }
 .skycake.sc-preview .sc-tl, .skycake.sc-preview .sc-tr, .skycake.sc-preview .sc-br, .skycake.sc-preview .sc-tabs { display: none; }
 
@@ -145,6 +149,11 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .view .fix b { display: flex; align-items: center; gap: 5px; color: #fff; font-weight: 700; }
 .skycake .view .fix i { padding: 0 4px; border-radius: 3px; background: #22d36b; color: #07150d; font-size: 9px; font-style: normal; }
 .skycake .view .fix.w i { background: #fff; color: #111; }
+/* Highlighted fixes and airports; the airplane's altitude. */
+.skycake .view .tag.hl { border-color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 12px rgb(255 255 255 / 0.6); }
+.skycake .view .tag.plane { z-index: 2; padding: 2px 6px; border: 1.5px solid #fff; border-radius: 5px; background: #14171cf0; color: #fff; font-weight: 700; }
+/* While a question is open: names only: no altitudes, and no FAF or MAP on a fix. */
+.skycake .view.sc-no-hints .tip, .skycake .view.sc-no-hints .fix .alt, .skycake .view.sc-no-hints .fix i { display: none; }
 /* Airways' names and their fixes' names, in IFR. */
 .skycake .view .awy { padding: 1px 5px; border-radius: 3px; background: #00707f; color: #fff; font-weight: 700; }
 .skycake .view .wp { padding: 1px 4px; border-radius: 3px; background: #14171ce0; color: #dff6fa; font-weight: 500; font-size: 10px; }
@@ -186,4 +195,75 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-br { flex-wrap: wrap; gap: 46px 10px; padding-inline: 8px; }
   .skycake .sc-round[data-tip]::after { right: auto; left: 50%; top: calc(100% + 6px); width: 58px; transform: translateX(-50%); padding: 0; border: 0; background: none; color: var(--sc-soft); font: 600 10px/1.25 var(--sc-head); letter-spacing: 0.05em; text-align: center; text-transform: uppercase; white-space: normal; opacity: 1; }
   .skycake.sc-open-view .sc-br { padding-bottom: 66px; }
+}
+
+/* The question card: a panel along the bottom (on a phone, in the bar's place, growing upward). */
+.skycake .sc-card { position: absolute; z-index: 5; left: 50%; bottom: var(--sc-gap); transform: translateX(-50%); box-sizing: border-box; width: min(560px, calc(100% - 2 * var(--sc-gap))); display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-card); background: var(--sc-panel); color: var(--sc-ink); }
+.skycake .sc-card .sc-prompt { margin: 0; font: 500 15px/1.4 var(--sc-sans); }
+.skycake .sc-card .sc-choices { display: flex; flex-direction: column; gap: 8px; }
+.skycake .sc-card .sc-numform { display: flex; align-items: center; gap: 8px; }
+.skycake .sc-card .sc-number { flex: 1; min-width: 0; box-sizing: border-box; height: 44px; padding: 0 16px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); background: var(--sc-side); color: var(--sc-ink); font: 500 16px var(--sc-mono); }
+.skycake .sc-card .sc-unit { color: var(--sc-soft); font: 500 14px var(--sc-mono); }
+.skycake .sc-card .sc-choice { box-sizing: border-box; min-height: 44px; padding: 0 18px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); background: var(--sc-panel); color: var(--sc-ink); font: 600 14px var(--sc-sans); text-align: left; cursor: pointer; }
+.skycake .sc-card .sc-choice[aria-pressed="true"] { border-color: var(--sc-accent); background: var(--sc-accent-bg); }
+.skycake .sc-card .sc-choice:disabled, .skycake .sc-card .sc-number:disabled { opacity: 0.6; cursor: default; }
+.skycake .sc-card .sc-submit, .skycake .sc-card .sc-next { text-align: center; border-color: var(--sc-accent); background: var(--sc-accent-bg); }
+.skycake .sc-card .sc-result { display: flex; align-items: center; gap: 8px; margin: 0; font: 700 14px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; }
+/* The right choice, marked after a wrong answer: the check and an outline, not color alone. */
+.skycake .sc-card .sc-choice.sc-answer { border-color: var(--sc-ink); opacity: 1; }
+.skycake .sc-card .sc-choice.sc-answer svg { width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.skycake .sc-card .sc-result svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.skycake .sc-card .sc-facts, .skycake .sc-card .sc-explain { margin: 0; font-size: 14px; color: var(--sc-soft); }
+/* Visually hidden, still in the tab order. */
+.skycake .sc-card .sc-onscreen { position: relative; }
+.skycake .sc-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@media (max-width: 860px) {
+  .skycake .sc-card { left: 0; right: 0; bottom: 0; min-height: 76px; transform: none; width: auto; border-width: 1px 0 0; border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; max-height: 100%; overflow: auto; }
+}
+
+/* The walkthrough player. Desktop: the title top left, Explore top right, the step's caption over the player row at
+   the bottom, above the caption line. Phone: the row is the 76px bar under the view, the caption card above it. */
+.skycake .sc-wtop { position: absolute; z-index: 3; left: var(--sc-gap); right: var(--sc-gap); top: var(--sc-gap); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; pointer-events: none; }
+.skycake .sc-wtop > * { pointer-events: auto; }
+.skycake .sc-title { box-sizing: border-box; min-height: 44px; margin: 0; padding: 11px 18px; border: 1px solid var(--sc-frame); border-radius: 22px; background: var(--sc-panel); font: 600 15px/1.4 var(--sc-head); }
+.skycake .sc-wtop .sc-pill { flex: none; }
+.skycake .sc-player { position: absolute; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); box-sizing: border-box; width: min(640px, calc(100% - 2 * var(--sc-gap))); display: flex; flex-direction: column; gap: 8px; }
+.skycake .sc-step { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-card); background: var(--sc-panel); }
+.skycake .sc-step p { margin: 0; font: 500 15px/1.45 var(--sc-sans); }
+.skycake .sc-end { display: flex; flex-wrap: wrap; gap: 8px; }
+.skycake .sc-end .sc-pill { box-shadow: none; text-decoration: none; }
+.skycake .sc-end .sc-next-link { border-color: var(--sc-accent); background: var(--sc-accent-bg); }
+.skycake .sc-player .sc-card { position: static; transform: none; width: auto; }
+.skycake .sc-bar { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-pill); background: var(--sc-panel); }
+.skycake .sc-bar .sc-round { flex: none; box-shadow: none; }
+.skycake .sc-round[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.skycake .sc-progress { flex: 1; min-width: 0; display: flex; gap: 4px; }
+.skycake .sc-progress i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--sc-accent) var(--f, 0%), var(--sc-frame) 0); }
+.skycake .sc-progress i.check { background: linear-gradient(90deg, var(--sc-accent) var(--f, 0%), transparent 0); box-shadow: inset 0 0 0 1.5px var(--sc-soft); }
+.skycake .sc-count { flex: none; min-width: 3.2em; text-align: center; font: 600 13px var(--sc-mono); color: var(--sc-soft); }
+.skycake .sc-big-play { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1.5px solid var(--sc-soft); border-radius: 50%; background: var(--sc-panel); box-shadow: 0 4px 16px rgb(0 0 0 / 0.5); color: var(--sc-ink); cursor: pointer; }
+.skycake .sc-big-play svg { width: 36px; height: 36px; margin-left: 4px; }
+@media (max-width: 860px) {
+  .skycake .sc-player { position: relative; left: auto; bottom: auto; transform: none; width: auto; flex: none; height: 76px; }
+  .skycake .sc-bar { height: 76px; box-sizing: border-box; gap: 6px; padding: 0 10px; border-width: 1px 0 0; border-radius: 0; }
+  /* Above the bar and the caption line. */
+  .skycake .sc-step, .skycake .sc-player .sc-card { position: absolute; left: var(--sc-gap); right: var(--sc-gap); bottom: calc(100% + 36px); max-height: 55svh; overflow: auto; border-width: 1px; border-radius: var(--sc-r-card); }
+  .skycake .sc-big-play { top: calc(50% - 38px); }
+}
+
+/* The quiz. Desktop: the count top left (as the walkthrough's title), Explore top right, the card along the bottom
+   above the caption line. Phone: the card is the answer area under the view, at least the 76px bar, the caption
+   line between them. */
+.skycake .sc-score { font-family: var(--sc-mono); line-height: 20px; } /* 44px, as Explore beside it */
+/* Explore stays top right when there is no count (nothing to ask). */
+.skycake .sc-score + .sc-pill { margin-left: auto; }
+.skycake .sc-quiz { position: absolute; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); box-sizing: border-box; width: min(560px, calc(100% - 2 * var(--sc-gap))); }
+.skycake .sc-quiz .sc-card { position: static; transform: none; width: auto; }
+/* Short choices share rows, so the card stays low and what the question shows, framed in the middle, stays clear of it. */
+.skycake .sc-quiz .sc-choices { flex-flow: row wrap; }
+.skycake .sc-quiz .sc-choices .sc-choice { flex: 1 1 auto; text-align: center; }
+@media (max-width: 860px) {
+  .skycake .sc-quiz { position: static; transform: none; width: auto; flex: none; display: flex; flex-direction: column; min-height: 76px; }
+  .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
+  .skycake.sc-quizzing .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
 }

@@ -4,7 +4,7 @@ Interactive 3D airspace and instrument procedures over real FAA charts, with ter
 
 Named for the upside-down wedding cake every student pilot learns Class B as.
 
-Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view. On phones the map in the page opens full screen with a tap, with a tab bar under it; there one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. Walkthroughs and quizzes come next; their content lives on the sites that use skycake, not here.
+Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view. On phones the map in the page opens full screen with a tap, with a tab bar under it; there one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. It also plays walkthroughs and asks quizzes, written or generated from the FAA data, with endless practice; their content lives on the sites that use skycake, not here.
 
 It is also its own app, SkyCake Viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
 
@@ -36,6 +36,91 @@ mount(document.querySelector("#airspace")!, {
 
 `types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
+### Walkthroughs
+
+`mode` gives the view one job: `"explore"` (free roam, the default) or a walkthrough that plays like a video. It starts paused on step 1 with a play button over the view; each step runs for `seconds` (default 4 + 0.06 per caption character, rounded up), dragging the view pauses, and a quick check pauses until it is answered (not scored). Explore leaves into free roam from the scene on screen; `next`, when given, is a link at the end.
+
+```ts
+import { mount, type Walkthrough } from "skycake";
+
+const walkthrough: Walkthrough = {
+  id: "class-b",
+  title: "The Phoenix Class B",
+  area: "phoenix",
+  steps: [
+    { caption: "The Class B from above.", scene: { camera: "top", highlight: [{ area: "b-phoenix-class-b-sfc-90" }] } },
+    {
+      caption: "An arrival, drawn leg by leg, with an airplane flying it.",
+      seconds: 10,
+      scene: {
+        raise: ["B"],
+        procedures: [{ airport: "KPHX", name: "EAGUL6", draw: true }],
+        airplane: { along: { airport: "KPHX", name: "EAGUL6" }, seconds: 10 },
+      },
+      check: { type: "find", prompt: "Tap the surface area.", answer: { area: "b-phoenix-class-b-sfc-90" } },
+    },
+  ],
+};
+mount(element, { base: "/skycake/phoenix/", mode: { walkthrough, next: { label: "Take the quiz", href: "/quiz/class-b" } } });
+```
+
+A step's `scene` takes everything a first scene does, plus `highlight`, `airplane` and `draw`. A name the data no longer has leaves that part out of the step, with a warning in the console. `demo/class-b.json` is a sample (`npm run demo`, then `/demo/?walkthrough=class-b`).
+
+#### Validating walkthroughs
+
+`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, that there are steps, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check as a quiz's written item (below). Unknown fields are ignored. `area` is the folder name the site loaded.
+
+```ts
+import { readFileSync } from "node:fs";
+import { validateWalkthrough } from "skycake";
+
+const data = JSON.parse(readFileSync("data/phoenix/area.json", "utf8"));
+const files = async (airport) => JSON.parse(readFileSync(`data/phoenix/procedures/${airport}.json`, "utf8"));
+const problems = await validateWalkthrough(walkthrough, data, files, "phoenix");
+if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
+```
+
+### Quizzes
+
+A quiz mode asks questions on the shared question card: the count (question, total and right so far) top left, Explore top right, the card along the bottom (on phones, under the view). Each question shows its scene with the rest dimmed; the chart-reading types (`find`, `read`, `airplane`) start top-down so the chart can be read, and the camera stays free. The floor and ceiling in the tip and fix altitudes and roles (FAF, MAP) stay hidden until the answer. Tags stay hidden too, except on procedure questions and generated questions that ask for a fix, which show tags with names only; the airplane keeps its altitude tag, since airplane questions ask about it. Then the card says right or wrong with an icon and a word (a wrong answer also names the right one and marks its choice), shows the area's values and the explanation, and the view raises the answer in 3D: the area tapped or highlighted, or the Class B, C, D or surface E area the airplane is in. The end shows the score, **Again** (generated questions are drawn fresh) and **Explore**.
+
+```ts
+import { mount, type Quiz } from "skycake";
+
+const quiz: Quiz = {
+  id: "class-b",
+  title: "The Phoenix Class B",
+  area: "phoenix",
+  shuffle: false,                    // true asks the items in random order
+  items: [
+    { id: "find-zinga", type: "find", prompt: "Tap ZINGA.", answer: { fix: "ZINGA" }, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
+    { id: "floor", type: "read", prompt: "The floor of the highlighted shelf?", choices: ["40", "50", "60"], answer: 1, scene: { highlight: [{ area: "b-phoenix-class-b-50-90-4" }] }, explanation: "The bottom number, in hundreds of feet MSL." },
+    { id: "ceiling", type: "read", prompt: "Its ceiling, in feet MSL?", number: { answer: 3000, tolerance: 0, unit: "ft MSL" }, scene: { highlight: [{ area: "d-chandler-municipal-airport-class-d" }] } },
+    { id: "plane", type: "airplane", prompt: "What airspace is the airplane in?", choices: ["B", "C", "D", "E"], answer: 0, scene: { airplane: { at: [33.4, -111.95, 4500] } } },
+    { id: "faf", type: "procedure", prompt: "Which fix is the FAF?", choices: ["FOWLE", "ZINGA", "AVONA"], answer: 1, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
+    { generate: "airplane", count: 2 }, // drawn from the data each attempt; also kinds and airports filters
+  ],
+};
+mount(element, { base: "/skycake/phoenix/", mode: { quiz }, onResult: (r) => console.log(r) });
+```
+
+A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) or by keyboard: Tab moves through what is on screen, Enter answers. `read`, `airplane` and `procedure` take 2 to 4 choices; a `read` can ask for a number with a tolerance instead (typed with or without commas, "3,000"). Generated questions (`find`, `read`, `airplane`, `procedure`) take every answer and wrong choice from `area.json`, the terrain and the procedure files, and carry no explanation; the card shows the data instead. Any question can name `answerArea`, an area id the reveal raises without the question naming it; generated airplane questions set it to the area the point is in. A `find` question for an area can list `also`: other area ids that are right too. Generated find questions use it for a name in many pieces, asked two ways: any piece ("Tap the PHOENIX CLASS B") or the pieces at the altitudes the chart prints ("Tap the PHOENIX CLASS B from 5,000 to 9,000"). While a question is open the hover tip is off, so the chart has to be read; the keyboard list names each area with its floor and ceiling.
+
+skycake is the framework; the walkthroughs, quiz banks and their wording live on the site. Every walkthrough and quiz word in `LABELS` (the card, the player, the generated questions' prompts in `labels.ask`) defaults to "Placeholder: ..." so a site that leaves one out sees it on screen. Free roam's words are real defaults.
+
+**Practice:** `mode: { quiz: "practice", types?, kinds?, airports? }` asks generated questions without end, with the score as right of answered. `kinds` alone keeps to airspace questions, `airports` alone to procedure questions; when the filters leave nothing to ask, it says so and offers Explore.
+
+**Results:** `onResult` is called after each answer with `{ quiz, item, right, ms }` (`item` is the question's `id`, or `generate:<type>:<n>`; `ms` runs from the question showing to the answer), and at the end of a quiz with `{ quiz, end: true, right, total }`. skycake stores nothing; the site decides what to keep. `demo/class-b-quiz.json` is a sample (`/demo/?quiz=class-b`, or `/demo/?quiz=practice&kinds=B,D`).
+
+#### Validating quizzes
+
+`validateQuiz(quiz, data, files, area)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks: names, prompt, choices (2 to 4, distinct) or a number, answer, tolerance, an `answerArea` and `also` areas the data has, and ids that don't repeat. A `find` answer must be an area, fix, airport or point the view can answer: not an E700 or MODEC area (they cannot be tapped), and a fix on the question's own procedures or among the area's waypoints. A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
+
+```ts
+import { validateQuiz } from "skycake";
+const problems = await validateQuiz(quiz, data, files, "phoenix");
+```
+
 ## Data
 
 `npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
@@ -55,7 +140,7 @@ npm install
 npm test
 npm run typecheck
 npm run build   # dist/, committed, so sites can install straight from GitHub
-npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene
+npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene, ?walkthrough=class-b to play one, ?quiz=class-b or ?quiz=practice to ask
 ```
 
 Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md) and [SkyCake Viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md), with the plan for F-Droid and iOS.

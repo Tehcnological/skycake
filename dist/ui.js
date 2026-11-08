@@ -19,6 +19,7 @@ export const LABELS = {
     height: "Height scale",
     fullScreen: "Full screen",
     open: "Open 3D view",
+    wake: "Placeholder: Tap to move the map",
     close: "Close",
     finalCourse: "Final course",
     glidepath: "Glidepath",
@@ -30,6 +31,44 @@ export const LABELS = {
     modes: { vfr: "VFR", ifr: "IFR" },
     chart: "Chart",
     charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
+    // Walkthrough and quiz words are the site's to write (instrumentready.com supplies them through `labels`); these defaults
+    // say Placeholder so any the site leaves out stand out on screen.
+    right: "Placeholder: Right",
+    wrong: "Placeholder: Wrong",
+    submit: "Placeholder: Check",
+    continue: "Placeholder: Continue",
+    facts: (name, floor, ceiling) => `Placeholder: ${name} · ${floor} to ${ceiling}`,
+    answerWas: (answer) => `Placeholder: Answer: ${answer}`,
+    play: "Placeholder: Play",
+    pause: "Placeholder: Pause",
+    back: "Placeholder: Back",
+    next: "Placeholder: Next",
+    explore: "Placeholder: Explore",
+    stepOf: (n, total) => `Placeholder: ${n}/${total}`,
+    count: (n, total, right) => `Placeholder: ${n}/${total} · ${right}`,
+    practiceCount: (right, answered) => `Placeholder: ${right}/${answered}`,
+    nextQuestion: "Placeholder: Next",
+    again: "Placeholder: Again",
+    result: (right, total) => `Placeholder: ${right} of ${total}`,
+    nothing: "Placeholder: Nothing to ask here",
+    ask: {
+        findArea: (name) => `Placeholder: Tap the ${name}`,
+        findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
+        findFix: (fix) => `Placeholder: Tap ${fix}`,
+        floor: "Placeholder: What is the floor of the highlighted airspace?",
+        ceiling: "Placeholder: What is its ceiling?",
+        cls: "Placeholder: What class is the highlighted airspace?",
+        airplaneClass: "Placeholder: What airspace is the airplane in?",
+        clearance: "Placeholder: Does the pilot need an ATC clearance here?",
+        radio: "Placeholder: Is two-way radio communication required here?",
+        transponder: "Placeholder: Is an altitude-reporting transponder required here?",
+        yes: "Placeholder: Yes",
+        no: "Placeholder: No",
+        altAt: (fix) => `Placeholder: What altitude is charted at ${fix}?`,
+        after: (fix) => `Placeholder: Which fix comes after ${fix}?`,
+        faf: "Placeholder: Which fix is the final approach fix?",
+        missed: "Placeholder: Which fix starts the missed approach?",
+    },
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -46,7 +85,7 @@ function h(tag, attrs = {}, ...kids) {
 }
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host, o) {
-    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
+    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
     const base = new URL(o.base, location.href);
     const url = (p) => new URL(p, base).href;
     const data = await fetch(url("area.json")).then((r) => {
@@ -79,7 +118,7 @@ export async function mount(host, o) {
         if (!a)
             return;
         tip.textContent = "";
-        tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
+        tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? h("span", {}, L.floor700) : fraction(a, data.ground));
         tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
     };
     const v = await build(view, data, show, (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })), (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })));
@@ -100,6 +139,17 @@ export async function mount(host, o) {
         e.preventDefault();
         act[e.key]();
     });
+    // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
+    // the page. sc-preview (free roam's map in the page on a phone) and sc-asleep (a walkthrough's or quiz's, until tapped)
+    // leave them to the page.
+    const taken = () => !fig.classList.contains("sc-preview") && !(fig.classList.contains("sc-asleep") && !fig.classList.contains("full"));
+    for (const t of ["gesturestart", "gesturechange", "gestureend"])
+        fig.addEventListener(t, (e) => taken() && e.preventDefault());
+    fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
+    fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
+    // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
+    if (matchMedia("(pointer: coarse)").matches)
+        fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
     const loaded = new Map();
     const procedures = (id) => {
         if (!loaded.has(id))
@@ -108,5 +158,15 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+    const mode = o.mode ?? "explore";
+    if (mode === "explore")
+        return freeRoam(context);
+    const explore = (from) => void freeRoam({ ...context, first: from });
+    if ("quiz" in mode) {
+        const { quiz } = await import("./quizui.js");
+        return quiz(context, mode, o.onResult ?? (() => { }), explore);
+    }
+    const { player } = await import("./player.js");
+    await player(context, mode.walkthrough, mode.next, explore);
 }

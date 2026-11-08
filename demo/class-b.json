@@ -1,0 +1,30 @@
+{
+  "id": "class-b",
+  "title": "Placeholder: the Phoenix Class B",
+  "area": "phoenix",
+  "steps": [
+    {
+      "caption": "Placeholder: the Phoenix Class B from above, as the chart prints it.",
+      "scene": { "camera": "top", "highlight": [{ "area": "b-phoenix-class-b-sfc-90" }] }
+    },
+    {
+      "caption": "Placeholder: raised, its shelves step up away from the airport.",
+      "scene": { "raise": ["B"], "camera": "fit" }
+    },
+    {
+      "caption": "Placeholder: an arrival into Phoenix, drawn leg by leg, with an airplane flying it.",
+      "seconds": 10,
+      "scene": {
+        "raise": ["B"],
+        "procedures": [{ "airport": "KPHX", "name": "EAGUL6", "draw": true }],
+        "airplane": { "along": { "airport": "KPHX", "name": "EAGUL6" }, "seconds": 10 },
+        "camera": { "frame": [{ "procedure": { "airport": "KPHX", "name": "EAGUL6" } }] }
+      }
+    },
+    {
+      "caption": "Placeholder: now find it yourself.",
+      "scene": { "raise": ["B"], "camera": "fit" },
+      "check": { "type": "find", "prompt": "Placeholder: tap the Class B's surface area.", "answer": { "area": "b-phoenix-class-b-sfc-90" } }
+    }
+  ]
+}

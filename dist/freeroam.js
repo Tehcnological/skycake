@@ -6,7 +6,7 @@ import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } fro
 import { SceneError, framedOnly, resolve } from "./scene.js";
 import { airportList, proceduresAt, search } from "./search.js";
 const SVG = "http://www.w3.org/2000/svg";
-function h(tag, attrs = {}, ...kids) {
+export function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
         if (v === undefined || v === false)
@@ -20,7 +20,7 @@ function h(tag, attrs = {}, ...kids) {
     return e;
 }
 /** An inline stroke icon built as elements, so strict CSPs allow it. */
-function icon(paths, box = "0 0 24 24") {
+export function icon(paths, box = "0 0 24 24") {
     const s = document.createElementNS(SVG, "svg");
     for (const [k, v] of Object.entries({ viewBox: box, width: "20", height: "20", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }))
         s.setAttribute(k, v);
@@ -31,7 +31,7 @@ function icon(paths, box = "0 0 24 24") {
     }
     return s;
 }
-const ICONS = {
+export const ICONS = {
     layers: ["M12 3 3 8l9 5 9-5-9-5Z", "m3 13 9 5 9-5"],
     search: ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z", "m20 20-3.5-3.5"],
     procedure: ["M4 19c4-1 6-5 8-9s5-6 8-6"],
@@ -306,15 +306,7 @@ export function freeRoam(c) {
         document.documentElement.classList.add("skycake-full");
     }
     drawPhone();
-    // CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms the page.
-    const taken = () => !fig.classList.contains("sc-preview");
-    for (const t of ["gesturestart", "gesturechange", "gestureend"])
-        fig.addEventListener(t, (e) => taken() && e.preventDefault());
-    fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
-    fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
-    // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
-    if (matchMedia("(pointer: coarse)").matches)
-        fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
+    // The page's own gestures over the map are stopped in mount() (ui.ts), for every mode.
     document.addEventListener("fullscreenchange", () => {
         if (!document.fullscreenElement)
             setFull(false);
@@ -335,4 +327,27 @@ export function freeRoam(c) {
     c.fig.addEventListener("skycake-raised", (e) => onRaised(e.detail.kind, e.detail.on));
     sheet(null);
     return refresh(true);
+}
+/**
+ * Walkthroughs and quizzes on a phone: the view in the page lets the page scroll past it until a tap wakes it, and it
+ * sleeps again once scrolled out of sight. The player and question card stay live throughout. Returns the undo.
+ */
+export function wakeOnTap(c) {
+    const { fig, labels: L } = c;
+    const phone = matchMedia("(max-width: 860px) and (pointer: coarse)");
+    const button = h("button", { type: "button", class: "sc-wake" }, h("span", { class: "sc-pill" }, L.wake));
+    fig.querySelector(".view").append(button);
+    const asleep = (on) => fig.classList.toggle("sc-asleep", on && phone.matches);
+    button.addEventListener("click", () => asleep(false));
+    const seen = new IntersectionObserver(([e]) => e.isIntersecting || asleep(true));
+    seen.observe(fig);
+    const change = () => asleep(true);
+    phone.addEventListener("change", change);
+    asleep(true);
+    return () => {
+        seen.disconnect();
+        phone.removeEventListener("change", change);
+        button.remove();
+        fig.classList.remove("sc-asleep");
+    };
 }
