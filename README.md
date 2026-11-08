@@ -96,7 +96,7 @@ const quiz: Quiz = {
     { id: "find-zinga", type: "find", prompt: "Tap ZINGA.", answer: { fix: "ZINGA" }, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
     { id: "floor", type: "read", prompt: "The floor of the highlighted shelf?", choices: ["40", "50", "60"], answer: 1, scene: { highlight: [{ area: "b-phoenix-class-b-50-90-4" }] }, explanation: "The bottom number, in hundreds of feet MSL." },
     { id: "ceiling", type: "read", prompt: "Its ceiling, in feet MSL?", number: { answer: 3000, tolerance: 0, unit: "ft MSL" }, scene: { highlight: [{ area: "d-chandler-municipal-airport-class-d" }] } },
-    { id: "plane", type: "airplane", prompt: "What airspace is the airplane in?", choices: ["B", "C", "D", "E", "G"], answer: 0, scene: { airplane: { at: [33.4, -111.95, 4500] } } },
+    { id: "plane", type: "airplane", prompt: "What airspace is the airplane in?", choices: ["B", "C", "D", "E"], answer: 0, scene: { airplane: { at: [33.4, -111.95, 4500] } } },
     { id: "faf", type: "procedure", prompt: "Which fix is the FAF?", choices: ["FOWLE", "ZINGA", "AVONA"], answer: 1, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } },
     { generate: "airplane", count: 2 }, // drawn from the data each attempt; also kinds and airports filters
   ],

@@ -1,6 +1,6 @@
 // The question card: shared by the quiz player and anything else that asks. Shows a question, reports one answer,
 // then reveals the result. A find question is answered on the chart (taps) or from a list of what is on screen (keys).
-import type { Answer, Question } from "./question.js";
+import { typedNumber, type Answer, type Question } from "./question.js";
 import type { Labels } from "./ui.js";
 import type { Candidate, View } from "./viewer.js";
 
@@ -79,8 +79,8 @@ export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) =
     form.append(submit);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      const n = parseFloat(input.value.replace(",", "."));
-      if (Number.isFinite(n)) answer({ number: n });
+      const n = typedNumber(input.value);
+      if (n !== null) answer({ number: n });
     });
     el.append(form);
   } else {

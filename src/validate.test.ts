@@ -62,3 +62,29 @@ test("catches another area, an answerArea the data lacks, and filters that leave
   ] } as unknown as Quiz;
   assert.deepEqual(await validateQuiz(bad, data, files, "phoenix"), ["q: area miami, data is phoenix", "q item 1: no area nope", "q item 2: nothing to ask with these filters"]);
 });
+test("catches questions the browser cannot run", async () => {
+  const ils = { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] };
+  const bad = { ...goodQuiz, items: [
+    { type: "read", prompt: "?" },
+    { type: "find", prompt: "?" },
+    { type: "find", prompt: "?", answer: { procedure: { airport: "KPHX", name: "ILS RWY 07L" } } },
+    { type: "find", prompt: "?", answer: { fix: "ZINGA" } },
+    { type: "find", prompt: "?", answer: { area: "e700-buckeye-class-e5" } },
+    { type: "find", prompt: "?", answer: { area: "modec-phoenix-sky-harbor-international-mode-c" } },
+    { type: "find", prompt: "?", answer: { fix: "ZINGA" }, scene: ils },
+    { type: "find", prompt: "?", answer: { fix: "BXK" } },
+  ] } as unknown as Quiz;
+  assert.deepEqual(await validateQuiz(bad, data, files, "phoenix"), [
+    "q item 1: no choices or number",
+    "q item 2: answer must be an area, fix, airport or point",
+    "q item 3: answer must be an area, fix, airport or point",
+    "q item 4: fix ZINGA is not on the question's procedures or the area's waypoints",
+    "q item 5: area e700-buckeye-class-e5 is E700, which cannot be tapped",
+    "q item 6: area modec-phoenix-sky-harbor-international-mode-c is MODEC, which cannot be tapped",
+  ]);
+});
+test("a walkthrough with no steps", async () => assert.deepEqual(await validateWalkthrough({ ...good, steps: [] }, data, files, "phoenix"), ["t: no steps"]));
+test("the demo samples have no problems", async () => {
+  assert.deepEqual(await validateQuiz(JSON.parse(readFileSync("demo/class-b-quiz.json", "utf8")), data, files, "phoenix"), []);
+  assert.deepEqual(await validateWalkthrough(JSON.parse(readFileSync("demo/class-b.json", "utf8")), data, files, "phoenix"), []);
+});

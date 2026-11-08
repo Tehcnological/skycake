@@ -7,17 +7,30 @@ export const locator = (data, procedures) => (t) => {
     return p ? [p.lat, p.lon] : null;
 };
 const FIND_NM = 1.5;
+/** A malformed question (one validateQuiz would reject) scores false with a warning: the quiz goes on. */
 export function score(q, a, locate) {
-    if ("choices" in q)
-        return "choice" in a && a.choice === q.answer;
-    if ("number" in q)
-        return "number" in a && Math.abs(a.number - q.number.answer) <= q.number.tolerance;
-    if (!("area" in a))
+    try {
+        if ("choices" in q)
+            return "choice" in a && a.choice === q.answer;
+        if ("number" in q)
+            return "number" in a && Math.abs(a.number - q.number.answer) <= q.number.tolerance;
+        if (!("area" in a))
+            return false;
+        if ("area" in q.answer)
+            return a.area === q.answer.area;
+        const p = locate(q.answer);
+        return !!(p && a.at && nm(p[0], p[1], a.at[0], a.at[1]) <= FIND_NM);
+    }
+    catch (e) {
+        console.warn(`skycake: cannot score "${q?.prompt}": ${e instanceof Error ? e.message : e}`);
         return false;
-    if ("area" in q.answer)
-        return a.area === q.answer.area;
-    const p = locate(q.answer);
-    return !!(p && a.at && nm(p[0], p[1], a.at[0], a.at[1]) <= FIND_NM);
+    }
+}
+/** A typed number in US style: commas and spaces dropped ("3,000" is 3000); null when it is not a number. */
+export function typedNumber(text) {
+    const t = text.replace(/[,\s]/g, "");
+    const n = Number(t);
+    return t && Number.isFinite(n) ? n : null;
 }
 const around = (lat, lon) => {
     const dLat = 5 / 60;

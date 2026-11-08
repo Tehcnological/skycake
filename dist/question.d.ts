@@ -35,7 +35,10 @@ export type Answer = {
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
 /** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
 export declare const locator: (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]) => Locate;
+/** A malformed question (one validateQuiz would reject) scores false with a warning: the quiz goes on. */
 export declare function score(q: Question, a: Answer, locate: Locate): boolean;
+/** A typed number in US style: commas and spaces dropped ("3,000" is 3000); null when it is not a number. */
+export declare function typedNumber(text: string): number | null;
 /** The type's default scene with the question's own fields laid over it. */
 export declare const questionScene: (q: Question) => Scene;
 /** After the answer: the answer raised, tags on, tilted to 3D on the frame the question showed. */

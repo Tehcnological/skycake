@@ -1,18 +1,40 @@
 import { maker } from "./quiz.js";
 import { seeded } from "./generate.js";
 import { LABELS } from "./ui.js";
-import { usable } from "./scene.js";
+import { locator, questionScene } from "./question.js";
+import { framedOnly, usable } from "./scene.js";
 /** Problems with a scene, one per field that names something the data lacks. */
 function sceneProblems(scene, data, hasFix) {
     const out = [];
     usable(scene ?? {}, data, hasFix, (m) => out.push(m.replace(/; leaving out .*$/, "")));
     return out;
 }
-/** Problems with a question, without a prefix; the quiz validator reuses this. */
-export function questionProblems(q, data, hasFix) {
+/** Problems with a find question's answer: what the browser can tap and locate. loaded: every procedure of the area. */
+function answerProblems(q, data, hasFix, loaded) {
+    const t = q.answer;
+    if (!t || typeof t !== "object" || !["area", "fix", "airport", "point"].some((k) => k in t))
+        return ["answer must be an area, fix, airport or point"];
+    const out = sceneProblems({ highlight: [q.answer] }, data, hasFix);
+    if (out.length)
+        return out;
+    const area = "area" in q.answer ? q.answer.area : null;
+    const kind = data.areas.find((a) => a.id === area)?.kind;
+    if (kind === "E700" || kind === "MODEC")
+        out.push(`area ${area} is ${kind}, which cannot be tapped`);
+    // The browser locates a fix in the procedures the question's scene shows, then the area's waypoints.
+    const s = questionScene(q);
+    const shown = [...(s.procedures ?? []), ...framedOnly(s)];
+    if ("fix" in q.answer && !locator(data, loaded.filter((p) => shown.some((r) => r.airport === p.airport && r.name === p.name)))(q.answer))
+        out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
+    return out;
+}
+/** Problems with a question, without a prefix; the quiz validator reuses this. loaded: every procedure of the area. */
+export function questionProblems(q, data, hasFix, loaded) {
     const out = sceneProblems(q.scene, data, hasFix);
     if (q.type === "find")
-        out.push(...sceneProblems({ highlight: [q.answer] }, data, hasFix));
+        out.push(...answerProblems(q, data, hasFix, loaded));
+    else if (!("choices" in q) && !("number" in q))
+        out.push("no choices or number");
     if (q.answerArea !== undefined)
         out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
     if (typeof q.prompt !== "string" || !q.prompt.trim())
@@ -31,31 +53,31 @@ export function questionProblems(q, data, hasFix) {
         out.push("tolerance is below 0");
     return out;
 }
-/** Whether a fix name is in any airport's procedures or the area's waypoints. */
-export async function fixFinder(data, procedures) {
-    const names = new Set(data.waypoints.map((w) => w.name));
-    for (const a of data.airports)
-        for (const p of await procedures(a.id))
-            for (const f of p.fixes)
-                names.add(f.name);
-    return (name) => names.has(name);
+/** Every procedure of the area's airports, and whether a fix name is in any of them or the area's waypoints. */
+async function load(data, procedures) {
+    const loaded = (await Promise.all(data.airports.map((a) => procedures(a.id)))).flat();
+    const names = new Set([...data.waypoints.map((w) => w.name), ...loaded.flatMap((p) => p.fixes.map((f) => f.name))]);
+    return { loaded, hasFix: (name) => names.has(name) };
 }
 /** area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>". */
 export async function validateWalkthrough(w, data, procedures, area) {
     const out = [];
     if (w.area !== area)
         out.push(`${w.id}: area ${w.area}, data is ${area}`);
-    const hasFix = await fixFinder(data, procedures);
-    w.steps.forEach((s, i) => {
-        const at = `${w.id} step ${i + 1}: `;
-        const problems = [];
-        if (typeof s.caption !== "string")
-            problems.push("caption is not text");
-        if (s.seconds !== undefined && !(s.seconds > 0))
-            problems.push("seconds must be above 0");
-        problems.push(...sceneProblems(s.scene, data, hasFix), ...(s.check ? questionProblems(s.check, data, hasFix) : []));
-        out.push(...problems.map((p) => at + p));
-    });
+    const { loaded, hasFix } = await load(data, procedures);
+    if (!Array.isArray(w.steps) || !w.steps.length)
+        out.push(`${w.id}: no steps`);
+    else
+        w.steps.forEach((s, i) => {
+            const at = `${w.id} step ${i + 1}: `;
+            const problems = [];
+            if (typeof s.caption !== "string")
+                problems.push("caption is not text");
+            if (s.seconds !== undefined && !(s.seconds > 0))
+                problems.push("seconds must be above 0");
+            problems.push(...sceneProblems(s.scene, data, hasFix), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+            out.push(...problems.map((p) => at + p));
+        });
     return out;
 }
 /** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. */
@@ -63,13 +85,12 @@ export async function validateQuiz(q, data, procedures, area) {
     const out = [];
     if (q.area !== area)
         out.push(`${q.id}: area ${q.area}, data is ${area}`);
-    const loaded = await Promise.all(data.airports.map((a) => procedures(a.id)));
-    const hasFix = await fixFinder(data, async (id) => loaded[data.airports.findIndex((a) => a.id === id)]);
-    const make = maker({ data, grid: null, procedures: loaded.flat(), ask: LABELS.ask }, seeded(0));
+    const { loaded, hasFix } = await load(data, procedures);
+    const make = maker({ data, grid: null, procedures: loaded, ask: LABELS.ask }, seeded(0));
     q.items.forEach((it, i) => {
         const problems = [];
         if (!("generate" in it))
-            problems.push(...questionProblems(it, data, hasFix));
+            problems.push(...questionProblems(it, data, hasFix, loaded));
         else {
             if (!(it.count >= 1))
                 problems.push("count must be at least 1");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { locator, questionScene, revealScene, score, type Locate, type Question } from "./question.js";
+import { locator, questionScene, revealScene, score, typedNumber, type Locate, type Question } from "./question.js";
 
 const at: Locate = (t) => ("fix" in t && t.fix === "SCADE" ? [33.4, -112.2] : "airport" in t && t.airport === "KCHD" ? [33.27, -111.81] : null);
 test("each type scores right and wrong", () => {
@@ -52,4 +52,19 @@ test("locator finds loaded procedure fixes first, then waypoints, airports and p
   assert.deepEqual(at({ point: [33, -112] }), [33, -112]);
   assert.equal(at({ fix: "NOPE" }), null);
   assert.equal(at({ area: "x" }), null);
+});
+test("a malformed question scores false with a warning, never a throw", () => {
+  const warn = console.warn, said: unknown[] = [];
+  console.warn = (...a: unknown[]) => void said.push(a);
+  try {
+    assert.equal(score({ type: "find", prompt: "" } as never, { area: "x", at: null }, at), false);
+    assert.equal(score({ type: "read", prompt: "", answer: 0 } as never, { area: "x", at: null }, at), false);
+    assert.equal(score({ type: "read", prompt: "", number: null } as never, { number: 1 }, at), false);
+  } finally {
+    console.warn = warn;
+  }
+  assert.equal(said.length, 3);
+});
+test("a typed number drops commas and spaces; anything else is no number", () => {
+  assert.deepEqual(["3,000", " 3 000 ", "4500", "-1.5", "12abc", "", "  ", "Infinity"].map(typedNumber), [3000, 3000, 4500, -1.5, null, null, null, null]);
 });
