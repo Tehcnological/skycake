@@ -6,7 +6,7 @@ Only the latest commit on `main` is supported, and the SkyCake Viewer deployed f
 
 ## Reporting a vulnerability
 
-Do not open a public issue. Use [Report a vulnerability](https://github.com/Tehcnological/skycake/security/advisories/new) on the repo's Security tab, or email Chris DeFoe at chris@defoe.me. Include:
+Do not open a public issue. Use [Report a vulnerability](https://github.com/Tehcnological/skycake/security/advisories/new) on the repo's Security tab; that is the only channel. Include:
 
 - what the problem is and where (file, function or input),
 - how to reproduce it,
