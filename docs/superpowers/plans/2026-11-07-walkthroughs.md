@@ -81,8 +81,8 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
 ### Task 2: The viewer draws highlight, the airplane and procedures leg by leg
 
 **Files:**
-- Create: `src/fly.ts`, `src/fly.test.ts`
-- Modify: `src/viewer.ts` (`View`, `apply`, the render loop), `style.css` (`.tag.hl`, `.tag.plane`)
+- Create: `src/fly.ts`, `src/fly.test.ts`, `src/plane.ts`
+- Modify: `src/viewer.ts` (`View`, `apply`, the render loop), `style.css` (`.tag.hl`, `.tag.plane`), `NOTICE.md` (the model's credit)
 
 **Interfaces:**
 - Consumes: `Resolved` from Task 1.
@@ -92,7 +92,9 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
     - Keep appending the first path whose first point equals the current last point, until none does.
     - Points count as equal within 1e-6 degrees. Consecutive duplicate points are dropped, and no path is used twice.
     - This puts a SID's runway leg, common route and enroute transition in order, and a STAR's or approach's transition before its common route and final.
-    - With no path but missed, the result is the first point of the first path. and `export function along(line: Point[], f: number): Point` (the point a fraction `f` of the way along by ground distance, `nm()` from `cifp.ts`; `f` clamped to 0..1).
+    - With no path but missed, the result is the first point of the first path.
+  - `fly.ts`: `export function along(line: Point[], f: number): Point`, the point a fraction `f` of the way along by ground distance (`nm()` from `cifp.ts`), with `f` clamped to 0..1.
+  - `src/plane.ts`: `export const PLANE_GLB: string`, the airplane model as base64 (see the Airplane step).
   - `View.apply(scene, procedures, now?, framing?, t = 1)`: `t` is the step timeline, 0 to 1.
   - `View.timeline(t: number): void`: moves the timeline without reapplying the scene.
   - `View.camera(): Camera`: the camera now, as `{ azimuth, tilt, distance, target }` in the same units `apply` takes.
@@ -105,7 +107,7 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
 - [ ] **Step 1: Write the failing tests** in `src/fly.test.ts` with a hand-made `proc` whose paths are, in file order: transition `[[33,-112,6000],[33,-111.95,5000]]`, common `[[33,-111.95,5000],[33,-111.9,4000]]`, final `[[33,-111.9,4000],[33,-111.85,3000],[33,-111.8,1500]]`, missed `[[33,-111.8,1500],[33,-111.7,5000]]`; and `missedOnly`, with only that missed path:
 
 ```ts
-test("the flight line is transition, common, final; missed and vectors are left out", () => {
+test("the flight line is transition, common, final; the missed approach is left out", () => {
   assert.deepEqual(flightLine(proc).map((p) => p[2]), [6000, 5000, 4000, 3000, 1500]);
 });
 test("along goes by distance and clamps", () => {
@@ -132,14 +134,28 @@ test("a real SID flies runway leg, common route, then its enroute transition", (
 
 - [ ] **Step 3: Implement `fly.ts`**, then the viewer:
   - **Highlight.** With a non-empty `highlight`, every area, procedure path and fix tag not named in it draws at 30% of its opacity; highlighted areas keep full opacity and get a 2 px brighter outline; a highlighted fix's tag gets class `hl`; a highlighted airport's tag gets class `hl`; a `point` gets a ground ring 0.5 NM across in the accent white. An empty list dims nothing.
-  - **Airplane.** One small mesh built here from plain geometry (a flat delta wing and a fin, white with a dark outline, about 0.6 NM span at height scale 1), facing along the line or north for `at`, with a tag "4,500" from `Labels.altitude` (see Task 4) at its position. `along` places it at `along(flightLine(p), t)`; `at` places it at the point.
+  - **Airplane.** Use "Small Airplane" by Vojtěch Balák, chosen by Chris on 2026-11-07.
+    - **Source:** https://poly.pizza/m/7cvx6ex-xfL, file `https://static.poly.pizza/077afae1-24b7-4bac-a31d-53d367002a04.glb`. It is 36,200 bytes, sha256 `020086413ab6cdd26662bafe564ca55cd3d8de8d1b5411c0109e2136be9c3f39`. It has 584 triangles, no textures and four plain materials (White, Red, Gray, Black). Download it into an empty folder and check the hash before using it.
+    - **License:** CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/). In `NOTICE.md`, under a new "Models" heading, add: "Small Airplane" by Vojtěch Balák, from poly.pizza, CC-BY 3.0, unchanged apart from scale and placement.
+    - **Packaging.** Commit it as `src/plane.ts` holding `export const PLANE_GLB = "<base64 of the file>";`, made once with `node -e` reading the file. It then ships inside the lazily loaded viewer chunk. Sites copy nothing new, and `data/` and the app's offline saves do not change.
+    - **Loading.** Use `GLTFLoader.parse()` from `three/examples/jsm/loaders/GLTFLoader.js`, on first use only. If it fails, warn once and show no airplane; never fail the scene.
+    - **The model's axes:**
+      - The span runs along x, from -5.56 to 5.51, so about 11.07 units.
+      - Up is +y.
+      - The nose points to -z, where the propeller is, at z ≈ -2.4. The tail is at +z.
+      - The propeller is its own node, `Propeller_Cone`, centred near (0, -0.05, -2.38).
+    - **Size and scale.** Scale it so the span is 0.6 NM. Keep it outside the world's height scale, so 4× height raises its position but does not stretch it.
+    - **Heading.** It points along the line (`along`), or north for `at`.
+    - **Propeller.** It turns about z while the walkthrough plays. It stops when paused, and with reduced motion.
+    - **Tag.** The altitude as a number, `ft.toLocaleString("en-US")` ("4,500"), like the fix tags; a number, so no label.
+    - **Placement.** `along` puts it at `along(flightLine(p), t)`; `at` puts it at the point.
   - **Draw.** For a procedure with `draw: true`, its paths reveal in order over the timeline: with `n` paths, path `i` grows from `t = i/n` to `(i+1)/n` (the line's draw range, the curtain to match); fix tags show once their point is drawn. At `t = 1` everything is drawn.
   - `apply` calls `timeline(t)` after building; `timeline` only updates draw ranges, the airplane and visibility, and marks the frame dirty.
   - `takeOver()` (already called on every manual camera move) dispatches `skycake-moved`.
 
 - [ ] **Step 4: Run** `npm test && npm run typecheck && npm run build`, then `npm run demo` and open `http://localhost:5179/demo/?scene=` with `{"procedures":[{"airport":"KPHX","name":"<an ILS at KPHX>","draw":true}],"highlight":[{"area":"b-phoenix-class-b-sfc-90"}],"airplane":{"at":[33.43,-112.01,4500]}}`. Expected: Class B surface area bright, everything else dim, the approach fully drawn (t = 1), an airplane with "4,500". In the browser console, `v.timeline(0.5)` (expose `v` on `window` in `demo/index.html` only) shows half the legs.
 
-- [ ] **Step 5: Commit** `src/fly.ts src/fly.test.ts src/viewer.ts style.css demo/index.html dist`: "Viewer: highlight, airplane, draw by timeline, tap hook".
+- [ ] **Step 5: Commit** `src/fly.ts src/fly.test.ts src/plane.ts src/viewer.ts style.css NOTICE.md demo/index.html dist`: "Viewer: highlight, airplane, draw by timeline, tap hook".
 
 ### Task 3: Questions and the shared question card
 
@@ -158,7 +174,7 @@ test("a real SID flies runway leg, common route, then its enroute transition", (
   - `export function revealScene(q: Question): Scene`: the question scene with the answer raised (an `area` answer or highlighted areas) and a `"top"` camera tilted to 32.
 - Produces (`card.ts`, DOM):
   - `export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void }`. Choices are buttons; a number question is an input (`inputmode="decimal"`) with its unit and a submit button; a find question shows only the prompt, calls `view.tap(...)` and lists `view.onScreen()` as visually hidden buttons named after each candidate. Tab moves through them and calls `view.focus`. Enter answers: an area candidate with `{ area, at: null }`, a fix or airport with `{ area: null, at: c.at }`, so keyboard answers score exactly like taps. `reveal` disables the answers, shows an icon plus the word right or wrong (never color alone), `facts`, the explanation if any, and one button labelled `button`. The prompt and result are in an `aria-live="polite"` region.
-  - New `Labels`: `right: "Right"`, `wrong: "Wrong"`, `submit: "Check"`, `continue: "Continue"`, `altitude: (ft) => ft.toLocaleString("en-US")`, `facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}``.
+  - New `Labels`: `right: "Right"`, `wrong: "Wrong"`, `submit: "Check"`, `continue: "Continue"`, `facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}``.
 
 - [ ] **Step 1: Write the failing tests** in `src/question.test.ts`:
 
