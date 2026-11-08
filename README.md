@@ -118,7 +118,8 @@ Not covered:
 - `npm run data`: it downloads from the FAA and USGS, so only the committed data's size and presence are checked.
 - Node versions other than 22, the `engines` floor.
 - instrumentready.com's own build, which is in a private repo.
-- New major versions of the two actions: `@v7` picks up fixes on its own, and a new major is a manual bump.
+
+The actions are pinned to a major version (`@v7`), which picks up fixes on its own. Dependabot (`.github/dependabot.yml`) opens a monthly PR when a new major comes out; npm security updates are on in the repo settings.
 
 A red check blocks merging only if branch protection requires it. These settings do that, and `enforce_admins: false` lets admins still push to main directly, in which case CI reports after the push:
 
@@ -130,4 +131,4 @@ EOF
 
 ## License
 
-AGPL-3.0-only ([LICENSE](LICENSE)). Copyright Christopher DeFoe. If you build skycake into your own site or product, the AGPL asks you to publish that code too. See [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes.
+AGPL-3.0-only ([LICENSE](LICENSE)). Copyright Christopher DeFoe. If you build skycake into your own site or product, the AGPL asks you to publish that code too. See [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes, [SECURITY.md](SECURITY.md) to report a vulnerability, and [CHANGELOG.md](CHANGELOG.md) for what changed. Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
