@@ -17,7 +17,7 @@ Students practise reading a VFR sectional the way they will on a checkride: find
 
 Success: every answer comes from public domain FAA or USGS data and matches what the chart prints; a question that cannot be checked is never asked; Phoenix and Miami work first. More areas, up to the whole country, come later, each served on its own when opened.
 
-Assumptions (not said by Chris, please correct): sectional only for v1 (not the TAC); the hunt is a practice game inside a quiz, not a separate mode; times are asked as the table prints them (local), not converted.
+Assumptions (not said by Chris, please correct): sectional only for v1 (not the TAC); the hunt is a practice game inside a quiz, not a separate mode. Times in questions and answers are UTC (Chris).
 
 ## What the data holds (checked 2026-11-08)
 
@@ -85,9 +85,11 @@ Where the chart and NASR could disagree (the chart's cutoff is weeks before its 
 | table agency | same | "Who controls R-2301 E?" | `CONT_AGENT` | other agencies in the table |
 | kind | an area highlighted, no name | "What kind of special use airspace is this?" | area kind | other SUA kinds |
 | airplane in it | airplane at a lat, lon, altitude inside the footprint | "Is the airplane inside QUAIL MOA?" | floor and ceiling (TNI: the ceiling itself is outside) | Yes / No |
-| in use at | a day and local time | "Is GLADDEN 1 MOA scheduled in use Saturday at 1400?" | `TIMESOFUSE`, only when it parses with a strict grammar ("HHMM - HHMM, DAY - DAY" with "OTHER TIMES BY NOTAM"); anything else is skipped | Yes / No / By NOTAM |
+| in use at | a date and a UTC time | "Is GLADDEN 1 MOA scheduled in use Saturday 14 November at 2100Z?" | `TIMESOFUSE` (local, as the table prints it) turned to UTC with the record's `GMTOFFSET` and `DST_CODE` for that date; only when the times parse with a strict grammar ("HHMM - HHMM, DAY - DAY" with "OTHER TIMES BY NOTAM"); anything else is skipped | Yes / No / By NOTAM |
+| times in UTC | the table | "When is BAGDAD 1 MOA in use, in UTC?" | as above, for a named date (daylight saving changes the answer outside Arizona) | other areas' times, and the same times left in local |
+| rules | an area highlighted | "What must you do before entering this restricted area when it is active?" | a rules table per kind in a new module like `airclass.ts`, written or approved by Chris | the other kinds' rules |
 
-The `find` generator already asks for SUA by name (kinds R, P, W, MOA, A); nothing changes there. Kinds filter: `sua` asks only about SUA kinds in `kinds`. What a student must do before entering each kind (a rules table like `airclass.ts`) is a possible later sub; Chris to say whether he wants it.
+The `find` generator already asks for SUA by name (kinds R, P, W, MOA, A); nothing changes there. Kinds filter: `sua` asks only about SUA kinds in `kinds`. The rules sub is in (Chris, 2026-11-08); its wording is Chris's.
 
 ### 3. `symbol`: what is it, and what does it say
 
@@ -102,10 +104,10 @@ Shows the sectional top-down, framed on one symbol, with that point highlighted 
 ### 4. `hunt`: find it in 30 seconds
 
 1. Pick a symbol kind the area has (respecting the `symbols` filter).
-2. Pick a random window about 6 to 10 NM across (zoom to be tuned on a phone) that holds at least one printed instance at least 1 NM inside the edges and at least 6 symbols of at least 4 kinds, from `chart.json`. Up to 200 tries, then give up (null, as the other generators do).
+2. Start the camera on a random window the size of a normal top-down map view (Chris: same size as normal; pan and zoom work as on the normal map) that holds at least one printed instance at least 1 NM inside the edges and at least 6 symbols of at least 4 kinds, from `chart.json`. Up to 200 tries, then give up (null, as the other generators do).
 3. Ask "Tap the private airport" (`ask.hunt(kindLabel)`), top-down, sectional, nothing raised, tags off.
-4. Any printed instance of that kind in the window is right, within `nm` (about 0.4 NM, a symbol's radius at that zoom). A tap elsewhere is wrong.
-5. A countdown of `seconds` (default 30). At 0 the question scores wrong and the reveal rings every instance.
+4. Any printed instance of that kind is right, including one the student pans to, within `nm` (about 0.4 NM, a symbol's radius at that zoom). A tap elsewhere is wrong.
+5. A countdown of `seconds` (default 30), shown as a number with a draining line or circle, something obvious (Chris). At 0 the question scores wrong and the reveal rings every instance.
 
 Kinds for the hunt and "what is this", by how sure we are the symbol is printed:
 
@@ -158,7 +160,7 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 - **`src/generate.ts`:** four generators, `block`, `sua`, `symbol`, `hunt`. `Gen` gains `chart: ChartFile | null` and `symbols?: SymbolKind[]`. A null `chart` (an area built before this) makes `block`, `symbol` and `hunt` return null, so practice skips them.
 - **`src/quiz.ts`:** `Generate` and Practice filters gain `symbols?: SymbolKind[]` and `seconds?: number`. One filter alone keeps to its side, as today: `symbols` alone asks only `symbol` and `hunt`; `kinds` naming only SUA kinds asks `find` and `sua`; `airports` alone also asks `block` about those airports.
 - **`src/quizui.ts`:** the countdown, the table panel, time up.
-- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, day, time)`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
+- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, date, utc)`, `ask.suaUtc(name, date)`, `ask.suaRules`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
 - **Validation (`src/validate.ts`):** authored questions may name a symbol by `id`; the validator checks it against `chart.json` as it does fixes and areas.
 
 ## Scaling
@@ -177,27 +179,24 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 
 ## Not in scope
 
-Maximum elevation figures, landmarks, MTR routes, TFRs, the TAC, IFR chart symbols, special use airspace frequencies, converting times to UTC, abandoned airports (later, see tier C), more areas (later, see Scaling).
+Maximum elevation figures, landmarks, MTR routes, TFRs, the TAC, IFR chart symbols, special use airspace frequencies, abandoned airports (later, see tier C), more areas (later, see Scaling).
 
 ## Open questions for Chris
 
-Visual direction (none of this is settled; nothing new is designed until Chris says):
+Still open:
 
-1. **Countdown:** a thin bar draining across the top of the card, a number, or a ring around the prompt? Does it pause when the tab is hidden?
-2. **Highlight** for "what does this symbol show" and the data block questions: the existing highlight style, a ring, or crosshairs? It must not cover the symbol or its data block.
-3. **The margin table:** a panel under the card that scrolls sideways at native scale, a full-screen sheet with pinch zoom, or the table cropped to the rows near the asked area (needs row positions, so more work)?
-4. **The hunt on a keyboard:** numbered markers on every symbol in the window, chosen by number; or the hunt is pointer-only and keyboard users get "what is this" questions instead?
-5. **Hunt window size** on a phone: how many NM across, and does the student get to zoom?
-
-Decisions:
-
-6. **The SUA rules sub** (what a student must do before entering each kind): wanted? Chris would write or approve the rules table.
-7. **Times:** keep "in use at" questions in local time as the table prints them?
-8. **Edition for symbology packs:** refresh yearly, or every 56 days with the rest?
+1. **The margin table:** how it shows on screen (recommended: a Table button on the card opening a full-screen sheet with pan and zoom, as the table is 13,000 px wide).
+2. **The hunt for keyboard and screen reader users** (accessibility): numbered markers chosen by number, or leave the hunt pointer-only and give those users "what is this" questions instead.
+3. **How often the symbol data is rebuilt:** every 56 days with the chart (recommended: in v1 the symbols sit on the area's chart image, which is rebuilt every 56 days, so the data must match it) or yearly.
 
 Settled with Chris (2026-11-08):
 
 - "The blurb underneath" is the airport data block; the SUA table questions stay as well.
 - The abandoned airport was an example: not in v1.
 - The whole country comes later, each area served on its own, never all at once.
-- Everything else in this spec is approved; the visual questions above are Chris's to look at.
+- Countdown: a number with a draining line or circle, something obvious.
+- Highlight: a ring.
+- Hunt window: the same size as the normal map, with pan and zoom as usual.
+- The SUA rules sub is in.
+- All times in UTC.
+- Everything else in this spec is approved.
