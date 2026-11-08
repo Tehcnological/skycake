@@ -9,7 +9,8 @@ export type Item = { q: Question; key: string; facts: string | null };
 /** pool: practice only, the draws advance() may append (one per allowed type). skipped: items skipped in accessibility mode. */
 export type Attempt = { items: Item[]; i: number; right: number; answered: number; skipped: number; done: boolean; practice: boolean; pool?: Generate[] };
 export type Make = (g: Generate) => (Question & { facts: string | null }) | null;
-/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. */
+/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. An end's total
+ * leaves skips out, so it is 0 when every item was skipped. */
 export type QuizResult = { quiz: string; item: string; right: boolean; ms: number; skipped?: true } | { quiz: string; end: true; right: number; total: number };
 
 /**

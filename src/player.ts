@@ -79,7 +79,7 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
     open = k;
     bar.before(k.el);
     // In accessibility mode a check takes focus as it opens.
-    if (c.a11y) k.el.querySelector<HTMLElement>(".sc-choice, .sc-number, .sc-option")?.focus();
+    if (c.a11y) k.el.querySelector<HTMLElement>(".sc-choice, .sc-number")?.focus();
     void show(scene);
   };
 

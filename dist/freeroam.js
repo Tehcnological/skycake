@@ -139,7 +139,10 @@ export function freeRoam(c) {
         if (name === "inview" && !inView) {
             inView = picker(v, {
                 label: (x) => ("area" in x ? L.facts(x.name, x.floor, x.ceiling) : "airport" in x ? `${x.airport} ${x.name}` : x.name),
-                pressed: (x) => "area" in x && v.raisedAreas().includes(x.area),
+                pressed: () => {
+                    const up = new Set(v.raisedAreas());
+                    return (x) => "area" in x && up.has(x.area);
+                },
                 onPick: (x) => {
                     if ("area" in x) {
                         v.raiseArea(x.area, !v.raisedAreas().includes(x.area));

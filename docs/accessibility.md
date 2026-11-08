@@ -4,7 +4,7 @@ Every change skycake makes in accessibility mode, for sites that embed it. The m
 
 ## Turning it on
 
-- **A site with its own toggle** passes `mount(host, { a11y: true | false })` from that toggle. skycake then shows no switch of its own. To follow a change, remount, or reload the page.
+- **A site with its own toggle** passes `mount(host, { a11y: true | false })` from that toggle. skycake then shows no switch of its own. To follow a change, reload the page: `mount` has no teardown, so mounting again leaves the old 3D view running.
 - **A site that passes nothing** (and SkyCake Viewer) gets a labeled row in free roam's View controls. Flipping it switches the map in place and keeps the choice per browser in `localStorage` under `skycake-a11y` (`"1"` is on). Blocked storage means off, and the choice lasts for the page only.
 - The mode sets `data-a11y` on the `.skycake` figure; all its styles hang off that attribute. The helpers `A11Y_KEY`, `stored`, `store` and `browserStorage` are exported for a site that wants to read or write the same key.
 - With the mode off, `@media (prefers-contrast: more)` still raises the colors, and `prefers-reduced-motion` still stops motion.
@@ -54,5 +54,5 @@ The chart reading hunt, once built, uses the same picker and Skip.
 
 - Pass `a11y` from its own toggle, if it has one, so the two never disagree.
 - Never turn `onResult`'s `ms` into a time limit or a score.
-- Treat a result with `skipped: true` as not asked: it is not wrong, and the end result's total already leaves it out.
+- Treat a result with `skipped: true` as not asked: it is not wrong, and the end result's total already leaves it out. A quiz with every question skipped ends with `total: 0`, so never divide by it unchecked.
 - Keep the site's own focus ring and contrast at least this high around the map.

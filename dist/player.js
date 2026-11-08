@@ -74,7 +74,7 @@ export function player(c, w, nextLink, explore) {
         bar.before(k.el);
         // In accessibility mode a check takes focus as it opens.
         if (c.a11y)
-            k.el.querySelector(".sc-choice, .sc-number, .sc-option")?.focus();
+            k.el.querySelector(".sc-choice, .sc-number")?.focus();
         void show(scene);
     };
     const draw = () => {

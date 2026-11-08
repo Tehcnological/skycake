@@ -10,10 +10,11 @@ export function picker(view, o) {
         const had = el.contains(document.activeElement) ? document.activeElement.dataset.key : undefined;
         list = view.onScreen();
         view.numbers(list);
+        const pressed = o.pressed?.();
         el.replaceChildren(...list.map((c, i) => {
             const n = i + 1;
             const words = o.label(c, n);
-            const b = h("button", { type: "button", class: "sc-option", "data-key": key(c), "aria-pressed": o.pressed ? String(o.pressed(c)) : undefined }, h("b", { class: "sc-num" }, String(n)), ...(words ? [h("span", {}, words)] : []));
+            const b = h("button", { type: "button", class: "sc-option", "data-key": key(c), "aria-pressed": pressed ? String(pressed(c)) : undefined }, h("b", { class: "sc-num" }, String(n)), ...(words ? [h("span", {}, words)] : []));
             b.addEventListener("click", () => o.onPick(c, n));
             for (const t of ["focus", "pointerenter"])
                 b.addEventListener(t, () => view.focus(c));
@@ -23,12 +24,16 @@ export function picker(view, o) {
         }));
         if (had)
             el.querySelector(`[data-key="${CSS.escape(had)}"]`)?.focus();
+        o.onRefill?.();
     };
-    // shortcut: the camera is checked twice a second and the list rebuilt once it has changed; upgrade to a viewer event
-    // if a list this long ever shows up in a profile.
-    let last = JSON.stringify(view.camera());
+    // What decides the list: the things on screen, in order, and which areas are raised (a raised area's badge sits at its
+    // ceiling). Badge positions follow the camera on their own. A camera move, a map tap, a VFR/IFR switch and a new
+    // procedure all show up here.
+    // shortcut: checked twice a second; upgrade to a viewer event if a list this long ever shows up in a profile.
+    const state = () => `${view.onScreen().map(key).join()}|${view.raisedAreas().join()}`;
+    let last = state();
     const timer = setInterval(() => {
-        const now = JSON.stringify(view.camera());
+        const now = state();
         if (now === last)
             return;
         last = now;
@@ -39,8 +44,11 @@ export function picker(view, o) {
         el,
         list: () => list,
         refill,
-        stop() {
+        /** clearView false: the view is another picker's now, so its badges and outline stay. */
+        stop(clearView = true) {
             clearInterval(timer);
+            if (!clearView)
+                return;
             view.numbers(null);
             view.focus(null);
         },

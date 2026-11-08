@@ -33,7 +33,8 @@ export type Attempt = {
 export type Make = (g: Generate) => (Question & {
     facts: string | null;
 }) | null;
-/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. */
+/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. An end's total
+ * leaves skips out, so it is 0 when every item was skipped. */
 export type QuizResult = {
     quiz: string;
     item: string;

@@ -117,34 +117,33 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
     const toAnswer = (c: Candidate): Answer => ("area" in c ? { area: c.area, at: null } : { area: null, at: c.at });
     let chosenKey = "";
     const keyOf = (a: Answer) => ("area" in a && a.area ? `a:${a.area}` : "at" in a && a.at ? `p:${a.at}` : "");
+    const field = h("input", "sc-number sc-pick-number");
+    // The one place the choice is set, so Check, the pressed number and the field always agree. A number with no badge
+    // (or a half-typed one) chooses nothing, so Enter never scores an earlier pick; the field keeps what is being typed.
+    const mark = (a: Answer | null, typed = false) => {
+      if (answered) return;
+      chosen = a;
+      chosenKey = a ? keyOf(a) : "";
+      check.disabled = !a;
+      const i = a ? p.list().findIndex((c) => keyOf(toAnswer(c)) === chosenKey) : -1;
+      [...p.el.children].forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+      if (!typed) field.value = i >= 0 ? String(i + 1) : "";
+    };
     const p = picker(view, {
       label: () => "",
-      pressed: (c) => keyOf(toAnswer(c)) === chosenKey,
-      onPick: (c) => chooseFind(toAnswer(c)),
+      pressed: () => (c) => keyOf(toAnswer(c)) === chosenKey,
+      onPick: (c) => mark(toAnswer(c)),
+      // The numbers change as the map moves: the field follows the chosen thing's new number.
+      onRefill: () => chosen && mark(chosen),
     });
     pick = p;
-    const chooseFind = (a: Answer) => {
-      if (answered) return;
-      choose(a);
-      chosenKey = keyOf(a);
-      for (const b of p.el.querySelectorAll<HTMLElement>("button")) b.setAttribute("aria-pressed", "false");
-      const i = p.list().findIndex((c) => keyOf(toAnswer(c)) === chosenKey);
-      p.el.children[i]?.setAttribute("aria-pressed", "true");
-    };
-    view.tap((hit) => chooseFind(hit));
-    const field = h("input", "sc-number sc-pick-number");
+    view.tap((hit) => mark(hit));
     field.setAttribute("inputmode", "numeric");
     field.setAttribute("aria-label", L.number);
     field.placeholder = L.number;
     field.addEventListener("input", () => {
       const i = pickByNumber(field.value, p.list().length);
-      if (i !== null) return chooseFind(toAnswer(p.list()[i]));
-      // A number with no badge (or a half-typed one) chooses nothing, so Enter never scores an earlier pick.
-      if (answered) return;
-      chosen = null;
-      chosenKey = "";
-      check.disabled = true;
-      for (const b of p.el.querySelectorAll<HTMLElement>("button")) b.setAttribute("aria-pressed", "false");
+      mark(i === null ? null : toAnswer(p.list()[i]), true);
     });
     field.addEventListener("keydown", (e) => e.key === "Enter" && !check.disabled && check.click());
     controls.push(field);
@@ -181,8 +180,10 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
 
   let closed = false;
   const done = () => {
-    if (closed || owner.get(view) !== me) return;
+    if (closed) return;
     closed = true;
+    // Another card has the view already: stop this one's picker, and leave the view (and its badges) to that card.
+    if (owner.get(view) !== me) return pick?.stop(false);
     pick?.stop();
     for (const b of pick?.el.querySelectorAll<HTMLButtonElement>("button") ?? []) b.disabled = true;
     owner.delete(view);

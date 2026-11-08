@@ -116,7 +116,6 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
       if (!a || a.done || open !== k) return;
       a = skip(a);
       report({ quiz: id, item: it.key, right: false, ms: Math.round(performance.now() - shownAt), skipped: true });
-      k.remove(); // while it still owns the view, so its picker stops; the next card's put() would be too late
       next();
     };
     const find = !("choices" in it.q) && !("number" in it.q);
@@ -136,7 +135,8 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     drawCount();
     shownAt = performance.now();
     // A find question is answered on the view, or by Tab into the list of what is on it.
-    if (had) (k.el.querySelector<HTMLElement>(".sc-choice, .sc-number, .sc-option") ?? viewEl).focus();
+    // The first choice, or a find question's number field; never a number button, whose focus outlines a thing on the map.
+    if (had) (k.el.querySelector<HTMLElement>(".sc-choice, .sc-number") ?? viewEl).focus();
     return show(scene, now);
   };
   const next = () => {

@@ -24,10 +24,10 @@ const TEXT = {
   a11yHelp: "Placeholder: Accessibility",
 };
 
-// Accessibility mode: the same switch as the map's own (skycake-a11y), so they agree; it also raises the start screen's contrast.
+// Accessibility mode: the same switch as the map's own (skycake-a11y), so they agree; it also raises the start screen's
+// contrast. Only the start screen sets data-a11y on the page: a map follows its own switch.
 const storage = browserStorage();
 const setA11y = (on: boolean) => document.documentElement.toggleAttribute("data-a11y", on);
-setA11y(stored(storage));
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("skycake: offline unavailable", e));
@@ -59,6 +59,7 @@ async function save(id: string, a: AreaInfo) {
 }
 
 async function startScreen() {
+  setA11y(stored(storage));
   const today = new Date().toISOString().slice(0, 10);
   const keys = "caches" in window ? await caches.keys() : null;
   const icon = Object.assign(document.createElement("img"), { src: "icon.svg", alt: "" });
