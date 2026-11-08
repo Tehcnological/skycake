@@ -97,6 +97,12 @@ test("a find question's also areas must exist", async () => {
   const q = { ...goodQuiz, items: [{ type: "find", prompt: "?", answer: { area: data.areas[0].id }, also: ["nope"] }] } as Quiz;
   assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 1: no area nope"]);
 });
+test("a find question's also areas must be tappable and beside an area answer", async () => {
+  const e700 = data.areas.find((a) => a.kind === "E700")!.id;
+  const one = (q: object) => validateQuiz({ ...goodQuiz, items: [q] } as Quiz, data, files, "phoenix");
+  assert.deepEqual(await one({ type: "find", prompt: "?", answer: { area: data.areas[0].id }, also: [e700] }), [`q item 1: area ${e700} is E700, which cannot be tapped`]);
+  assert.deepEqual(await one({ type: "find", prompt: "?", answer: { airport: "KPHX" }, also: [data.areas[0].id] }), ["q item 1: also must be a list of area ids, beside an area answer"]);
+});
 test("written item ids must not repeat", async () => {
   const q = { ...goodQuiz, items: [{ id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 0 }, { id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 1 }] } as Quiz;
   assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 2: id a repeats"]);
