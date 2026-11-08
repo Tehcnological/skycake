@@ -1,6 +1,6 @@
 import { type AirspaceFile, type Area, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
-import type { Resolved } from "./scene.js";
+import type { Camera, Resolved } from "./scene.js";
 type Style = {
     color: number;
     wall: number;
@@ -24,12 +24,40 @@ export type View = {
     /**
      * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
      * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
+     * t: the step timeline, 0 to 1 (see timeline).
      */
-    apply(scene: Resolved, procedures: Procedure[], now?: boolean, framing?: Procedure[]): Promise<void>;
+    apply(scene: Resolved, procedures: Procedure[], now?: boolean, framing?: Procedure[], t?: number): Promise<void>;
+    /** Moves the step timeline (0 to 1) without reapplying the scene: procedures with draw grow, the airplane flies. */
+    timeline(t: number): void;
+    /** The camera now, in the units apply takes. */
+    camera(): Camera;
+    /** While set, a tap calls fn with the area under it (as the tip picks) and the ground point, and raises nothing. */
+    tap(fn: ((hit: {
+        area: string | null;
+        at: [lat: number, lon: number];
+    }) => void) | null): void;
+    /** What can be tapped and is at least partly in view: areas (smallest first), then shown fixes, then airports. */
+    onScreen(): Candidate[];
+    /** Outlines the area, or rings the fix or airport, as focused. */
+    focus(c: Candidate | null): void;
+    /** Off: the tip and fix tags keep their names but not their altitudes, which would give an answer away. */
+    hints(on: boolean): void;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
+};
+export type Candidate = {
+    area: string;
+    name: string;
+} | {
+    fix: string;
+    name: string;
+    at: [lat: number, lon: number];
+} | {
+    airport: string;
+    name: string;
+    at: [lat: number, lon: number];
 };
 export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void, 
 /** A tap on an airport's tag on the chart. */

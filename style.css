@@ -145,6 +145,11 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .view .fix b { display: flex; align-items: center; gap: 5px; color: #fff; font-weight: 700; }
 .skycake .view .fix i { padding: 0 4px; border-radius: 3px; background: #22d36b; color: #07150d; font-size: 9px; font-style: normal; }
 .skycake .view .fix.w i { background: #fff; color: #111; }
+/* Highlighted fixes and airports; the airplane's altitude. */
+.skycake .view .tag.hl { border-color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 12px rgb(255 255 255 / 0.6); }
+.skycake .view .tag.plane { z-index: 2; padding: 2px 6px; border: 1.5px solid #fff; border-radius: 5px; background: #14171cf0; color: #fff; font-weight: 700; }
+/* While a question is open: names only, no altitudes. */
+.skycake .view.sc-no-hints .tip > :not(.name), .skycake .view.sc-no-hints .fix .alt { display: none; }
 /* Airways' names and their fixes' names, in IFR. */
 .skycake .view .awy { padding: 1px 5px; border-radius: 3px; background: #00707f; color: #fff; font-weight: 700; }
 .skycake .view .wp { padding: 1px 4px; border-radius: 3px; background: #14171ce0; color: #dff6fa; font-weight: 500; font-size: 10px; }

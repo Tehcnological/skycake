@@ -130,7 +130,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     tip.hidden = !a;
     if (!a) return;
     tip.textContent = "";
-    tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? L.floor700 : fraction(a, data.ground));
+    tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? h("span", {}, L.floor700) : fraction(a, data.ground));
     tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
   };
   const v = await build(

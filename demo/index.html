@@ -10,14 +10,17 @@
   @media (max-width: 860px) { body { padding: 0; } }
 </style>
 <script type="importmap">
-{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/" } }
+{
+  "imports": { "three": "/node_modules/three/build/three.module.js", "three/examples/jsm/": "/node_modules/three/examples/jsm/", "/dist/viewer.js": "/demo/viewer.js" },
+  "scopes": { "/demo/": { "/dist/viewer.js": "/dist/viewer.js" } }
+}
 </script>
 </head>
 <body>
 <div id="v"></div>
 <script type="module">
   import { mount } from "../dist/index.js";
-  // ?scene={...} shows that scene first, for checking.
+  // ?scene={...} shows that scene first, for checking. The view is window.v (demo/viewer.js), e.g. v.timeline(0.5).
   const scene = new URLSearchParams(location.search).get("scene");
   mount(document.querySelector("#v"), { base: "/data/phoenix/", ...(scene ? { scene: JSON.parse(scene) } : {}) });
 </script>
