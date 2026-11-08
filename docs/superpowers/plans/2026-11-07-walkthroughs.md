@@ -335,12 +335,12 @@ test("dragging pauses; play resumes from the step's start", () => {
 
 **Interfaces:**
 - Consumes: `resolve`, `SceneError` (Task 1); `Question` (Task 3); `Walkthrough` (Task 4).
-- Produces: `export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>): Promise<string[]>`. It returns problems as `"<walkthrough id> step <n>: <problem>"`, empty when fine, and runs in Node with no DOM. The quiz plan adds `validateQuiz` beside it.
+- Produces: `export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string): Promise<string[]>`. It returns problems as `"<walkthrough id> step <n>: <problem>"`, empty when fine, and runs in Node with no DOM. The quiz plan adds `validateQuiz` beside it.
 
 - [ ] **Step 1: Write the failing tests** in `src/validate.test.ts`, reading `data/phoenix/area.json` and `data/phoenix/procedures/<id>.json` from disk:
 
 ```ts
-test("a good walkthrough has no problems", async () => assert.deepEqual(await validateWalkthrough(good, data, files), []));
+test("a good walkthrough has no problems", async () => assert.deepEqual(await validateWalkthrough(good, data, files, "phoenix"), []));
 test("catches a missing area, airport, procedure and fix, with the step number", async () => {
   const bad = { ...good, steps: [
     { caption: "a", scene: { raise: [{ area: "nope" }] } },
@@ -348,15 +348,15 @@ test("catches a missing area, airport, procedure and fix, with the step number",
     { caption: "c", scene: { procedures: [{ airport: "KPHX", name: "NOPE" }] } },
     { caption: "d", scene: { highlight: [{ fix: "ZZZZZ" }] } },
   ] };
-  assert.deepEqual(await validateWalkthrough(bad, data, files), ["t step 1: no area nope", "t step 2: no airport KZZZ", "t step 3: no procedure NOPE at KPHX", "t step 4: no fix ZZZZZ"]);
+  assert.deepEqual(await validateWalkthrough(bad, data, files, "phoenix"), ["t step 1: no area nope", "t step 2: no airport KZZZ", "t step 3: no procedure NOPE at KPHX", "t step 4: no fix ZZZZZ"]);
 });
 test("catches a check whose answer is out of range or a walkthrough for another area", async () => {
   const bad = { ...good, area: "miami", steps: [{ caption: "a", scene: {}, check: { type: "read", prompt: "?", choices: ["x", "x"], answer: 2 } }] };
-  assert.deepEqual(await validateWalkthrough(bad, data, files), ["t: area miami, data is phoenix", "t step 1: answer 2 is not a choice", "t step 1: choices repeat"]);
+  assert.deepEqual(await validateWalkthrough(bad, data, files, "phoenix"), ["t: area miami, data is phoenix", "t step 1: answer 2 is not a choice", "t step 1: choices repeat"]);
 });
 ```
 
-`files(airport)` reads the JSON from disk; `data` carries no area name, so the test passes the folder name as the expected area, via a fourth parameter `area: string`. Signature: `validateWalkthrough(w, data, procedures, area)`.
+`files(airport)` reads the JSON from disk. `data` carries no area name, so `area` is the folder name the site loaded (`"phoenix"` here).
 
 - [ ] **Step 2: Run** `npx tsx --test src/validate.test.ts`. Expected: FAIL (module missing).
 
