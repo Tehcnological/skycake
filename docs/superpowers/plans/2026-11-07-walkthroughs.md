@@ -87,13 +87,19 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
 **Interfaces:**
 - Consumes: `Resolved` from Task 1.
 - Produces:
-  - `fly.ts`: `export function flightLine(p: Procedure): Point[]` (the first `transition` path, then every `common`, then every `final` path, in file order, consecutive duplicate points dropped; when that is empty, the first point of the first path) and `export function along(line: Point[], f: number): Point` (the point a fraction `f` of the way along by ground distance, `nm()` from `cifp.ts`; `f` clamped to 0..1).
+  - `fly.ts`: `export function flightLine(p: Procedure): Point[]`, the connected route as published. Every path except `missed` is an edge from its first point to its last.
+    - Start with the first path, in file order, whose first point is not the last point of another such path.
+    - Keep appending the first path whose first point equals the current last point, until none does.
+    - Points count as equal within 1e-6 degrees. Consecutive duplicate points are dropped, and no path is used twice.
+    - This puts a SID's runway leg, common route and enroute transition in order, and a STAR's or approach's transition before its common route and final.
+    - With no path but missed, the result is the first point of the first path. and `export function along(line: Point[], f: number): Point` (the point a fraction `f` of the way along by ground distance, `nm()` from `cifp.ts`; `f` clamped to 0..1).
   - `View.apply(scene, procedures, now?, framing?, t = 1)`: `t` is the step timeline, 0 to 1.
   - `View.timeline(t: number): void`: moves the timeline without reapplying the scene.
   - `View.camera(): Camera`: the camera now, as `{ azimuth, tilt, distance, target }` in the same units `apply` takes.
   - `View.tap(fn: ((hit: { area: string | null; at: [lat: number, lon: number] }) => void) | null): void`: while set, a tap calls `fn` with the smallest area under the pointer (raised first, else flat, as the hover tip picks) and the ground point, instead of raising or lowering anything.
-  - `View.onScreen(): string[]`: ids of areas whose outline is at least partly in view, smallest first.
-  - `View.focusArea(id: string | null): void`: outlines one area as focused (keyboard "tap to find").
+  - `export type Candidate = { area: string; name: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] }`.
+  - `View.onScreen(): Candidate[]`: what can be tapped and is at least partly in view. Areas come first, smallest first, then the fixes of the shown procedures, then airports with a tag. These are the keyboard's "tap to find" choices.
+  - `View.focus(c: Candidate | null): void`: outlines the area, or rings the fix or airport, as focused.
   - The viewer dispatches `skycake-moved` (bubbles) on its host when the person drags, pinches or uses the keys.
 
 - [ ] **Step 1: Write the failing tests** in `src/fly.test.ts` with a hand-made `proc` whose paths are, in file order: transition `[[33,-112,6000],[33,-111.95,5000]]`, common `[[33,-111.95,5000],[33,-111.9,4000]]`, final `[[33,-111.9,4000],[33,-111.85,3000],[33,-111.8,1500]]`, missed `[[33,-111.8,1500],[33,-111.7,5000]]`; and `missedOnly`, with only that missed path:
@@ -111,6 +117,14 @@ test("along goes by distance and clamps", () => {
 });
 test("a procedure with only a missed approach flies from its first point", () => {
   assert.deepEqual(flightLine(missedOnly), [missedOnly.paths[0].pts[0]]);
+});
+test("a real SID flies runway leg, common route, then its enroute transition", () => {
+  // data/phoenix/procedures/KSDL.json, BNYRD6: in the file, vectors, then common, then the transition.
+  const bnyrd = JSON.parse(readFileSync(new URL("../data/phoenix/procedures/KSDL.json", import.meta.url), "utf8")).find((p: Procedure) => p.name.startsWith("BNYRD"));
+  const line = flightLine(bnyrd);
+  assert.deepEqual(line[0].slice(0, 2), [33.62288, -111.91053]);
+  assert.deepEqual(line.at(-1), [32.0952, -110.91486, 4510]);
+  assert.ok(line.findIndex((p) => p[0] === 32.88586) < line.length - 1); // the common route's end comes before the transition's end
 });
 ```
 
@@ -134,7 +148,7 @@ test("a procedure with only a missed approach flies from its first point", () =>
 - Modify: `src/ui.ts` (`Labels`, `LABELS`), `style.css` (`.sc-card`)
 
 **Interfaces:**
-- Consumes: `Target`, `Scene`, `Resolved` (Task 1); `View.tap`, `View.onScreen`, `View.focusArea` (Task 2); `nm()` from `cifp.ts`.
+- Consumes: `Target`, `Scene`, `Resolved` (Task 1); `View.tap`, `View.onScreen`, `View.focus`, `Candidate` (Task 2); `nm()` from `cifp.ts`.
 - Produces (`question.ts`, pure):
   - `export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string } & ({ type: "find"; answer: Target } | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number } | { type: "read"; number: { answer: number; tolerance: number; unit?: string } })`
   - `export type Answer = { choice: number } | { number: number } | { area: string | null; at: [lat: number, lon: number] | null }`
@@ -143,7 +157,7 @@ test("a procedure with only a missed approach flies from its first point", () =>
   - `export function questionScene(q: Question): Scene`: the type's default scene with `q.scene` laid over it field by field. Defaults: `find` `{ camera: "top", raise: [] }`; `read` `{ raise: <the area targets in q.scene.highlight>, camera: { frame: <q.scene.highlight>, tilt: 32 } }`; `airplane` `{ raise: [], camera: { frame: [{ point: <airplane.at lat, lon> }], tilt: 32 } }` when `q.scene.airplane` is `at`; `procedure` `{ camera: { frame: <q.scene.procedures as targets> } }`.
   - `export function revealScene(q: Question): Scene`: the question scene with the answer raised (an `area` answer or highlighted areas) and a `"top"` camera tilted to 32.
 - Produces (`card.ts`, DOM):
-  - `export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void }`. Choices are buttons; a number question is an input (`inputmode="decimal"`) with its unit and a submit button; a find question shows only the prompt, calls `view.tap(...)` and lists `view.onScreen()` as visually hidden buttons named after the areas (Tab moves through them and calls `view.focusArea`, Enter answers with that area). `reveal` disables the answers, shows an icon plus the word right or wrong (never color alone), `facts`, the explanation if any, and one button labelled `button`. The prompt and result are in an `aria-live="polite"` region.
+  - `export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void }`. Choices are buttons; a number question is an input (`inputmode="decimal"`) with its unit and a submit button; a find question shows only the prompt, calls `view.tap(...)` and lists `view.onScreen()` as visually hidden buttons named after each candidate. Tab moves through them and calls `view.focus`. Enter answers: an area candidate with `{ area, at: null }`, a fix or airport with `{ area: null, at: c.at }`, so keyboard answers score exactly like taps. `reveal` disables the answers, shows an icon plus the word right or wrong (never color alone), `facts`, the explanation if any, and one button labelled `button`. The prompt and result are in an `aria-live="polite"` region.
   - New `Labels`: `right: "Right"`, `wrong: "Wrong"`, `submit: "Check"`, `continue: "Continue"`, `altitude: (ft) => ft.toLocaleString("en-US")`, `facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}``.
 
 - [ ] **Step 1: Write the failing tests** in `src/question.test.ts`:
