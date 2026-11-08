@@ -40,6 +40,10 @@ test("the reveal raises the answer and tilts to 3D", () => {
   const p = revealScene({ ...plane, answerArea: "b-1" });
   assert.deepEqual([p.raise, (p.camera as { frame: unknown[] }).frame.length, p.tags], [[{ area: "b-1" }], 4, true]);
   assert.deepEqual(revealScene(plane).raise, []);
+  assert.equal(questionScene({ type: "find", prompt: "", answer: { fix: "ZINGA" } }).tags, true);
+  assert.equal(questionScene({ type: "find", prompt: "", answer: { area: "y" } }).tags, false);
+  // A malformed find question (no answer) still reveals, on the question's own scene.
+  assert.deepEqual(revealScene({ type: "find", prompt: "" } as unknown as Question).raise, []);
 });
 
 test("locator finds loaded procedure fixes first, then waypoints, airports and points", () => {

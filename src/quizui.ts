@@ -100,9 +100,12 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     }
     const it = a.items[a.i];
     let shownAt = 0;
-    const k = card(it.q, L, v, say, (ans) => {
+    const scene = questionScene(it.q);
+    const files = stage.filesOf(scene);
+    const k = card(it.q, L, v, say, async (ans) => {
+      const loaded = await files;
       if (!a || a.done || open !== k) return;
-      const right = score(it.q, ans, locator(data, stage.files()));
+      const right = score(it.q, ans, locator(data, loaded));
       a = answer(a, right);
       drawCount();
       report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
@@ -115,7 +118,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     shownAt = performance.now();
     // A find question is answered on the view, or by Tab into the list of what is on it.
     if (had) (k.el.querySelector<HTMLElement>(".sc-choice, .sc-number") ?? viewEl).focus();
-    return show(questionScene(it.q), now);
+    return show(scene, now);
   };
   const next = () => {
     if (!a || a.done) return;

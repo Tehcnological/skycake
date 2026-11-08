@@ -83,6 +83,10 @@ test("catches questions the browser cannot run", async () => {
     "q item 6: area modec-phoenix-sky-harbor-international-mode-c is MODEC, which cannot be tapped",
   ]);
 });
+test("a fix on the procedure the airplane flies counts as shown", async () => {
+  const q = { ...goodQuiz, items: [{ type: "find", prompt: "?", answer: { fix: "ZINGA" }, scene: { airplane: { along: { airport: "KPHX", name: "ILS RWY 07L" }, seconds: 30 } } }] } as Quiz;
+  assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), []);
+});
 test("a walkthrough with no steps", async () => assert.deepEqual(await validateWalkthrough({ ...good, steps: [] }, data, files, "phoenix"), ["t: no steps"]));
 test("the demo samples have no problems", async () => {
   assert.deepEqual(await validateQuiz(JSON.parse(readFileSync("demo/class-b-quiz.json", "utf8")), data, files, "phoenix"), []);

@@ -54,7 +54,8 @@ const around = (lat: number, lon: number): Target[] => {
 function defaults(q: Question): Scene {
   const flat = { raise: [], tags: false };
   const top = { camera: "top" as const, ...flat };
-  if (q.type === "find") return top;
+  // Fix tags on for a fix answer: the keyboard list only offers fixes whose tags show.
+  if (q.type === "find") return q.answer && "fix" in q.answer ? { ...top, tags: true } : top;
   if (q.type === "procedure") return q.scene?.procedures?.length ? { camera: { frame: q.scene.procedures.map((procedure) => ({ procedure: { airport: procedure.airport, name: procedure.name } })) } } : {};
   const plane = q.scene?.airplane;
   if (plane && "at" in plane) return { camera: { frame: around(plane.at[0], plane.at[1]), tilt: 90 }, ...flat };
@@ -69,7 +70,7 @@ export const questionScene = (q: Question): Scene => ({ ...defaults(q), ...q.sce
 export function revealScene(q: Question): Scene {
   const s = questionScene(q);
   const areas = (ts: Target[]) => ts.filter((t): t is AreaRef => "area" in t);
-  const answer = q.type === "find" ? [q.answer] : [];
+  const answer = q.type === "find" && q.answer ? [q.answer] : [];
   const raise = areas([...answer, ...(q.scene?.highlight ?? []), ...(q.answerArea ? [{ area: q.answerArea }] : [])]);
   const frame = s.camera && typeof s.camera === "object" && "frame" in s.camera ? s.camera.frame : [...answer, ...(q.scene?.highlight ?? [])];
   return { ...s, raise, tags: true, camera: frame.length ? { frame, tilt: 32 } : s.camera };

@@ -66,14 +66,18 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   const ask = () => {
     const q = w.steps[p.step].check!;
     closeCard();
-    const k = card(q, L, v, (t) => live.replaceChildren(t), (a) => {
-      const right = score(q, a, locator(data, stage.files()));
+    const scene = questionScene(q);
+    const files = stage.filesOf(scene);
+    const k = card(q, L, v, (t) => live.replaceChildren(t), async (a) => {
+      const loaded = await files;
+      if (open !== k) return;
+      const right = score(q, a, locator(data, loaded));
       void show(revealScene(q));
       k.reveal(right, null, L.continue, () => set(answered(p, w)));
     });
     open = k;
     bar.before(k.el);
-    void show(questionScene(q));
+    void show(scene);
   };
 
   const draw = () => {

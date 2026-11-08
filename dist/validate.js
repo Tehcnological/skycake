@@ -2,7 +2,7 @@ import { maker } from "./quiz.js";
 import { seeded } from "./generate.js";
 import { LABELS } from "./ui.js";
 import { locator, questionScene } from "./question.js";
-import { framedOnly, usable } from "./scene.js";
+import { sceneRefs, usable } from "./scene.js";
 /** Problems with a scene, one per field that names something the data lacks. */
 function sceneProblems(scene, data, hasFix) {
     const out = [];
@@ -21,9 +21,8 @@ function answerProblems(q, data, hasFix, loaded) {
     const kind = data.areas.find((a) => a.id === area)?.kind;
     if (kind === "E700" || kind === "MODEC")
         out.push(`area ${area} is ${kind}, which cannot be tapped`);
-    // The browser locates a fix in the procedures the question's scene shows, then the area's waypoints.
-    const s = questionScene(q);
-    const shown = [...(s.procedures ?? []), ...framedOnly(s)];
+    // The browser locates a fix in the procedures the question's scene loads, then the area's waypoints.
+    const shown = sceneRefs(questionScene(q));
     if ("fix" in q.answer && !locator(data, loaded.filter((p) => shown.some((r) => r.airport === p.airport && r.name === p.name)))(q.answer))
         out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
     return out;
