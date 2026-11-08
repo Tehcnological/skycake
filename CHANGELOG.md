@@ -4,6 +4,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- Accessibility mode: `mount({ a11y })`, or skycake's own switch in View when a site passes nothing. Higher contrast, a focus ring, a camera pad, In view with numbered badges, Check before scoring, Skip on find questions (`skipped: true` in `onResult`), walkthroughs that stop at each step, no motion. Every change: `docs/accessibility.md`. SkyCake Viewer has the switch on its start screen and an `accessibility.html` page.
 - Walkthroughs: `mount({ mode: { walkthrough, next } })` plays steps like a video, with captions, highlights, procedures drawn leg by leg, an airplane flying them and quick checks; Explore leaves into free roam. Scenes take `highlight` and `airplane`.
 - Quizzes: `mount({ mode: { quiz } })` asks written questions (find, read, airplane, procedure) and questions generated from the FAA data, with a running count, the answer revealed in 3D, and Again or Explore at the end. `quiz: "practice"` asks generated questions without end, filtered by `types`, `kinds` and `airports`. `onResult` reports each answer and the end; skycake stores nothing.
 - SkyCake Viewer (`app/`): a standalone web app for skycake.app. Start screen with the areas, offline saves with a current-through date, full screen maps.

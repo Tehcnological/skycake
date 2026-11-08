@@ -7,3 +7,4 @@ export type { Generate, Quiz, QuizResult } from "./quiz.js";
 export type { QuestionType } from "./generate.js";
 export type { Step, Walkthrough } from "./walkthrough.js";
 export { validateQuiz, validateWalkthrough } from "./validate.js";
+export { A11Y_KEY, browserStorage, stored, store } from "./a11y.js";

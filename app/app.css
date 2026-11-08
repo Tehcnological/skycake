@@ -18,3 +18,17 @@ html, body { margin: 0; background: #17191c; color: #d9dadc; font-family: system
 .areas p { margin: 20px 0 0; font: 500 11px ui-monospace, monospace; color: #b3b6ba; }
 .areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: inherit; text-decoration: underline; }
 .areas p.notice { font: 400 15px/1.5 system-ui, sans-serif; color: #d9dadc; }
+
+/* Accessibility mode's switch row, under the areas. */
+.areas .a11y { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 12px; padding: 0 14px 0 18px; border: 1px solid #3a3f45; border-radius: 20px; background: #1f2226; font: 600 13px system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+.areas .a11y input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+/* Accessibility mode (and more contrast asked by the system): the same raised values as the map; one focus ring. */
+:root[data-a11y] { --accent: #6aa6e8; }
+:root[data-a11y] .areas li, :root[data-a11y] .areas .a11y { border-color: #767c83; }
+:root[data-a11y] .areas a span { color: #b0b4b9; }
+:root[data-a11y] :focus-visible { outline: 3px solid #d9dadc; outline-offset: 2px; box-shadow: 0 0 0 7px #141619; }
+@media (prefers-contrast: more) {
+  :root { --accent: #6aa6e8; }
+  .areas li, .areas .a11y { border-color: #767c83; }
+  .areas a span { color: #b0b4b9; }
+}

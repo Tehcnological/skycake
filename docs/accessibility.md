@@ -1,0 +1,58 @@
+# Accessibility mode
+
+Every change skycake makes in accessibility mode, for sites that embed it. The mode targets WCAG 2.2 AA. Students read the short version in SkyCake Viewer's `accessibility.html`.
+
+## Turning it on
+
+- **A site with its own toggle** passes `mount(host, { a11y: true | false })` from that toggle. skycake then shows no switch of its own. To follow a change, remount, or reload the page.
+- **A site that passes nothing** (and SkyCake Viewer) gets a labeled row in free roam's View controls. Flipping it switches the map in place and keeps the choice per browser in `localStorage` under `skycake-a11y` (`"1"` is on). Blocked storage means off, and the choice lasts for the page only.
+- The mode sets `data-a11y` on the `.skycake` figure; all its styles hang off that attribute. The helpers `A11Y_KEY`, `stored`, `store` and `browserStorage` are exported for a site that wants to read or write the same key.
+- With the mode off, `@media (prefers-contrast: more)` still raises the colors, and `prefers-reduced-motion` still stops motion.
+
+## Everywhere
+
+| Change | WCAG 2.2 |
+|---|---|
+| Text and line colors raised: `--sc-soft` `#c5c8cc`, `--sc-muted` `#b0b4b9`, `--sc-dim` `#969ba1`, `--sc-frame` `#767c83`, accent `#6aa6e8` (each falls back to the site's own token) | 1.4.3, 1.4.11 |
+| Focus ring: 3px in the text color with a dark halo, inside the map's frame | 2.4.7 |
+| Map tags 13px on opaque backgrounds, fixes with solid borders; airspace rims and ribs 1.5 times wider | 1.4.3, 1.4.11 |
+| No motion: camera moves jump, tooltips appear at once (the mode implies reduced motion) | 2.2.2, 2.3.3 |
+| Every control at least 44px | 2.5.8 |
+| Taps allow a looser touch (16px of travel, no time limit), so a shaky tap still counts | 2.5.1 |
+| Airport tags leave the tab order; In view reaches them instead | 2.4.3 |
+| Keyboard: arrows turn and tilt, Shift with arrows moves the map, plus and minus zoom; only while the map has focus, never as single-key shortcuts elsewhere (`aria-keyshortcuts` names them) | 2.1.1, 2.1.4 |
+| Buttons say their state with `aria-pressed`; groups and fields have names | 4.1.2 |
+
+## Free roam
+
+| Change | WCAG 2.2 |
+|---|---|
+| Camera pad over the map, bottom left: arrows turn and tilt, plus and minus zoom, Pan makes the arrows move the map | 2.5.1, 2.5.7 |
+| In view (a pill under Airspace on desktop, a tab on a phone) lists what is on the map now, numbered, with the same number on a white badge on the map. Focusing an entry outlines its thing; picking an area raises or lowers it, picking an airport opens it. Escape closes it and returns focus | 2.1.1, 2.5.7, 2.4.3 |
+| A text summary of the scene (chart, raised areas, procedures) is the map's description for screen readers | 1.1.1 |
+
+## Walkthroughs
+
+| Change | WCAG 2.2 |
+|---|---|
+| Playback stops at the end of every step; Play goes on | 2.2.1, 2.2.2 |
+| A quick check asks for a choice, then Check | 3.2.2 |
+
+## Quizzes
+
+| Change | WCAG 2.2 |
+|---|---|
+| Choices: choose, then Check (full width under the choices). Nothing is scored until Check | 3.2.2 |
+| Find questions: the numbered picker shows numbers only (it still asks the student to find the thing on the chart), a number field takes the badge's number, then Check | 2.1.1, 2.5.7 |
+| Skip on find questions: moves on, and the quiz's total drops by one | 2.1.1 |
+| The camera pad, as in free roam | 2.5.1, 2.5.7 |
+| No time limit: `ms` is reported, never enforced | 2.2.1 |
+
+The chart reading hunt, once built, uses the same picker and Skip.
+
+## What a site must do
+
+- Pass `a11y` from its own toggle, if it has one, so the two never disagree.
+- Never turn `onResult`'s `ms` into a time limit or a score.
+- Treat a result with `skipped: true` as not asked: it is not wrong, and the end result's total already leaves it out.
+- Keep the site's own focus ring and contrast at least this high around the map.

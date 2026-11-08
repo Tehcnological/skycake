@@ -1,7 +1,7 @@
 // SkyCake Viewer, the standalone app. The start screen lists the areas, each with its offline download and the date its
 // data is current through; ?area=phoenix opens one full screen (and ?scene={...} a first scene, as in the demo).
 // Every on-screen word here is a placeholder for Chris's copy.
-import { mount } from "../src/index.js";
+import { browserStorage, mount, store, stored } from "../src/index.js";
 
 /** www/data/manifest.json, written by scripts/app.mjs. */
 /** rev: a hash of every file, so any rebuild (charts every 56 days, procedures every 28) is a new revision. */
@@ -20,7 +20,14 @@ const TEXT = {
   failed: "Retry",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
+  a11y: "Placeholder: Accessibility mode",
+  a11yHelp: "Placeholder: Accessibility",
 };
+
+// Accessibility mode: the same switch as the map's own (skycake-a11y), so they agree; it also raises the start screen's contrast.
+const storage = browserStorage();
+const setA11y = (on: boolean) => document.documentElement.toggleAttribute("data-a11y", on);
+setA11y(stored(storage));
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("skycake: offline unavailable", e));
@@ -88,9 +95,18 @@ async function startScreen() {
   }
   const section = document.createElement("section");
   section.className = "areas";
+  const box = Object.assign(document.createElement("input"), { type: "checkbox", checked: stored(storage) });
+  box.setAttribute("role", "switch");
+  box.addEventListener("change", () => {
+    store(storage, box.checked);
+    setA11y(box.checked);
+  });
+  const row = document.createElement("label");
+  row.className = "a11y";
+  row.append(Object.assign(document.createElement("span"), { textContent: TEXT.a11y }), box);
   const foot = Object.assign(document.createElement("p"), { textContent: `${TEXT.notForNavigation} · ` });
-  foot.append(Object.assign(document.createElement("a"), { href: "privacy.html", textContent: TEXT.privacy }));
-  section.append(h1, list, foot);
+  foot.append(Object.assign(document.createElement("a"), { href: "privacy.html", textContent: TEXT.privacy }), " · ", Object.assign(document.createElement("a"), { href: "accessibility.html", textContent: TEXT.a11yHelp }));
+  section.append(h1, list, row, foot);
   root.replaceChildren(section);
 }
 
