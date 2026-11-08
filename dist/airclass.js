@@ -18,7 +18,7 @@ export function classAt(data, grid, lat, lon, ft) {
     const agl = ft - groundFt(data, grid, lat, lon);
     const ins = data.areas.filter((a) => within(a, lat, lon));
     const slab = (a) => a.floor <= ft && ft < a.ceiling;
-    // 91.215(b)(3): above the ceiling and within the lateral boundaries of a B or C area, outer shelves included.
+    // 91.215(b)(4): above the ceiling and within the lateral boundaries of a B or C area, outer shelves included.
     const overBC = ins.some((a) => (a.kind === "B" || a.kind === "C") && ft >= a.ceiling);
     const veil = ins.some((a) => a.kind === "MODEC" && slab(a));
     const hit = (k) => ins.find((a) => a.kind === k && slab(a) && (k !== "E" || surface(data, a)));
@@ -32,8 +32,9 @@ export function classAt(data, grid, lat, lon, ft) {
 }
 export function needs(c, ft) {
     const transponder = c.kind === "B" || c.kind === "C" || // (b)(1)
-        (ft < 10000 && (c.veil || c.overBC)) || // (b)(2), (b)(3)
+        (ft < 10000 && (c.veil || c.overBC)) || // (b)(2), (b)(4)
         (ft >= 10000 && c.agl > 2500); // (b)(5)(i)
+    // Clearance: 91.131(a). Radio: 91.131(c)(1) in B, 91.130(c) in C, 91.129(c) in D.
     return { clearance: c.kind === "B", radio: c.kind !== "E" && c.kind !== "G", transponder };
 }
 /** NM from a point to the nearest edge of a ring, flat-earth. */

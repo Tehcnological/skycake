@@ -68,7 +68,7 @@ A step's `scene` takes everything a first scene does, plus `highlight`, `airplan
 
 #### Validating walkthroughs
 
-`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check's prompt, choices (2 to 4, distinct), answer and tolerance. Unknown fields are ignored. `area` is the folder name the site loaded.
+`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, that there are steps, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check as a quiz's written item (below). Unknown fields are ignored. `area` is the folder name the site loaded.
 
 ```ts
 import { readFileSync } from "node:fs";
@@ -82,7 +82,7 @@ if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 
 ### Quizzes
 
-A quiz mode asks questions on the shared question card: the count (question, total and right so far) top left, Explore top right, the card along the bottom (on phones, under the view). Each question shows its scene with the rest dimmed; the chart-reading types (`find`, `read`, `airplane`) start top-down so the chart can be read, and the camera stays free. Tags, the floor and ceiling in the tip, and fix altitudes and roles (FAF, MAP) stay hidden until the answer; the airplane keeps its altitude tag, since airplane questions ask about it. Then the card says right or wrong with an icon and a word (a wrong answer also names the right one and marks its choice), shows the area's values and the explanation, and the view raises the answer in 3D: the area tapped or highlighted, or the Class B, C, D or surface E area the airplane is in. The end shows the score, **Again** (generated questions are drawn fresh) and **Explore**.
+A quiz mode asks questions on the shared question card: the count (question, total and right so far) top left, Explore top right, the card along the bottom (on phones, under the view). Each question shows its scene with the rest dimmed; the chart-reading types (`find`, `read`, `airplane`) start top-down so the chart can be read, and the camera stays free. The floor and ceiling in the tip and fix altitudes and roles (FAF, MAP) stay hidden until the answer. Tags stay hidden too, except on procedure questions and questions that ask for a fix, which show tags with names only; the airplane keeps its altitude tag, since airplane questions ask about it. Then the card says right or wrong with an icon and a word (a wrong answer also names the right one and marks its choice), shows the area's values and the explanation, and the view raises the answer in 3D: the area tapped or highlighted, or the Class B, C, D or surface E area the airplane is in. The end shows the score, **Again** (generated questions are drawn fresh) and **Explore**.
 
 ```ts
 import { mount, type Quiz } from "skycake";
@@ -104,7 +104,7 @@ const quiz: Quiz = {
 mount(element, { base: "/skycake/phoenix/", mode: { quiz }, onResult: (r) => console.log(r) });
 ```
 
-A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) or by keyboard: Tab moves through what is on screen, Enter answers. `read`, `airplane` and `procedure` take 2 to 4 choices; a `read` can ask for a number with a tolerance instead. Generated questions (`find`, `read`, `airplane`, `procedure`) take every answer and wrong choice from `area.json`, the terrain and the procedure files, and carry no explanation; the card shows the data instead. Any question can name `answerArea`, an area id the reveal raises without the question naming it; generated airplane questions set it to the area the point is in.
+A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) or by keyboard: Tab moves through what is on screen, Enter answers. `read`, `airplane` and `procedure` take 2 to 4 choices; a `read` can ask for a number with a tolerance instead (typed with or without commas, "3,000"). Generated questions (`find`, `read`, `airplane`, `procedure`) take every answer and wrong choice from `area.json`, the terrain and the procedure files, and carry no explanation; the card shows the data instead. Any question can name `answerArea`, an area id the reveal raises without the question naming it; generated airplane questions set it to the area the point is in.
 
 **Practice:** `mode: { quiz: "practice", types?, kinds?, airports? }` asks generated questions without end, with the score as right of answered. `kinds` alone keeps to airspace questions, `airports` alone to procedure questions; when the filters leave nothing to ask, it says so and offers Explore.
 
@@ -112,7 +112,7 @@ A `find` question is answered by a tap (a fix or airport counts within 1.5 NM) o
 
 #### Validating quizzes
 
-`validateQuiz(quiz, data, files, area)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks (names, prompt, choices, answer, tolerance, and an `answerArea` the data has). A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
+`validateQuiz(quiz, data, files, area)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks: names, prompt, choices (2 to 4, distinct) or a number, answer, tolerance, and an `answerArea` the data has. A `find` answer must be an area, fix, airport or point the view can answer: not an E700 or MODEC area (they cannot be tapped), and a fix on the question's own procedures or among the area's waypoints. A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
 
 ```ts
 import { validateQuiz } from "skycake";

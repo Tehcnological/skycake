@@ -55,7 +55,7 @@ test("what a point needs", () => {
   assert.deepEqual(needs(at({ kind: "C", area: "x", overBC: true }), 3000), { clearance: false, radio: true, transponder: true });
   assert.deepEqual(needs(at({ kind: "D", area: "x" }), 3000), { clearance: false, radio: true, transponder: false });
   assert.deepEqual(needs(at({ agl: 1500 }), 1500), { clearance: false, radio: false, transponder: false });
-  assert.equal(needs(at({ kind: "E", overBC: true }), 9500).transponder, true); // above a B or C, within its outline: (b)(3)
+  assert.equal(needs(at({ kind: "E", overBC: true }), 9500).transponder, true); // above a B or C, within its outline: (b)(4)
   assert.equal(needs(at({ kind: "E", overBC: true }), 10500).transponder, true); // (b)(5)(i) from here
   assert.equal(needs(at({ kind: "E", agl: 5000 }), 11000).transponder, true); // (b)(5)(i)
   assert.equal(needs(at({ kind: "E", agl: 2000 }), 11000).transponder, false); // at or below 2,500 AGL: excepted
