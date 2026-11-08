@@ -54,6 +54,8 @@ export const LABELS = {
     nothing: "Placeholder: Nothing to ask here",
     a11y: "Placeholder: Accessibility mode",
     inView: "Placeholder: In view",
+    number: "Placeholder: Number",
+    skip: "Placeholder: Skip",
     summary: (chart, areas, procedures) => `Placeholder: ${chart}. Raised: ${areas.join("; ") || "none"}. Procedures: ${procedures.join("; ") || "none"}.`,
     camera: {
         group: "Placeholder: Camera",

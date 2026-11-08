@@ -69,9 +69,12 @@ export function player(c, w, nextLink, explore) {
             const right = score(q, a, locator(data, loaded));
             void show(revealScene(q));
             k.reveal(right, null, L.continue, () => set(answered(p, w)));
-        });
+        }, { a11y: c.a11y });
         open = k;
         bar.before(k.el);
+        // In accessibility mode a check takes focus as it opens.
+        if (c.a11y)
+            k.el.querySelector(".sc-choice, .sc-number, .sc-option")?.focus();
         void show(scene);
     };
     const draw = () => {
@@ -115,7 +118,7 @@ export function player(c, w, nextLink, explore) {
         const dt = Math.min(Math.max((now - last) / 1000, 0), 0.25);
         last = now;
         if (p.playing)
-            set(tick(p, w, dt));
+            set(tick(p, w, dt, c.a11y));
         raf = requestAnimationFrame(loop);
     });
     playButton.addEventListener("click", () => set(p.playing ? pause(p) : play(p)));

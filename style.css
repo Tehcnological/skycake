@@ -338,3 +338,13 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* Number badges on the map: a white circle with a dark number, over every tag. */
 .skycake .view .badges { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .skycake .view .badge { position: absolute; left: 0; top: 0; min-width: 24px; height: 24px; box-sizing: border-box; padding: 0 5px; border: 1.5px solid #14171c; border-radius: 12px; background: #fff; color: #14171c; font: 700 13px/21px var(--sc-mono); text-align: center; box-shadow: 0 1px 4px rgb(0 0 0 / 0.5); }
+
+/* Accessibility mode's question card: Check full width under the choices; a find question's numbers, field and Skip. */
+.skycake .sc-card .sc-check { width: 100%; }
+.skycake .sc-card .sc-check:disabled { opacity: 0.5; }
+.skycake .sc-card .sc-skip { align-self: flex-start; }
+/* Two rows, scrolling: the card stays low so the badges on the map stay in sight; typing the number is the quick way. */
+.skycake .sc-card .sc-pick-numbers { flex-flow: row wrap; gap: 6px; max-height: 94px; overflow: auto; }
+.skycake .sc-card .sc-pick-numbers .sc-option { min-width: 44px; justify-content: center; padding: 0 8px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); }
+.skycake .sc-card .sc-pick-numbers .sc-option[aria-pressed="true"] { border-color: var(--sc-accent); background: var(--sc-accent-bg); box-shadow: none; }
+.skycake .sc-card .sc-pick-numbers .sc-num { border: 0; background: none; color: inherit; }
