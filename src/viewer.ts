@@ -12,6 +12,7 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { groundFt } from "./airclass.js";
 import { clipRing, deepest, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
 import { isTap, twoFingers, type Pt } from "./gesture.js";
@@ -175,16 +176,8 @@ export async function build(
   const { nx, ny, url } = data.dem;
   const grid = await fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
   const dem = grid && new Int16Array(grid);
-  // Bilinear between the grid points, which are the ground mesh's vertices.
-  const groundAt = (x: number, z: number) => {
-    if (!dem) return nm(data.ground);
-    const fi = Math.max(0, Math.min(nx - 1, ((x + width / 2) / width) * (nx - 1)));
-    const fj = Math.max(0, Math.min(ny - 1, ((z + depth / 2) / depth) * (ny - 1)));
-    const i = Math.min(Math.floor(fi), nx - 2), j = Math.min(Math.floor(fj), ny - 2);
-    const [a, c] = [fi - i, fj - j];
-    const h = (di: number, dj: number) => dem[(j + dj) * nx + i + di];
-    return nm((h(0, 0) * (1 - a) + h(1, 0) * a) * (1 - c) + (h(0, 1) * (1 - a) + h(1, 1) * a) * c);
-  };
+  // Bilinear between the grid points, which are the ground mesh's vertices; the same sampling the quizzes use.
+  const groundAt = (x: number, z: number) => nm(groundFt(data, dem, ...latLon(x, z)));
   const ground = new THREE.PlaneGeometry(width, depth, nx - 1, ny - 1);
   ground.rotateX(-Math.PI / 2);
   const pos = ground.attributes.position as THREE.BufferAttribute;
