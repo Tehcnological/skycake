@@ -1,5 +1,7 @@
 // A question: what it asks, how an answer is scored, and the scenes it shows. Pure; card.ts draws it.
+import type { AirspaceFile } from "./airspace.js";
 import { nm } from "./cifp.js";
+import type { Procedure } from "./procedure.js";
 import type { AreaRef, Scene, Target } from "./scene.js";
 
 export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string } & (
@@ -10,6 +12,13 @@ export type Question = { id?: string; prompt: string; scene?: Scene; explanation
 export type Answer = { choice: number } | { number: number } | { area: string | null; at: [lat: number, lon: number] | null };
 /** A fix or airport's position; the caller builds it from the area's airports, waypoints and loaded procedure fixes. */
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
+
+/** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
+export const locator = (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]): Locate => (t) => {
+  if ("point" in t) return t.point;
+  const p = "airport" in t ? data.airports.find((a) => a.id === t.airport) : "fix" in t ? (procedures.flatMap((x) => x.fixes).find((f) => f.name === t.fix) ?? data.waypoints.find((w) => w.name === t.fix)) : undefined;
+  return p ? [p.lat, p.lon] : null;
+};
 
 const FIND_NM = 1.5;
 

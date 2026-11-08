@@ -35,6 +35,12 @@ export const LABELS = {
     submit: "Check",
     continue: "Continue",
     facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
+    play: "Play",
+    pause: "Pause",
+    back: "Back",
+    next: "Next",
+    explore: "Explore",
+    stepOf: (n, total) => `${n}/${total}`,
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -113,5 +119,10 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+    const mode = o.mode ?? "explore";
+    if (mode === "explore")
+        return freeRoam(context);
+    const { player } = await import("./player.js");
+    await player(context, mode.walkthrough, mode.next, (from) => void freeRoam({ ...context, first: from }));
 }

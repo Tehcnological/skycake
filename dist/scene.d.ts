@@ -73,6 +73,11 @@ export declare function resolve(scene: Scene, data: AirspaceFile): Resolved;
 export declare function stripPlayback(scene: Scene): Scene;
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export declare function framedOnly(scene: Scene): ProcedureRef[];
+/**
+ * The scene without each field that names something the data lacks, so the rest still shows; warn() says what was
+ * left out. hasFix: whether a fix name is known (fixes live in the procedure files, which resolve() does not read).
+ */
+export declare function usable(scene: Scene, data: AirspaceFile, hasFix: (name: string) => boolean, warn: (message: string) => void): Scene;
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export declare function freeRoamScene(data: AirspaceFile): Scene;
 /** mount()'s older options as a first scene; undefined when none is given. */

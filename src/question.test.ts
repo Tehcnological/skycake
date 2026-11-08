@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { questionScene, revealScene, score, type Locate, type Question } from "./question.js";
+import { locator, questionScene, revealScene, score, type Locate, type Question } from "./question.js";
 
 const at: Locate = (t) => ("fix" in t && t.fix === "SCADE" ? [33.4, -112.2] : "airport" in t && t.airport === "KCHD" ? [33.27, -111.81] : null);
 test("each type scores right and wrong", () => {
@@ -35,4 +35,16 @@ test("the reveal raises the answer and tilts to 3D", () => {
   assert.deepEqual([revealScene(q).raise, revealScene(q).camera, revealScene(q).tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 32 }, true]);
   const f = revealScene({ type: "find", prompt: "", answer: { area: "y" } });
   assert.deepEqual([f.raise, f.camera], [[{ area: "y" }], { frame: [{ area: "y" }], tilt: 32 }]);
+});
+
+test("locator finds loaded procedure fixes first, then waypoints, airports and points", () => {
+  const data = { airports: [{ id: "KCHD", lat: 33.27, lon: -111.81 }], waypoints: [{ name: "BXK", lat: 33.45, lon: -112.82, ft: 6000 }, { name: "SCADE", lat: 1, lon: 1, ft: 0 }] } as never;
+  const procs = [{ fixes: [{ name: "SCADE", lat: 33.4, lon: -112.2 }] }] as never;
+  const at = locator(data, procs);
+  assert.deepEqual(at({ fix: "SCADE" }), [33.4, -112.2]);
+  assert.deepEqual(at({ fix: "BXK" }), [33.45, -112.82]);
+  assert.deepEqual(at({ airport: "KCHD" }), [33.27, -111.81]);
+  assert.deepEqual(at({ point: [33, -112] }), [33, -112]);
+  assert.equal(at({ fix: "NOPE" }), null);
+  assert.equal(at({ area: "x" }), null);
 });

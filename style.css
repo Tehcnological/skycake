@@ -213,3 +213,33 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 @media (max-width: 860px) {
   .skycake .sc-card { left: 0; right: 0; bottom: 0; min-height: 76px; transform: none; width: auto; border-width: 1px 0 0; border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; max-height: 100%; overflow: auto; }
 }
+
+/* The walkthrough player. Desktop: the title top left, Explore top right, the step's caption over the player row at
+   the bottom, above the caption line. Phone: the row is the 76px bar under the view, the caption card above it. */
+.skycake .sc-wtop { position: absolute; z-index: 3; left: var(--sc-gap); right: var(--sc-gap); top: var(--sc-gap); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; pointer-events: none; }
+.skycake .sc-wtop > * { pointer-events: auto; }
+.skycake .sc-title { box-sizing: border-box; min-height: 44px; margin: 0; padding: 11px 18px; border: 1px solid var(--sc-frame); border-radius: 22px; background: var(--sc-panel); font: 600 15px/1.4 var(--sc-head); }
+.skycake .sc-wtop .sc-pill { flex: none; }
+.skycake .sc-player { position: absolute; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); box-sizing: border-box; width: min(640px, calc(100% - 2 * var(--sc-gap))); display: flex; flex-direction: column; gap: 8px; }
+.skycake .sc-step { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-card); background: var(--sc-panel); }
+.skycake .sc-step p { margin: 0; font: 500 15px/1.45 var(--sc-sans); }
+.skycake .sc-end { display: flex; flex-wrap: wrap; gap: 8px; }
+.skycake .sc-end .sc-pill { box-shadow: none; text-decoration: none; }
+.skycake .sc-end .sc-next-link { border-color: var(--sc-accent); background: var(--sc-accent-bg); }
+.skycake .sc-player .sc-card { position: static; transform: none; width: auto; }
+.skycake .sc-bar { display: flex; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-pill); background: var(--sc-panel); }
+.skycake .sc-bar .sc-round { flex: none; box-shadow: none; }
+.skycake .sc-round[aria-disabled="true"] { opacity: 0.5; cursor: default; }
+.skycake .sc-progress { flex: 1; min-width: 0; display: flex; gap: 4px; }
+.skycake .sc-progress i { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--sc-accent) var(--f, 0%), var(--sc-frame) 0); }
+.skycake .sc-progress i.check { background: linear-gradient(90deg, var(--sc-accent) var(--f, 0%), transparent 0); box-shadow: inset 0 0 0 1.5px var(--sc-soft); }
+.skycake .sc-count { flex: none; min-width: 3.2em; text-align: center; font: 600 13px var(--sc-mono); color: var(--sc-soft); }
+.skycake .sc-big-play { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1.5px solid var(--sc-soft); border-radius: 50%; background: var(--sc-panel); box-shadow: 0 4px 16px rgb(0 0 0 / 0.5); color: var(--sc-ink); cursor: pointer; }
+.skycake .sc-big-play svg { width: 36px; height: 36px; margin-left: 4px; }
+@media (max-width: 860px) {
+  .skycake .sc-player { position: relative; left: auto; bottom: auto; transform: none; width: auto; flex: none; height: 76px; }
+  .skycake .sc-bar { height: 76px; box-sizing: border-box; gap: 6px; padding: 0 10px; border-width: 1px 0 0; border-radius: 0; }
+  /* Above the bar and the caption line. */
+  .skycake .sc-step, .skycake .sc-player .sc-card { position: absolute; left: var(--sc-gap); right: var(--sc-gap); bottom: calc(100% + 36px); max-height: 55svh; overflow: auto; border-width: 1px; border-radius: var(--sc-r-card); }
+  .skycake .sc-big-play { top: calc(50% - 38px); }
+}

@@ -91,6 +91,27 @@ export function framedOnly(scene: Scene): ProcedureRef[] {
   return out;
 }
 
+/**
+ * The scene without each field that names something the data lacks, so the rest still shows; warn() says what was
+ * left out. hasFix: whether a fix name is known (fixes live in the procedure files, which resolve() does not read).
+ */
+export function usable(scene: Scene, data: AirspaceFile, hasFix: (name: string) => boolean, warn: (message: string) => void): Scene {
+  const out = { ...scene };
+  for (const k of Object.keys(scene) as (keyof Scene)[]) {
+    try {
+      resolve({ [k]: scene[k] } as Scene, data);
+      const cam = scene.camera;
+      const targets = k === "highlight" ? (scene.highlight ?? []) : k === "camera" && cam && typeof cam === "object" && "frame" in cam ? cam.frame : [];
+      for (const t of targets) if ("fix" in t && !hasFix(t.fix)) throw new SceneError(`no fix ${t.fix}`);
+    } catch (e) {
+      if (!(e instanceof SceneError)) throw e;
+      warn(`${e.message}; leaving out the scene's ${k}`);
+      delete out[k];
+    }
+  }
+  return out;
+}
+
 /** Free roam's first view: every airspace type in the area raised, the whole chart in view. */
 export function freeRoamScene(data: AirspaceFile): Scene {
   return { camera: "fit", raise: KINDS.filter((k) => data.areas.some((a) => a.kind === k)) };

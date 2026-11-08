@@ -36,6 +36,36 @@ mount(document.querySelector("#airspace")!, {
 
 `types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
+### Walkthroughs
+
+`mode` gives the view one job: `"explore"` (free roam, the default) or a walkthrough that plays like a video. It starts paused on step 1 with a play button over the view; each step runs for `seconds` (default 4 + 0.06 per caption character, rounded up), dragging the view pauses, and a quick check pauses until it is answered (not scored). Explore leaves into free roam from the scene on screen; `next`, when given, is a link at the end.
+
+```ts
+import { mount, type Walkthrough } from "skycake";
+
+const walkthrough: Walkthrough = {
+  id: "class-b",
+  title: "The Phoenix Class B",
+  area: "phoenix",
+  steps: [
+    { caption: "The Class B from above.", scene: { camera: "top", highlight: [{ area: "b-phoenix-class-b-sfc-90" }] } },
+    {
+      caption: "An arrival, drawn leg by leg, with an airplane flying it.",
+      seconds: 10,
+      scene: {
+        raise: ["B"],
+        procedures: [{ airport: "KPHX", name: "EAGUL6", draw: true }],
+        airplane: { along: { airport: "KPHX", name: "EAGUL6" }, seconds: 10 },
+      },
+      check: { type: "find", prompt: "Tap the surface area.", answer: { area: "b-phoenix-class-b-sfc-90" } },
+    },
+  ],
+};
+mount(element, { base: "/skycake/phoenix/", mode: { walkthrough, next: { label: "Take the quiz", href: "/quiz/class-b" } } });
+```
+
+A step's `scene` takes everything a first scene does, plus `highlight`, `airplane` and `draw`. A name the data no longer has leaves that part out of the step, with a warning in the console. `demo/class-b.json` is a sample (`npm run demo`, then `/demo/?walkthrough=class-b`).
+
 ## Data
 
 `npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
@@ -55,7 +85,7 @@ npm install
 npm test
 npm run typecheck
 npm run build   # dist/, committed, so sites can install straight from GitHub
-npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene
+npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene, ?walkthrough=class-b to play one
 ```
 
 Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md) and [SkyCake Viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md), with the plan for F-Droid and iOS.

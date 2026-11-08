@@ -16,5 +16,18 @@ export type Context = {
     /** See Options.close in ui.ts. */
     close?: () => void;
 };
+export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string, string | boolean | undefined>, ...kids: (Node | string)[]): HTMLElementTagNameMap[K];
+/** An inline stroke icon built as elements, so strict CSPs allow it. */
+export declare function icon(paths: string[], box?: string): SVGSVGElement;
+export declare const ICONS: {
+    layers: string[];
+    search: string[];
+    procedure: string[];
+    diagram: string[];
+    tags: string[];
+    view: string[];
+    full: string[];
+    close: string[];
+};
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;

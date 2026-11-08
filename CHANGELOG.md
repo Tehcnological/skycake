@@ -4,6 +4,8 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- Walkthroughs: `mount({ mode: { walkthrough, next } })` plays steps like a video, with captions, highlights, procedures drawn leg by leg, an airplane flying them and quick checks; Explore leaves into free roam. Scenes take `highlight` and `airplane`.
+
 - SkyCake Viewer (`app/`): a standalone web app for skycake.app. Start screen with the areas, offline saves with a current-through date, full screen maps.
 - Blue (`#3d7bc2`) is the default accent. Sites that set `--red` and `--redbg` keep their own, so instrumentready.com stays red.
 - `mount()` takes `close`: the view fills the window from the start and its close button calls the site's function.

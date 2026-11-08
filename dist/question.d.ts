@@ -1,3 +1,5 @@
+import type { AirspaceFile } from "./airspace.js";
+import type { Procedure } from "./procedure.js";
 import type { Scene, Target } from "./scene.js";
 export type Question = {
     id?: string;
@@ -29,6 +31,8 @@ export type Answer = {
 };
 /** A fix or airport's position; the caller builds it from the area's airports, waypoints and loaded procedure fixes. */
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
+/** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
+export declare const locator: (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]) => Locate;
 export declare function score(q: Question, a: Answer, locate: Locate): boolean;
 /** The type's default scene with the question's own fields laid over it. */
 export declare const questionScene: (q: Question) => Scene;

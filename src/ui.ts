@@ -3,6 +3,7 @@
 import { chartsOf, type AirspaceFile, type Area, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType, Procedure } from "./procedure.js";
 import { firstScene, type Scene } from "./scene.js";
+import type { Walkthrough } from "./walkthrough.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
@@ -44,6 +45,13 @@ export type Labels = {
   submit: string;
   continue: string;
   facts: (name: string, floor: string, ceiling: string) => string;
+  /** The walkthrough player: its buttons, the button that leaves into free roam, and the step count ("4/8"). */
+  play: string;
+  pause: string;
+  back: string;
+  next: string;
+  explore: string;
+  stepOf: (n: number, total: number) => string;
 };
 
 export const LABELS: Labels = {
@@ -79,6 +87,12 @@ export const LABELS: Labels = {
   submit: "Check",
   continue: "Continue",
   facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
+  play: "Play",
+  pause: "Pause",
+  back: "Back",
+  next: "Next",
+  explore: "Explore",
+  stepOf: (n, total) => `${n}/${total}`,
 };
 
 export type Options = {
@@ -96,6 +110,9 @@ export type Options = {
   /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
    * desktop: in place of Full screen) calls this. */
   close?: () => void;
+  /** The view's one job. "explore" (default): free roam. A walkthrough plays instead; its Explore button leaves into
+   * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). */
+  mode?: "explore" | { walkthrough: Walkthrough; next?: { label: string; href: string } };
 };
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string | boolean> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] {
@@ -176,5 +193,9 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
+  const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+  const mode = o.mode ?? "explore";
+  if (mode === "explore") return freeRoam(context);
+  const { player } = await import("./player.js");
+  await player(context, mode.walkthrough, mode.next, (from) => void freeRoam({ ...context, first: from }));
 }

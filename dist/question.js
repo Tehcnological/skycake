@@ -1,5 +1,11 @@
-// A question: what it asks, how an answer is scored, and the scenes it shows. Pure; card.ts draws it.
 import { nm } from "./cifp.js";
+/** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
+export const locator = (data, procedures) => (t) => {
+    if ("point" in t)
+        return t.point;
+    const p = "airport" in t ? data.airports.find((a) => a.id === t.airport) : "fix" in t ? (procedures.flatMap((x) => x.fixes).find((f) => f.name === t.fix) ?? data.waypoints.find((w) => w.name === t.fix)) : undefined;
+    return p ? [p.lat, p.lon] : null;
+};
 const FIND_NM = 1.5;
 export function score(q, a, locate) {
     if ("choices" in q)

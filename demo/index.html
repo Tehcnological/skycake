@@ -20,9 +20,13 @@
 <div id="v"></div>
 <script type="module">
   import { mount } from "../dist/index.js";
-  // ?scene={...} shows that scene first, for checking. The view is window.v (demo/viewer.js), e.g. v.timeline(0.5).
-  const scene = new URLSearchParams(location.search).get("scene");
-  mount(document.querySelector("#v"), { base: "/data/phoenix/", ...(scene ? { scene: JSON.parse(scene) } : {}) });
+  // ?scene={...} shows that scene first, for checking. ?walkthrough=class-b plays demo/class-b.json.
+  // The view is window.v (demo/viewer.js), e.g. v.timeline(0.5).
+  const q = new URLSearchParams(location.search);
+  const scene = q.get("scene");
+  const walkthrough = q.get("walkthrough");
+  const mode = walkthrough ? { walkthrough: await fetch(`./${encodeURIComponent(walkthrough)}.json`).then((r) => r.json()), next: { label: "Quiz", href: "./" } } : "explore";
+  mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, ...(scene ? { scene: JSON.parse(scene) } : {}) });
 </script>
 </body>
 </html>

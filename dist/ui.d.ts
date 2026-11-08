@@ -1,6 +1,7 @@
 import { type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { ProcType } from "./procedure.js";
 import { type Scene } from "./scene.js";
+import type { Walkthrough } from "./walkthrough.js";
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
     kinds: Record<Kind, string>;
@@ -41,6 +42,13 @@ export type Labels = {
     submit: string;
     continue: string;
     facts: (name: string, floor: string, ceiling: string) => string;
+    /** The walkthrough player: its buttons, the button that leaves into free roam, and the step count ("4/8"). */
+    play: string;
+    pause: string;
+    back: string;
+    next: string;
+    explore: string;
+    stepOf: (n: number, total: number) => string;
 };
 export declare const LABELS: Labels;
 export type Options = {
@@ -58,6 +66,15 @@ export type Options = {
     /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
      * desktop: in place of Full screen) calls this. */
     close?: () => void;
+    /** The view's one job. "explore" (default): free roam. A walkthrough plays instead; its Explore button leaves into
+     * free roam, and `next`, when given, is a link at its end (for example the topic's quiz). */
+    mode?: "explore" | {
+        walkthrough: Walkthrough;
+        next?: {
+            label: string;
+            href: string;
+        };
+    };
 };
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export declare function mount(host: HTMLElement, o: Options): Promise<void>;

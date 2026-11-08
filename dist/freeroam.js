@@ -6,7 +6,7 @@ import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } fro
 import { SceneError, framedOnly, resolve } from "./scene.js";
 import { airportList, proceduresAt, search } from "./search.js";
 const SVG = "http://www.w3.org/2000/svg";
-function h(tag, attrs = {}, ...kids) {
+export function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
         if (v === undefined || v === false)
@@ -20,7 +20,7 @@ function h(tag, attrs = {}, ...kids) {
     return e;
 }
 /** An inline stroke icon built as elements, so strict CSPs allow it. */
-function icon(paths, box = "0 0 24 24") {
+export function icon(paths, box = "0 0 24 24") {
     const s = document.createElementNS(SVG, "svg");
     for (const [k, v] of Object.entries({ viewBox: box, width: "20", height: "20", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }))
         s.setAttribute(k, v);
@@ -31,7 +31,7 @@ function icon(paths, box = "0 0 24 24") {
     }
     return s;
 }
-const ICONS = {
+export const ICONS = {
     layers: ["M12 3 3 8l9 5 9-5-9-5Z", "m3 13 9 5 9-5"],
     search: ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z", "m20 20-3.5-3.5"],
     procedure: ["M4 19c4-1 6-5 8-9s5-6 8-6"],

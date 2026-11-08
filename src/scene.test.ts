@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chartsOf, type AirspaceFile } from "./airspace.js";
-import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand, stripPlayback } from "./scene.js";
+import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand, stripPlayback, usable } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
 
@@ -97,4 +97,20 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
   assert.equal(resolve(scene, data).procedures[0].draw, true);
   assert.deepEqual(stripPlayback(scene), { procedures: [{ airport: "KPHX", name }] });
   assert.equal(resolve({}, data).airplane, null);
+});
+
+test("usable leaves out each field naming something missing, and keeps the rest", () => {
+  const said: string[] = [];
+  const scene = {
+    raise: [{ area: "nope" }],
+    procedures: [{ airport: "KPHX", name: "EAGUL6" }],
+    highlight: [{ fix: "GONE" }],
+    camera: { frame: [{ fix: "BXK" }] },
+    diagram: "KLUF",
+    tags: false,
+  };
+  const out = usable(scene, data, (f) => f === "BXK", (m) => said.push(m));
+  assert.deepEqual(out, { procedures: scene.procedures, camera: scene.camera, tags: false });
+  assert.deepEqual(said, ["no area nope; leaving out the scene's raise", "no fix GONE; leaving out the scene's highlight", "no diagram for KLUF; leaving out the scene's diagram"]);
+  assert.doesNotThrow(() => resolve(out, data));
 });
