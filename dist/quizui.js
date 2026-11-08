@@ -6,9 +6,10 @@ import { h, wakeOnTap } from "./freeroam.js";
 import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
-import { advance, answer, attempt, maker, practice } from "./quiz.js";
+import { advance, answer, attempt, maker, practice, progress, skip } from "./quiz.js";
 import { stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
+import { pad } from "./pad.js";
 const TYPES = ["find", "read", "airplane", "procedure"];
 /** Resolves once the first question shows. explore: leave into free roam from the scene on screen; the quiz's DOM is gone by then. */
 export async function quiz(c, mode, onResult, explore) {
@@ -23,6 +24,9 @@ export async function quiz(c, mode, onResult, explore) {
     const say = (text) => live.replaceChildren(text);
     const box = h("div", { class: "sc-quiz" }, live);
     viewEl.after(top);
+    // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
+    const camera = pad(c);
+    viewEl.append(camera);
     fig.append(box);
     fig.classList.add("sc-quizzing");
     const unwake = wakeOnTap(c);
@@ -79,8 +83,10 @@ export async function quiz(c, mode, onResult, explore) {
     let a = start();
     const drawCount = () => {
         count.hidden = !a;
-        if (a)
-            count.textContent = a.practice ? L.practiceCount(a.right, a.answered) : L.count(a.i + 1, a.items.length, a.right);
+        if (!a)
+            return;
+        const { n, total } = progress(a);
+        count.textContent = a.practice ? L.practiceCount(a.right, a.answered) : L.count(n, total, a.right);
     };
     // Written questions carry no facts; one whose answer is an area shows that area's.
     const factsOf = (it) => {
@@ -90,6 +96,8 @@ export async function quiz(c, mode, onResult, explore) {
         const found = data.areas.find((x) => x.id === area);
         return found ? areaFacts(L.facts, data, found) : null;
     };
+    // In accessibility mode each new question takes focus, except the first, so the page's own focus is never taken.
+    let asked = 0;
     const ask = (now = false) => {
         if (!a || a.done) {
             drawCount();
@@ -100,6 +108,15 @@ export async function quiz(c, mode, onResult, explore) {
         let shownAt = 0;
         const scene = questionScene(it.q);
         const files = stage.filesOf(scene);
+        // Skip (accessibility mode, find questions): moves on without scoring; a fixed quiz's total drops by one.
+        const onSkip = () => {
+            if (!a || a.done || open !== k)
+                return;
+            a = skip(a);
+            report({ quiz: id, item: it.key, right: false, ms: Math.round(performance.now() - shownAt), skipped: true });
+            next();
+        };
+        const find = !("choices" in it.q) && !("number" in it.q);
         const k = card(it.q, L, v, say, async (ans) => {
             const loaded = await files;
             if (!a || a.done || open !== k)
@@ -110,12 +127,14 @@ export async function quiz(c, mode, onResult, explore) {
             report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
             void show(revealScene(withArea(it.q)));
             k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next());
-        });
-        const had = put(k.el);
+        }, { a11y: c.a11y, ...(find && { onSkip }) });
+        const had = put(k.el) || (c.a11y && asked > 0);
+        asked++;
         open = k;
         drawCount();
         shownAt = performance.now();
         // A find question is answered on the view, or by Tab into the list of what is on it.
+        // The first choice, or a find question's number field; never a number button, whose focus outlines a thing on the map.
         if (had)
             (k.el.querySelector(".sc-choice, .sc-number") ?? viewEl).focus();
         return show(scene, now);
@@ -126,8 +145,9 @@ export async function quiz(c, mode, onResult, explore) {
         a = advance(a, make, rng);
         if (!a.done)
             return void ask(); // practice is done only when nothing more can be made; it ends with its score too
-        report({ quiz: id, end: true, right: a.right, total: a.items.length });
-        note(L.result(a.right, a.items.length), pill(L.again, () => {
+        const { total } = progress(a);
+        report({ quiz: id, end: true, right: a.right, total });
+        note(L.result(a.right, total), pill(L.again, () => {
             a = start();
             void ask();
         }), pill(L.explore, leave));
@@ -139,6 +159,7 @@ export async function quiz(c, mode, onResult, explore) {
         open = null;
         top.remove();
         box.remove();
+        camera.remove();
         fig.classList.remove("sc-quizzing");
         viewEl.focus();
         explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));

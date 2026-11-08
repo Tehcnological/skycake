@@ -1,10 +1,13 @@
 // Free roam's controls, over the 3D view. Desktop: floating panels in the corners (Airspace top left, search top
 // right, view buttons bottom right). Phone: a tab bar along the bottom, menus as sheets above it. One DOM for both;
 // style.css decides what shows. Every change goes through roam.ts and reaches the viewer as a scene.
-import { KINDS, chartsIn, modeOf, pickChart, shownIn } from "./airspace.js";
+import { KINDS, chartsIn, feetText, modeOf, pickChart, shownIn } from "./airspace.js";
 import { add, pickAirport, raiseNow, remove, sceneOf, start, toggleDiagram } from "./roam.js";
 import { SceneError, framedOnly, resolve } from "./scene.js";
 import { airportList, proceduresAt, search } from "./search.js";
+import { pad } from "./pad.js";
+import { picker } from "./picker.js";
+import { describe } from "./summary.js";
 const SVG = "http://www.w3.org/2000/svg";
 export function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -40,6 +43,7 @@ export const ICONS = {
     view: ["M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"],
     full: ["M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"],
     close: ["M6 6l12 12M18 6 6 18"],
+    list: ["M9 6h11", "M9 12h11", "M9 18h11", "M4 6h1", "M4 12h1", "M4 18h1"],
 };
 /** Resolves once the first scene is showing. */
 export function freeRoam(c) {
@@ -63,7 +67,11 @@ export function freeRoam(c) {
     }));
     const kindList = h("div", { class: "sc-panel sc-kinds", id: "sc-kinds" }, ...[...rows.values()].map((x) => x.row));
     const kindButton = h("button", { type: "button", class: "sc-pill", "aria-expanded": "false", "aria-controls": "sc-kinds" }, icon(ICONS.layers), L.airspace);
-    const topLeft = h("div", { class: "sc-tl" }, kindButton, kindList);
+    // In view (accessibility mode): what is on the map, numbered as on the map; picking an area raises or lowers it, an
+    // airport lists its procedures. The picker (and its badges) lives only while the panel is open.
+    const inViewList = h("div", { class: "sc-panel sc-inview", id: "sc-inview" });
+    const inViewButton = h("button", { type: "button", class: "sc-pill sc-inview-pill", "aria-expanded": "false", "aria-controls": "sc-inview" }, icon(ICONS.list), L.inView);
+    const topLeft = h("div", { class: "sc-tl" }, kindButton, kindList, inViewButton, inViewList);
     // Search, its results and the shown procedures (top right; phone: top).
     const input = h("input", { type: "search", "aria-label": L.search, placeholder: L.search, autocomplete: "off", spellcheck: "false" });
     const results = h("div", { class: "sc-panel sc-results", role: "listbox", "aria-label": L.search, hidden: true });
@@ -80,22 +88,98 @@ export function freeRoam(c) {
     const chartButton = round(L.chart, L.chart, [], "sc-chart");
     const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
     const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
+    // Accessibility mode's own switch, when the site has none: under the view buttons (phone: the foot of the View sheet).
+    if (c.setA11y) {
+        const box = h("input", { type: "checkbox", role: "switch" });
+        box.checked = c.a11y;
+        box.addEventListener("change", () => {
+            if (!box.checked && fig.classList.contains("sc-open-inview"))
+                sheet(null);
+            c.setA11y(box.checked);
+        });
+        bottomRight.append(h("label", { class: "sc-row sc-a11y-row" }, h("span", {}, L.a11y), box));
+    }
     const caption = fig.querySelector(".sc-caption");
     // Phone tab bar.
     const tab = (label, paths) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
-    const tabs = { airspace: tab(L.airspace, ICONS.layers), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), close: tab(L.close, ICONS.close) };
+    const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), close: tab(L.close, ICONS.close) };
+    tabs.inView.classList.add("sc-inview-tab");
     const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
+    // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
+    // and again as the view takes focus, so it is current.
+    const viewEl = fig.querySelector(".view");
+    const summary = h("p", { class: "sc-hidden", id: `sc-summary-${Math.random().toString(36).slice(2)}` });
+    viewEl.after(summary);
+    viewEl.setAttribute("aria-describedby", summary.id);
+    const writeSummary = () => {
+        const raised = v.raisedAreas().flatMap((id) => data.areas.find((a) => a.id === id) ?? []);
+        summary.textContent = describe({
+            chart: `${L.charts[chart]} ${data.edition}`,
+            areas: raised.map((a) => ({ name: a.name, floor: feetText(a.floor, data.ground), ceiling: feetText(a.ceiling, data.ground) })),
+            procedures: r.procedures.map((p) => `${p.airport} ${p.name}`),
+        }, L);
+    };
+    writeSummary();
+    viewEl.addEventListener("focus", writeSummary);
     // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
     const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
     fig.querySelector(".view").after(openButton, topLeft, topRight, bottomRight);
+    fig.querySelector(".view").append(pad(c));
     fig.append(tabBar);
+    let inView = null;
     const sheet = (name) => {
         fig.classList.toggle("sc-open-kinds", name === "kinds");
         fig.classList.toggle("sc-open-view", name === "view");
+        fig.classList.toggle("sc-open-inview", name === "inview");
         kindButton.setAttribute("aria-expanded", String(name === "kinds"));
+        inViewButton.setAttribute("aria-expanded", String(name === "inview"));
         tabs.airspace.setAttribute("aria-pressed", String(name === "kinds"));
+        tabs.inView.setAttribute("aria-pressed", String(name === "inview"));
         tabs.view.setAttribute("aria-pressed", String(name === "view"));
+        if (name === "inview" && !inView) {
+            inView = picker(v, {
+                label: (x) => ("area" in x ? L.facts(x.name, x.floor, x.ceiling) : "airport" in x ? `${x.airport} ${x.name}` : x.name),
+                pressed: () => {
+                    const up = new Set(v.raisedAreas());
+                    return (x) => "area" in x && up.has(x.area);
+                },
+                onPick: (x) => {
+                    if ("area" in x) {
+                        v.raiseArea(x.area, !v.raisedAreas().includes(x.area));
+                        inView?.refill();
+                    }
+                    else if ("airport" in x) {
+                        sheet(null);
+                        showAirport(x.airport);
+                        input.focus();
+                    }
+                },
+            });
+            inViewList.replaceChildren(inView.el);
+        }
+        else if (name !== "inview" && inView) {
+            inView.stop();
+            inView = null;
+            inViewList.replaceChildren();
+        }
     };
+    // The open sheet's own button, where Escape puts focus back (desktop pill or phone tab, whichever shows).
+    const opener = (a, b) => (a.offsetParent ? a : b);
+    fig.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape")
+            return;
+        if (fig.classList.contains("sc-open-kinds"))
+            opener(kindButton, tabs.airspace).focus();
+        else if (fig.classList.contains("sc-open-inview"))
+            opener(inViewButton, tabs.inView).focus();
+        else if (fig.classList.contains("sc-open-view"))
+            tabs.view.focus();
+        else
+            return;
+        sheet(null);
+    });
+    inViewButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
+    tabs.inView.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
     kindButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
     tabs.airspace.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
     tabs.view.addEventListener("click", () => sheet(fig.classList.contains("sc-open-view") ? null : "view"));

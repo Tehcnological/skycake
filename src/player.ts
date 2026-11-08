@@ -75,9 +75,11 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
       const right = score(q, a, locator(data, loaded));
       void show(revealScene(q));
       k.reveal(right, null, L.continue, () => set(answered(p, w)));
-    });
+    }, { a11y: c.a11y });
     open = k;
     bar.before(k.el);
+    // In accessibility mode a check takes focus as it opens.
+    if (c.a11y) k.el.querySelector<HTMLElement>(".sc-choice, .sc-number")?.focus();
     void show(scene);
   };
 
@@ -118,7 +120,7 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   let raf = requestAnimationFrame(function loop(now) {
     const dt = Math.min(Math.max((now - last) / 1000, 0), 0.25);
     last = now;
-    if (p.playing) set(tick(p, w, dt));
+    if (p.playing) set(tick(p, w, dt, c.a11y));
     raf = requestAnimationFrame(loop);
   });
 

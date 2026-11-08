@@ -36,6 +36,8 @@ mount(document.querySelector("#airspace")!, {
 
 `types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
+Accessibility mode (higher contrast, a camera pad, numbered picks, no motion, no single-key shortcuts): pass `a11y` from the site's own toggle, or pass nothing and skycake shows its own switch. Every change and what a site must do: [docs/accessibility.md](docs/accessibility.md).
+
 ### Walkthroughs
 
 `mode` gives the view one job: `"explore"` (free roam, the default) or a walkthrough that plays like a video. It starts paused on step 1 with a play button over the view; each step runs for `seconds` (default 4 + 0.06 per caption character, rounded up), dragging the view pauses, and a quick check pauses until it is answered (not scored). Explore leaves into free roam from the scene on screen; `next`, when given, is a link at the end.
@@ -155,7 +157,7 @@ Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design
 
 The current-through date is the last day of the area's procedure cycle. Data built before `cycle` was recorded falls back to the chart edition, the earliest cycle it can be from.
 
-The start screen links to `privacy.html`. The app sets no cookies, stores nothing about anyone and loads nothing from other sites. Saved areas stay on the device, in Cache Storage. Two Cloudflare settings would make the notice untrue, so leave them off: Web Analytics on the Pages project, and Bot Fight Mode on the skycake.app zone, which sets a `__cf_bm` cookie.
+The start screen has the accessibility mode switch (the same `skycake-a11y` key as the map's own row) and links to `accessibility.html` and `privacy.html`. The app sets no cookies, stores nothing about anyone and loads nothing from other sites. Saved areas stay on the device, in Cache Storage. Two Cloudflare settings would make the notice untrue, so leave them off: Web Analytics on the Pages project, and Bot Fight Mode on the skycake.app zone, which sets a `__cf_bm` cookie.
 
 ### Hosting on Cloudflare Pages
 

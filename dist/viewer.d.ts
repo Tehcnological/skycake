@@ -42,12 +42,18 @@ export type View = {
     focus(c: Candidate | null): void;
     /** Off, while a question is open: no hover tip (read the chart), and fix tags keep their names but not their altitudes or roles. */
     hints(on: boolean): void;
+    /** Accessibility mode: a numbered badge (1 to n, in list order) on each candidate, over every tag; null clears them. */
+    numbers(list: Candidate[] | null): void;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
     zoom(factor: number): void;
+    /** Keyboard and the camera pad: moves the map under the camera, right and forward on the ground, by these fractions of the camera's distance. */
+    pan(right: number, forward: number): void;
     /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
     dem(): Int16Array | null;
+    /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
+    setA11y(on: boolean): void;
 };
 /** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
 export type Candidate = {
@@ -66,5 +72,7 @@ export type Candidate = {
 };
 export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void, 
 /** A tap on an airport's tag on the chart. */
-airport?: (id: string) => void): Promise<View>;
+airport?: (id: string) => void, 
+/** Accessibility mode at first; View.setA11y changes it. */
+a11y?: boolean): Promise<View>;
 export {};

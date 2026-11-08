@@ -74,3 +74,18 @@ test("pause stops the clock and every transition returns a new Play", () => {
   assert.notEqual(tick(b, w, 1), b);
   assert.deepEqual(tick(b, w, 1), b);
 });
+test("hold stops at the step's end and Next goes on", () => {
+  let p = play(begin());
+  p = tick(p, w, 100, true);
+  assert.equal(p.step, 0);
+  assert.equal(p.playing, false);
+  assert.equal(p.t, stepSeconds(w.steps[0]));
+  assert.equal(next(p, w).step, 1);
+  // Play from a held end moves on with the next tick.
+  assert.equal(play(p).playing, true);
+  assert.equal(tick(play(p), w, 0.01, true).step, 1);
+});
+test("hold never swallows a check", () => {
+  const p = tick({ ...play(begin()), step: 1 }, w, 100, true);
+  assert.equal(p.checking, true);
+});

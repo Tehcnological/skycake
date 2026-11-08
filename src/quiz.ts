@@ -6,10 +6,12 @@ import type { Question } from "./question.js";
 export type Generate = { generate: QuestionType; count: number; kinds?: Kind[]; airports?: string[] };
 export type Quiz = { id: string; title: string; area: string; items: (Question | Generate)[]; shuffle?: boolean };
 export type Item = { q: Question; key: string; facts: string | null };
-/** pool: practice only, the draws advance() may append (one per allowed type). */
-export type Attempt = { items: Item[]; i: number; right: number; answered: number; done: boolean; practice: boolean; pool?: Generate[] };
+/** pool: practice only, the draws advance() may append (one per allowed type). skipped: items skipped in accessibility mode. */
+export type Attempt = { items: Item[]; i: number; right: number; answered: number; skipped: number; done: boolean; practice: boolean; pool?: Generate[] };
 export type Make = (g: Generate) => (Question & { facts: string | null }) | null;
-export type QuizResult = { quiz: string; item: string; right: boolean; ms: number } | { quiz: string; end: true; right: number; total: number };
+/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. An end's total
+ * leaves skips out, so it is 0 when every item was skipped. */
+export type QuizResult = { quiz: string; item: string; right: boolean; ms: number; skipped?: true } | { quiz: string; end: true; right: number; total: number };
 
 /**
  * Make from the generators, each Generate's filters laid over gen. One filter alone keeps to its side: kinds alone asks
@@ -45,7 +47,7 @@ export function attempt(quiz: Quiz, make: Make, rng: Rng): Attempt {
     return out;
   });
   if (quiz.shuffle) items = shuffle(items, rng);
-  return { items, i: 0, right: 0, answered: 0, done: items.length === 0, practice: false };
+  return { items, i: 0, right: 0, answered: 0, skipped: 0, done: items.length === 0, practice: false };
 }
 
 function draw(pool: Generate[], make: Make, rng: Rng, n: number): Item | null {
@@ -62,10 +64,14 @@ function draw(pool: Generate[], make: Make, rng: Rng, n: number): Item | null {
 export function practice(make: Make, types: QuestionType[], filters: { kinds?: Kind[]; airports?: string[] }, rng: Rng): Attempt | null {
   const pool = types.map((generate): Generate => ({ generate, count: 1, ...filters }));
   const first = draw(pool, make, rng, 0);
-  return first && { items: [first], i: 0, right: 0, answered: 0, done: false, practice: true, pool };
+  return first && { items: [first], i: 0, right: 0, answered: 0, skipped: 0, done: false, practice: true, pool };
 }
 
 export const answer = (a: Attempt, right: boolean): Attempt => ({ ...a, right: a.right + (right ? 1 : 0), answered: a.answered + 1 });
+/** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
+export const skip = (a: Attempt): Attempt => ({ ...a, skipped: a.skipped + 1 });
+/** A fixed quiz's count: question n of total, skips taken out; n stays on a question while its answer shows. */
+export const progress = (a: Attempt): { n: number; total: number } => ({ n: a.i - a.skipped + 1, total: a.items.length - a.skipped });
 
 export function advance(a: Attempt, make: Make, rng: Rng): Attempt {
   if (a.practice && a.pool) {

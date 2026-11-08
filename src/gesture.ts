@@ -15,6 +15,8 @@ const SWITCH_PINCH_PX = 30;
 const TWIST_RAD = (20 * Math.PI) / 180;
 const TAP_PX = 8;
 const TAP_MS = 500;
+// Accessibility mode: a slow or shaky tap still counts.
+const TAP_PX_LOOSE = 16;
 
 /**
  * Returns null until the gesture shows what it is, then what it is now, judged on the fingers' recent movement.
@@ -59,5 +61,6 @@ export function twoFingers(a0: Pt, b0: Pt): (a: Pt, b: Pt) => TwoFingerStep | nu
   };
 }
 
-/** Fingers: the most on the view at once. Lifting after a pinch or a long press is not a tap. */
-export const isTap = (t: { fingers: number; moved: number; ms: number }) => t.fingers === 1 && t.moved <= TAP_PX && t.ms < TAP_MS;
+/** Fingers: the most on the view at once. Lifting after a pinch or a long press is not a tap. loose: accessibility mode. */
+export const isTap = (t: { fingers: number; moved: number; ms: number }, loose = false) =>
+  t.fingers === 1 && (loose ? t.moved <= TAP_PX_LOOSE : t.moved <= TAP_PX && t.ms < TAP_MS);

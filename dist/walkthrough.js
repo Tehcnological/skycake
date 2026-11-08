@@ -14,7 +14,8 @@ function go(p, w, step) {
     const done = step >= w.steps.length;
     return { ...p, step: done ? p.step : Math.max(0, step), t: 0, checking: false, moved: false, done, playing: p.playing && !done };
 }
-export function tick(p, w, dt) {
+/** hold (accessibility mode): a step with no check stops at its end; Play then goes on to the next. */
+export function tick(p, w, dt, hold = false) {
     if (!p.playing)
         return { ...p };
     const len = stepSeconds(w.steps[p.step]);
@@ -23,6 +24,8 @@ export function tick(p, w, dt) {
         return { ...p, t };
     if (w.steps[p.step].check)
         return { ...p, t: len, playing: false, checking: true };
+    if (hold && p.t < len)
+        return { ...p, t: len, playing: false };
     return go(p, w, p.step + 1);
 }
 export const next = (p, w) => go(p, w, p.step + 1);

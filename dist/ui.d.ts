@@ -63,6 +63,29 @@ export type Labels = {
     again: string;
     result: (right: number, total: number) => string;
     nothing: string;
+    /** Accessibility mode's own switch, when the site does not drive it. */
+    a11y: string;
+    /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
+    inView: string;
+    /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */
+    number: string;
+    skip: string;
+    summary: (chart: string, areas: string[], procedures: string[]) => string;
+    /** Accessibility mode's camera pad: each button's name; with Pan pressed the arrows move the map instead. */
+    camera: {
+        group: string;
+        left: string;
+        right: string;
+        up: string;
+        down: string;
+        zoomIn: string;
+        zoomOut: string;
+        pan: string;
+        panLeft: string;
+        panRight: string;
+        panUp: string;
+        panDown: string;
+    };
     /** The generated questions' prompts and their Yes/No answers. */
     ask: {
         findArea: (name: string) => string;
@@ -96,8 +119,9 @@ export type Options = {
     airport?: string;
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;
-    labels?: Omit<Partial<Labels>, "ask"> & {
+    labels?: Omit<Partial<Labels>, "ask" | "camera"> & {
         ask?: Partial<Labels["ask"]>;
+        camera?: Partial<Labels["camera"]>;
     };
     /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
      * desktop: in place of Full screen) calls this. */
@@ -114,6 +138,9 @@ export type Options = {
     } | QuizMode;
     /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
     onResult?: (r: QuizResult) => void;
+    /** Accessibility mode, driven by the site's own toggle (instrumentready.com: a11yOn()). Left out, skycake shows its own
+     * switch in free roam's view controls and keeps it per browser as "skycake-a11y". See docs/accessibility.md. */
+    a11y?: boolean;
 };
 export type QuizMode = {
     quiz: Quiz | "practice";

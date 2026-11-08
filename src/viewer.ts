@@ -114,12 +114,18 @@ export type View = {
   focus(c: Candidate | null): void;
   /** Off, while a question is open: no hover tip (read the chart), and fix tags keep their names but not their altitudes or roles. */
   hints(on: boolean): void;
+  /** Accessibility mode: a numbered badge (1 to n, in list order) on each candidate, over every tag; null clears them. */
+  numbers(list: Candidate[] | null): void;
   /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
   orbit(azimuth: number, polar: number): void;
   /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */
   zoom(factor: number): void;
+  /** Keyboard and the camera pad: moves the map under the camera, right and forward on the ground, by these fractions of the camera's distance. */
+  pan(right: number, forward: number): void;
   /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
   dem(): Int16Array | null;
+  /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
+  setA11y(on: boolean): void;
 };
 /** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
 export type Candidate = { area: string; name: string; floor: string; ceiling: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] };
@@ -136,6 +142,8 @@ export async function build(
   raised: (kind: Kind, on: boolean) => void,
   /** A tap on an airport's tag on the chart. */
   airport: (id: string) => void = () => {},
+  /** Accessibility mode at first; View.setA11y changes it. */
+  a11y = false,
 ): Promise<View> {
   const { bounds: b } = data;
   const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
@@ -145,7 +153,9 @@ export async function build(
   const latLon = (x: number, z: number): [lat: number, lon: number] => [lat0 - z / 60, lon0 + x / (60 * k)];
   const nm = (ft: number) => ft / FT_PER_NM;
   const width = (b.e - b.w) * 60 * k, depth = (b.n - b.s) * 60;
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let still = reduced || a11y;
+  let loose = a11y;
 
   const scene = new THREE.Scene();
   const world = new THREE.Group(); // scaled in y by the exaggeration
@@ -331,6 +341,14 @@ export async function build(
   const span2 = ([p, q]: number[][]) => Math.hypot((q[1] - p[1]) * k, q[0] - p[0]);
   const fat = (color: number, linewidth: number, dashed: boolean, opacity = 1) =>
     new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
+  // Area rims and walls, drawn half again as wide in accessibility mode: each material with its normal width.
+  const widened: [LineMaterial, number][] = [];
+  const WIDE = 1.5;
+  const wide = (m: LineMaterial) => {
+    widened.push([m, m.linewidth]);
+    if (loose) m.linewidth *= WIDE;
+    return m;
+  };
 
   // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
   let mode: Mode = "vfr";
@@ -399,10 +417,10 @@ export async function build(
           run = 0;
         }
       });
-      const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), fat(s.color, 1.6, s.line === "dashed"));
+      const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), wide(fat(s.color, 1.6, s.line === "dashed")));
       if (s.line === "dashed") rim.computeLineDistances();
       group.add(rim);
-      if (ribs.length) group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), fat(s.color, 1, false, 0.45)));
+      if (ribs.length) group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), wide(fat(s.color, 1, false, 0.45))));
     }
     if (s.walls) {
       // The chart's own form: ceiling over floor, on the widest ring.
@@ -425,6 +443,8 @@ export async function build(
     if (!a.procedures.length) continue;
     const node = el("button", "tag apt", a.id);
     node.setAttribute("type", "button");
+    // In accessibility mode the search box's airport list and In view reach them; the map is not dozens of tab stops.
+    if (loose) node.tabIndex = -1;
     node.addEventListener("click", () => tapAirport(a.id));
     addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
   }
@@ -702,6 +722,35 @@ export async function build(
     });
   let shownFixes: { fix: Fix; tag: Tag }[] = [];
 
+  // Accessibility mode's number badges: their own layer, never hidden behind a tag, so every number on a list is on the map.
+  const badgeBox = el("div", "badges");
+  badgeBox.setAttribute("aria-hidden", "true");
+  host.append(badgeBox);
+  let badges: { el: HTMLElement; at: THREE.Vector3 }[] = [];
+  const placeBadges = () => {
+    const { clientWidth: w, clientHeight: h } = host;
+    for (const b of badges) {
+      v.set(b.at.x, b.at.y * world.scale.y, b.at.z).project(camera);
+      const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h;
+      const show = v.z < 1 && x >= 0 && x <= w && y >= 0 && y <= h;
+      b.el.style.visibility = show ? "visible" : "hidden";
+      if (show) b.el.style.transform = `translate(${Math.round(x - 12)}px, ${Math.round(y - 12)}px)`;
+    }
+  };
+  // Where a candidate's badge goes: an area where its chart tag goes (raised: at its ceiling), a fix at its altitude, an airport on the ground.
+  const badgeAt = (c: Candidate): THREE.Vector3 | null => {
+    if ("area" in c) {
+      const l = lives.find((x) => x.area.id === c.area);
+      if (!l) return null;
+      const [x, z] = deepest(l.rings.reduce((a, r) => (r.length > a.length ? r : a)));
+      return new THREE.Vector3(x, l.goal ? nm(l.area.ceiling) : groundAt(x, z), z);
+    }
+    const [lat, lon] = c.at;
+    const fix = "fix" in c ? shownFixes.find(({ fix: f }) => f.name === c.fix && f.lat === lat && f.lon === lon)?.fix : undefined;
+    const apt = "airport" in c ? data.airports.find((a) => a.id === c.airport) : undefined;
+    return new THREE.Vector3(X(lon), fix ? nm(fix.ft) : apt ? nm(apt.elev) : groundAt(X(lon), Z(lat)), Z(lat));
+  };
+
   // An airport diagram draped a little above the ground, or none. The same one again is left as it is.
   let plate: THREE.Mesh | null = null, plateUrl: string | null = null, plateTicket = 0;
   const showDiagram = async (d: { url: string; bounds: Bounds } | null) => {
@@ -892,7 +941,7 @@ export async function build(
     const touch = fingers.delete(e.pointerId);
     regrip();
     if (fingers.size) return;
-    if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 })) return;
+    if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose)) return;
     // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
     const tag = airportTags.find((t) => {
       const r = t.el.getBoundingClientRect();
@@ -932,6 +981,15 @@ export async function build(
 
   const view: View = {
     dem: () => dem,
+    setA11y: (on) => {
+      loose = on;
+      still = reduced || on;
+      for (const [m, w] of widened) m.linewidth = on ? w * WIDE : w;
+      for (const t of airportTags) t.el.tabIndex = on ? -1 : 0;
+      // The mode's tags are larger: measure them again.
+      for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags]) t.w = 0;
+      dirty = true;
+    },
     raise: (kind, on) => {
       for (const l of lives) if (l.area.kind === kind) set(l, on);
       setKind(kind);
@@ -959,6 +1017,21 @@ export async function build(
       const off = camera.position.clone().sub(controls.target);
       off.setLength(Math.min(Math.max(off.length() * factor, controls.minDistance), controls.maxDistance));
       camera.position.copy(controls.target).add(off);
+      takeOver();
+      dirty = true;
+    },
+    pan: (right, forward) => {
+      // The camera's facing, flattened onto the ground; looking straight down, up on screen is forward.
+      const off = controls.target.clone().sub(camera.position);
+      const ahead = new THREE.Vector3(off.x, 0, off.z);
+      if (ahead.lengthSq() < 1e-9) ahead.set(0, 1, 0).applyQuaternion(camera.quaternion).setY(0);
+      ahead.normalize();
+      const side = new THREE.Vector3(-ahead.z, 0, ahead.x);
+      const shift = side.multiplyScalar(right).addScaledVector(ahead, forward).multiplyScalar(off.length());
+      camera.position.add(shift);
+      controls.target.add(shift);
+      keepOnChart();
+      controls.update();
       takeOver();
       dirty = true;
     },
@@ -1114,6 +1187,17 @@ export async function build(
       world.add(focusMark);
       dirty = true;
     },
+    numbers: (list) => {
+      badgeBox.replaceChildren();
+      badges = (list ?? []).flatMap((c, i) => {
+        const at = badgeAt(c);
+        if (!at) return [];
+        const b = el("span", "badge", String(i + 1));
+        badgeBox.append(b);
+        return [{ el: b, at }];
+      });
+      placeBadges();
+    },
     hints: (on) => {
       host.classList.toggle("sc-no-hints", !on);
       for (const t of approachTags) t.w = 0; // the altitudes change the tags' widths
@@ -1156,6 +1240,7 @@ export async function build(
     dirty = false;
     renderer.render(scene, camera);
     place();
+    placeBadges();
   });
 
   return view;

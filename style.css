@@ -267,3 +267,86 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
   .skycake.sc-quizzing .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
 }
+
+/* Accessibility mode (data-a11y on the figure), and anyone whose system asks for more contrast: text at least 4.5:1 and
+   control borders at least 3:1 on the panels. A host's own tokens still win, so instrumentready.com's raised ones apply
+   there (and it stays red). See docs/accessibility.md. */
+.skycake[data-a11y] { --sc-soft: var(--soft, #c5c8cc); --sc-muted: var(--muted, #b0b4b9); --sc-dim: var(--dim, #969ba1); --sc-frame: var(--frame, #767c83); --sc-accent: var(--red, #6aa6e8); }
+@media (prefers-contrast: more) {
+  .skycake { --sc-soft: var(--soft, #c5c8cc); --sc-muted: var(--muted, #b0b4b9); --sc-dim: var(--dim, #969ba1); --sc-frame: var(--frame, #767c83); --sc-accent: var(--red, #6aa6e8); }
+}
+/* One focus ring for everything, seen over light and dark chart: a dark gap, a 3px ring in the text color, a dark halo. */
+.skycake[data-a11y] :focus-visible { outline: 3px solid var(--sc-ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--sc-side); }
+/* The view clips its children, so its ring is drawn inside. */
+.skycake[data-a11y] .view:focus-visible { outline-offset: -5px; box-shadow: none; }
+/* Larger tags on solid backgrounds. */
+.skycake[data-a11y] .view .tag { font-size: 13px; }
+.skycake[data-a11y] .view .fix { border-color: #fff; background: #14171c; }
+.skycake[data-a11y] .view .tag.apt, .skycake[data-a11y] .view .tag.plane, .skycake[data-a11y] .view .wp { background: #14171c; }
+.skycake[data-a11y] .sc-round[data-tip]::after { transition: none; }
+/* The mode's own switch, when the site has none: a pill row under the view buttons; on a phone, the View sheet's foot. */
+.skycake .sc-a11y-row { box-sizing: border-box; padding: 0 8px 0 18px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); background: var(--sc-panel); box-shadow: 0 2px 8px rgb(0 0 0 / 0.45); color: var(--sc-ink); font: 600 13px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; }
+.skycake .sc-a11y-row input { width: 22px; height: 22px; }
+.skycake .sc-br { align-items: flex-end; }
+/* The search panel stops above the view buttons, the switch row (44px) and its gap too. */
+.skycake:has(.sc-a11y-row) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 380px); }
+@media (max-width: 860px) {
+  .skycake .sc-br { align-items: flex-start; }
+  .skycake:has(.sc-a11y-row) .sc-tr { max-height: calc((100% - 76px) * 0.6); }
+  .skycake .sc-a11y-row { flex-basis: 100%; margin-top: 8px; box-shadow: none; }
+}
+
+/* Accessibility mode's camera pad: inside the view, bottom left, above the caption line. A ring of arrows around a centre
+   mark; zoom and Pan beside it. Over the phone's wake button; under the open sheets. */
+.skycake .sc-pad { display: none; position: absolute; z-index: 3; left: var(--sc-gap); bottom: 44px; align-items: flex-end; gap: 8px; }
+.skycake[data-a11y] .sc-pad { display: flex; }
+.skycake.sc-preview .sc-pad { display: none; }
+.skycake .sc-pad .sc-round { width: 44px; height: 44px; }
+.skycake .sc-pad-ring { display: grid; grid-template: repeat(3, 44px) / repeat(3, 44px); gap: 2px; }
+.skycake .sc-pad-ring .sc-pad-up { grid-area: 1 / 2; }
+.skycake .sc-pad-ring .sc-pad-left { grid-area: 2 / 1; }
+.skycake .sc-pad-mid { grid-area: 2 / 2; place-self: center; width: 10px; height: 10px; border: 2px solid var(--sc-soft); border-radius: 50%; background: var(--sc-panel); }
+.skycake .sc-pad-ring .sc-pad-right { grid-area: 2 / 3; }
+.skycake .sc-pad-ring .sc-pad-down { grid-area: 3 / 2; }
+.skycake .sc-pad-side { display: flex; flex-direction: column; gap: 6px; }
+/* Desktop quizzes: the card owns the bottom, so the pad sits under the count. */
+@media (min-width: 861px) {
+  /* The Airspace and In view lists stop above the pad (3 x 44px and gaps, over the 44px caption strip). */
+  .skycake[data-a11y] .sc-tl { max-height: calc(100% - var(--sc-gap) - 44px - 152px); }
+  .skycake.sc-quizzing .sc-pad { top: calc(var(--sc-gap) + 56px); bottom: auto; }
+}
+@media (max-width: 860px) {
+  .skycake .sc-pad { bottom: 40px; }
+  /* Above the wake pill (16px under it, 44px tall). */
+  .skycake.sc-quizzing .sc-pad { bottom: 68px; }
+}
+
+/* Accessibility mode's In view: a pill and list under Airspace (desktop), a tab and sheet (phone). Off the mode, hidden. */
+.skycake:not([data-a11y]) .sc-inview-pill, .skycake:not([data-a11y]) .sc-inview-tab, .skycake:not([data-a11y]) .sc-inview, .skycake:not([data-a11y]) .badges { display: none !important; }
+.skycake .sc-inview-pill { flex: none; }
+.skycake .sc-inview { display: none; flex-direction: column; padding: 8px; min-height: 0; overflow: auto; }
+.skycake.sc-open-inview .sc-inview { display: flex; }
+.skycake .sc-pick { display: flex; flex-direction: column; gap: 2px; }
+.skycake .sc-pick .sc-option { display: flex; align-items: center; gap: 10px; }
+.skycake .sc-pick .sc-option[aria-pressed="true"] { background: var(--sc-accent-bg); box-shadow: inset 3px 0 0 var(--sc-accent); }
+/* A number: in a list and as a badge on the map, the same white circle with a dark number. */
+.skycake .sc-num, .skycake .view .badge { min-width: 24px; height: 24px; box-sizing: border-box; padding: 0 5px; border: 1.5px solid #14171c; border-radius: 12px; background: #fff; color: #14171c; font: 700 13px/21px var(--sc-mono); text-align: center; }
+.skycake .sc-num { flex: none; }
+@media (max-width: 860px) {
+  .skycake .sc-inview { border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; border-width: 1px 0 0; max-height: 60svh; background: var(--sc-panel); }
+  .skycake .sc-tl .sc-inview-pill { display: none; }
+  .skycake.sc-open-inview .sc-inview { padding-bottom: 34px; }
+}
+/* Number badges on the map: a white circle with a dark number, over every tag. */
+.skycake .view .badges { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.skycake .view .badge { position: absolute; left: 0; top: 0; box-shadow: 0 1px 4px rgb(0 0 0 / 0.5); }
+
+/* Accessibility mode's question card: Check full width under the choices; a find question's numbers, field and Skip. */
+.skycake .sc-card .sc-check { width: 100%; }
+.skycake .sc-card .sc-check:disabled { opacity: 0.5; }
+.skycake .sc-card .sc-skip { align-self: flex-start; }
+/* Two rows, scrolling: the card stays low so the badges on the map stay in sight; typing the number is the quick way. */
+.skycake .sc-card .sc-pick-numbers { flex-flow: row wrap; gap: 6px; max-height: 94px; overflow: auto; }
+.skycake .sc-card .sc-pick-numbers .sc-option { min-width: 44px; justify-content: center; padding: 0 8px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); }
+.skycake .sc-card .sc-pick-numbers .sc-option[aria-pressed="true"] { border-color: var(--sc-accent); background: var(--sc-accent-bg); box-shadow: none; }
+.skycake .sc-card .sc-pick-numbers .sc-num { border: 0; background: none; color: inherit; }

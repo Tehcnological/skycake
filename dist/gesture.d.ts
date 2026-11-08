@@ -15,9 +15,9 @@ export type TwoFingerStep = {
  * swipe looks like one finger pulling away from the other.
  */
 export declare function twoFingers(a0: Pt, b0: Pt): (a: Pt, b: Pt) => TwoFingerStep | null;
-/** Fingers: the most on the view at once. Lifting after a pinch or a long press is not a tap. */
+/** Fingers: the most on the view at once. Lifting after a pinch or a long press is not a tap. loose: accessibility mode. */
 export declare const isTap: (t: {
     fingers: number;
     moved: number;
     ms: number;
-}) => boolean;
+}, loose?: boolean) => boolean;

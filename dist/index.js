@@ -2,3 +2,4 @@
 export { mount, LABELS } from "./ui.js";
 export { KINDS } from "./airspace.js";
 export { validateQuiz, validateWalkthrough } from "./validate.js";
+export { A11Y_KEY, browserStorage, stored, store } from "./a11y.js";
