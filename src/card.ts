@@ -77,9 +77,11 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
   let pick: ReturnType<typeof picker> | null = null;
 
   const me = {};
+  // Taking the view from another card: what that card left on it (its tap, outline and number badges) goes.
   if (owner.has(view)) {
     view.tap(null);
     view.focus(null);
+    view.numbers(null);
   }
   owner.set(view, me);
   view.hints(false);
