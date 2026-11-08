@@ -126,6 +126,7 @@ test("a find prompt's right areas are exactly what it names: every piece of a na
       const named = data.areas.filter((x) => x.name === a.name && (byName || (x.floor === a.floor && x.ceiling === a.ceiling)));
       assert.deepEqual(right, new Set(named.map((x) => x.id)), q.prompt);
       if (data.areas.filter((x) => x.name === a.name).length > 1) asked[byName ? "name" : "piece"]++;
+      if (!byName) assert.ok(["B", "C"].includes(a.kind), `${q.prompt}: the chart prints no altitudes for ${a.kind}`);
     } else {
       const r = q.scene!.procedures![0], p = procedures.find((x) => x.airport === r.airport && x.name === r.name)!;
       assert.equal(p.fixes.filter((f) => f.name === (q.answer as { fix: string }).fix).length, 1);
