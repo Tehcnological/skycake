@@ -32,7 +32,7 @@ mount(document.querySelector("#airspace")!, {
 });
 ```
 
-`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens.
+`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
 ## Data
 
@@ -52,7 +52,7 @@ Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/sup
 
 ## SkyCake Viewer (the app)
 
-`app/` is a standalone web app around `mount()`: a start screen lists the areas, each with a button that saves it for offline use and the date its data is current through, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). Its accent is blue, set in `app/app.css` only; the library's default stays red. On-screen words in `app/main.ts` are placeholders.
+`app/` is a standalone web app around `mount()`: a start screen lists the areas, each with a button that saves it for offline use and the date its data is current through, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are placeholders.
 
 `npm run app` bundles it with three.js (esbuild) into `www/`, with the library's `style.css`, a copy of `data/`, `data/manifest.json` (per area: edition, current-through date, files and size) and a service worker. The service worker caches the app itself on first load; saved areas go in their own caches, one per area and edition. To try it: `npm run app && npm run demo`, then http://localhost:5179/www/.
 
@@ -74,7 +74,16 @@ Free, no payment method needed. In the Cloudflare dashboard: Workers & Pages, Cr
 | Root directory | (blank) |
 | Environment variable | `NODE_VERSION` = `22` |
 
-Pages runs `npm ci` itself before the build command. Each PR also gets a preview URL. A custom domain is added later under the project's Custom domains tab.
+Pages runs `npm ci` itself before the build command. Each PR also gets a preview URL. The app has no host name in its code, so a custom domain needs no change here.
+
+### skycake.app
+
+Once the Pages project is up: open it, Custom domains, Set up a custom domain, enter `skycake.app`, then Activate domain. An apex domain like this one has to be a zone on the same Cloudflare account:
+
+- Bought through Cloudflare Registrar: it already is, and Cloudflare adds the DNS record itself.
+- Bought elsewhere: first add it as a domain (`skycake.app`, Free plan) and change the nameservers at the registrar to the two Cloudflare gives you, then add the custom domain.
+
+`.app` is HTTPS only for every browser, which Pages handles with its own certificate. Add `www.skycake.app` the same way if you want it too.
 
 ## CI
 

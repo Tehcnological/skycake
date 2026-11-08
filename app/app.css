@@ -1,7 +1,6 @@
-/* SkyCake Viewer only. The blue lives here; the library's default stays red for the sites. */
+/* SkyCake Viewer only. The map takes its blue from style.css; --accent is the same blue for the start screen. */
 :root { color-scheme: dark; --accent: #3d7bc2; }
 html, body { margin: 0; background: #17191c; color: #d9dadc; font-family: system-ui, sans-serif; }
-.skycake { --sc-accent: var(--accent); --sc-accent-bg: rgb(61 123 194 / 0.16); }
 
 /* The start screen: one row per area, in the library's pill style. */
 .areas { box-sizing: border-box; max-width: 480px; margin: 0 auto; padding: 24px 16px; }
