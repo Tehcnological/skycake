@@ -105,8 +105,10 @@ All four share `prompt`, optional `scene` (default chosen per type, below), opti
 | Type | Student does | Answer | Default scene |
 |---|---|---|---|
 | `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM on the ground) | `camera: "top"`, nothing raised |
-| `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target raised alone, oblique |
-| `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, oblique |
+| `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target flat on the chart, camera moved top-down to it |
+| `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, camera moved top-down over it |
+
+Any question answered by reading the chart starts with the camera moved top-down, so the sectional can be read; nothing locks it there, and the student can still turn and tilt (Chris, 2026-11-07). Tags, and the floor and ceiling in the hover tip, stay hidden until the answer, since they would give it away. The 3D reveal comes after the answer.
 | `procedure` | picks a choice | a choice | only the procedures asked about shown, framed |
 
 ### Format

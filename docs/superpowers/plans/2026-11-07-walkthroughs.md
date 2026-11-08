@@ -102,6 +102,7 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
   - `export type Candidate = { area: string; name: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] }`.
   - `View.onScreen(): Candidate[]`: what can be tapped and is at least partly in view. Areas come first, smallest first, then the fixes of the shown procedures, then airports with a tag. These are the keyboard's "tap to find" choices.
   - `View.focus(c: Candidate | null): void`: outlines the area, or rings the fix or airport, as focused.
+  - `View.hints(on: boolean): void`. Off hides the hover and tap tip, which shows an area's floor and ceiling, and the altitudes in fix tags; it keeps their names. While a question is open these would show the answer. On by default; the card turns it off for the question and back on at the reveal.
   - The viewer dispatches `skycake-moved` (bubbles) on its host when the person drags, pinches or uses the keys.
 
 - [ ] **Step 1: Write the failing tests** in `src/fly.test.ts` with a hand-made `proc` whose paths are, in file order: transition `[[33,-112,6000],[33,-111.95,5000]]`, common `[[33,-111.95,5000],[33,-111.9,4000]]`, final `[[33,-111.9,4000],[33,-111.85,3000],[33,-111.8,1500]]`, missed `[[33,-111.8,1500],[33,-111.7,5000]]`; and `missedOnly`, with only that missed path:
@@ -164,16 +165,22 @@ test("a real SID flies runway leg, common route, then its enroute transition", (
 - Modify: `src/ui.ts` (`Labels`, `LABELS`), `style.css` (`.sc-card`)
 
 **Interfaces:**
-- Consumes: `Target`, `Scene`, `Resolved` (Task 1); `View.tap`, `View.onScreen`, `View.focus`, `Candidate` (Task 2); `nm()` from `cifp.ts`.
+- Consumes: `Target`, `Scene`, `Resolved` (Task 1); `View.tap`, `View.onScreen`, `View.focus`, `View.hints`, `Candidate` (Task 2); `nm()` from `cifp.ts`.
 - Produces (`question.ts`, pure):
   - `export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string } & ({ type: "find"; answer: Target } | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number } | { type: "read"; number: { answer: number; tolerance: number; unit?: string } })`
   - `export type Answer = { choice: number } | { number: number } | { area: string | null; at: [lat: number, lon: number] | null }`
   - `export type Locate = (t: Target) => [lat: number, lon: number] | null` (fix or airport position; the caller builds it from `data.airports`, `data.waypoints` and loaded procedure fixes).
   - `export function score(q: Question, a: Answer, locate: Locate): boolean`: a choice matches `answer`; a number is right when `|n - answer| <= tolerance`; a find answer is right when its `area` equals an `area` target, or its `at` is within 1.5 NM of a fix or airport target's position.
-  - `export function questionScene(q: Question): Scene`: the type's default scene with `q.scene` laid over it field by field. Defaults: `find` `{ camera: "top", raise: [] }`; `read` `{ raise: <the area targets in q.scene.highlight>, camera: { frame: <q.scene.highlight>, tilt: 32 } }`; `airplane` `{ raise: [], camera: { frame: [{ point: <airplane.at lat, lon> }], tilt: 32 } }` when `q.scene.airplane` is `at`; `procedure` `{ camera: { frame: <q.scene.procedures as targets> } }`.
-  - `export function revealScene(q: Question): Scene`: the question scene with the answer raised (an `area` answer or highlighted areas) and a `"top"` camera tilted to 32.
+  - `export function questionScene(q: Question): Scene`: the type's default scene, with `q.scene` laid over it field by field.
+    - **Chart-reading questions start top-down** (Chris, 2026-11-07), so the chart can be read: find, read and airplane. The camera flies there as the question starts, but nothing locks it. The student can turn and tilt as in free roam.
+    - **Defaults:**
+      - `find`: `{ camera: "top", raise: [], tags: false }`.
+      - `read`: `{ camera: { frame: <q.scene.highlight>, tilt: 90 }, raise: [], tags: false }`. The highlighted area stands out flat on the chart.
+      - `airplane` (when `q.scene.airplane` is `at`): `{ camera: { frame: <four points 5 NM north, south, east and west of the airplane>, tilt: 90 }, raise: [], tags: false }`.
+      - `procedure`: `{ camera: { frame: <q.scene.procedures as targets> } }`, oblique as it is drawn in 3D.
+  - `export function revealScene(q: Question): Scene`: after the answer, the question scene with the answer raised (an `area` answer, or the highlighted areas), tags on, and the camera tilted to 32 on the same frame.
 - Produces (`card.ts`, DOM):
-  - `export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void }`. Choices are buttons; a number question is an input (`inputmode="decimal"`) with its unit and a submit button; a find question shows only the prompt, calls `view.tap(...)` and lists `view.onScreen()` as visually hidden buttons named after each candidate. Tab moves through them and calls `view.focus`. Enter answers: an area candidate with `{ area, at: null }`, a fix or airport with `{ area: null, at: c.at }`, so keyboard answers score exactly like taps. `reveal` disables the answers, shows an icon plus the word right or wrong (never color alone), `facts`, the explanation if any, and one button labelled `button`. The prompt and result are in an `aria-live="polite"` region.
+  - `export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void }`. Choices are buttons; a number question is an input (`inputmode="decimal"`) with its unit and a submit button; a find question shows only the prompt, calls `view.tap(...)` and lists `view.onScreen()` as visually hidden buttons named after each candidate. Tab moves through them and calls `view.focus`. Enter answers: an area candidate with `{ area, at: null }`, a fix or airport with `{ area: null, at: c.at }`, so keyboard answers score exactly like taps. `reveal` disables the answers, shows an icon plus the word right or wrong (never color alone), `facts`, the explanation if any, and one button labelled `button`. The prompt and result are in an `aria-live="polite"` region. The card calls `view.hints(false)` while the question is open, and `view.hints(true)` at the reveal and on `remove`.
   - New `Labels`: `right: "Right"`, `wrong: "Wrong"`, `submit: "Check"`, `continue: "Continue"`, `facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}``.
 
 - [ ] **Step 1: Write the failing tests** in `src/question.test.ts`:
@@ -195,10 +202,16 @@ test("each type scores right and wrong", () => {
   assert.equal(score(fix, { area: null, at: [33.4, -112.2 + 1.6 / 60 / Math.cos((33.4 * Math.PI) / 180)] }, at), false);
 });
 test("default scenes per type, with the question's own fields winning", () => {
-  assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" } }), { camera: "top", raise: [] });
+  assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" } }), { camera: "top", raise: [], tags: false });
   assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" }, scene: { raise: ["D"] } }).raise, ["D"]);
   const read = questionScene({ type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } });
-  assert.deepEqual(read.raise, [{ area: "x" }]);
+  assert.deepEqual([read.raise, read.camera], [[], { frame: [{ area: "x" }], tilt: 90 }]); // top-down, flat, to read the chart
+  const plane = questionScene({ type: "airplane", prompt: "", choices: ["a", "b"], answer: 0, scene: { airplane: { at: [33.4, -112, 4500] } } });
+  assert.equal((plane.camera as { tilt: number }).tilt, 90);
+});
+test("the reveal raises the answer and tilts to 3D", () => {
+  const q = { type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } } as const;
+  assert.deepEqual([revealScene(q).raise, revealScene(q).camera, revealScene(q).tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 32 }, true]);
 });
 ```
 
