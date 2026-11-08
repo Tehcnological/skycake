@@ -674,6 +674,36 @@ a11y = false) {
         }
     });
     let shownFixes = [];
+    // Accessibility mode's number badges: their own layer, never hidden behind a tag, so every number on a list is on the map.
+    const badgeBox = el("div", "badges");
+    badgeBox.setAttribute("aria-hidden", "true");
+    host.append(badgeBox);
+    let badges = [];
+    const placeBadges = () => {
+        const { clientWidth: w, clientHeight: h } = host;
+        for (const b of badges) {
+            v.set(b.at.x, b.at.y * world.scale.y, b.at.z).project(camera);
+            const x = (v.x * 0.5 + 0.5) * w, y = (-v.y * 0.5 + 0.5) * h;
+            const show = v.z < 1 && x >= 0 && x <= w && y >= 0 && y <= h;
+            b.el.style.visibility = show ? "visible" : "hidden";
+            if (show)
+                b.el.style.transform = `translate(${Math.round(x - 12)}px, ${Math.round(y - 12)}px)`;
+        }
+    };
+    // Where a candidate's badge goes: an area where its chart tag goes (raised: at its ceiling), a fix at its altitude, an airport on the ground.
+    const badgeAt = (c) => {
+        if ("area" in c) {
+            const l = lives.find((x) => x.area.id === c.area);
+            if (!l)
+                return null;
+            const [x, z] = deepest(l.rings.reduce((a, r) => (r.length > a.length ? r : a)));
+            return new THREE.Vector3(x, l.goal ? nm(l.area.ceiling) : groundAt(x, z), z);
+        }
+        const [lat, lon] = c.at;
+        const fix = "fix" in c ? shownFixes.find(({ fix: f }) => f.name === c.fix && f.lat === lat && f.lon === lon)?.fix : undefined;
+        const apt = "airport" in c ? data.airports.find((a) => a.id === c.airport) : undefined;
+        return new THREE.Vector3(X(lon), fix ? nm(fix.ft) : apt ? nm(apt.elev) : groundAt(X(lon), Z(lat)), Z(lat));
+    };
     // An airport diagram draped a little above the ground, or none. The same one again is left as it is.
     let plate = null, plateUrl = null, plateTicket = 0;
     const showDiagram = async (d) => {
@@ -1169,6 +1199,18 @@ a11y = false) {
             world.add(focusMark);
             dirty = true;
         },
+        numbers: (list) => {
+            badgeBox.replaceChildren();
+            badges = (list ?? []).flatMap((c, i) => {
+                const at = badgeAt(c);
+                if (!at)
+                    return [];
+                const b = el("span", "badge", String(i + 1));
+                badgeBox.append(b);
+                return [{ el: b, at }];
+            });
+            placeBadges();
+        },
         hints: (on) => {
             host.classList.toggle("sc-no-hints", !on);
             for (const t of approachTags)
@@ -1214,6 +1256,7 @@ a11y = false) {
         dirty = false;
         renderer.render(scene, camera);
         place();
+        placeBadges();
     });
     return view;
 }

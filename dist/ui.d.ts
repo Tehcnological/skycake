@@ -65,6 +65,9 @@ export type Labels = {
     nothing: string;
     /** Accessibility mode's own switch, when the site does not drive it. */
     a11y: string;
+    /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
+    inView: string;
+    summary: (chart: string, areas: string[], procedures: string[]) => string;
     /** Accessibility mode's camera pad: each button's name; with Pan pressed the arrows move the map instead. */
     camera: {
         group: string;

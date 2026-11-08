@@ -311,6 +311,8 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-pad-side { display: flex; flex-direction: column; gap: 6px; }
 /* Desktop quizzes: the card owns the bottom, so the pad sits under the count. */
 @media (min-width: 861px) {
+  /* The Airspace and In view lists stop above the pad (3 x 44px and gaps, over the 44px caption strip). */
+  .skycake[data-a11y] .sc-tl { max-height: calc(100% - var(--sc-gap) - 44px - 152px); }
   .skycake.sc-quizzing .sc-pad { top: calc(var(--sc-gap) + 56px); bottom: auto; }
 }
 @media (max-width: 860px) {
@@ -318,3 +320,21 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   /* Above the wake pill (16px under it, 44px tall). */
   .skycake.sc-quizzing .sc-pad { bottom: 68px; }
 }
+
+/* Accessibility mode's In view: a pill and list under Airspace (desktop), a tab and sheet (phone). Off the mode, hidden. */
+.skycake:not([data-a11y]) .sc-inview-pill, .skycake:not([data-a11y]) .sc-inview-tab, .skycake:not([data-a11y]) .sc-inview, .skycake:not([data-a11y]) .badges { display: none !important; }
+.skycake .sc-inview-pill { flex: none; }
+.skycake .sc-inview { display: none; flex-direction: column; padding: 8px; min-height: 0; overflow: auto; }
+.skycake.sc-open-inview .sc-inview { display: flex; }
+.skycake .sc-pick { display: flex; flex-direction: column; gap: 2px; }
+.skycake .sc-pick .sc-option { display: flex; align-items: center; gap: 10px; }
+.skycake .sc-pick .sc-option[aria-pressed="true"] { background: var(--sc-accent-bg); box-shadow: inset 3px 0 0 var(--sc-accent); }
+.skycake .sc-num { flex: none; min-width: 24px; height: 24px; box-sizing: border-box; padding: 0 5px; border: 1.5px solid #14171c; border-radius: 12px; background: #fff; color: #14171c; font: 700 13px/21px var(--sc-mono); text-align: center; }
+@media (max-width: 860px) {
+  .skycake .sc-inview { border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; border-width: 1px 0 0; max-height: 60svh; background: var(--sc-panel); }
+  .skycake .sc-tl .sc-inview-pill { display: none; }
+  .skycake.sc-open-inview .sc-inview { padding-bottom: 34px; }
+}
+/* Number badges on the map: a white circle with a dark number, over every tag. */
+.skycake .view .badges { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.skycake .view .badge { position: absolute; left: 0; top: 0; min-width: 24px; height: 24px; box-sizing: border-box; padding: 0 5px; border: 1.5px solid #14171c; border-radius: 12px; background: #fff; color: #14171c; font: 700 13px/21px var(--sc-mono); text-align: center; box-shadow: 0 1px 4px rgb(0 0 0 / 0.5); }

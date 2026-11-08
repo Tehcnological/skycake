@@ -42,6 +42,8 @@ export type View = {
     focus(c: Candidate | null): void;
     /** Off, while a question is open: no hover tip (read the chart), and fix tags keep their names but not their altitudes or roles. */
     hints(on: boolean): void;
+    /** Accessibility mode: a numbered badge (1 to n, in list order) on each candidate, over every tag; null clears them. */
+    numbers(list: Candidate[] | null): void;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
     /** Keyboard: moves the camera closer (factor < 1) or farther (factor > 1). */

@@ -70,6 +70,9 @@ export type Labels = {
   nothing: string;
   /** Accessibility mode's own switch, when the site does not drive it. */
   a11y: string;
+  /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
+  inView: string;
+  summary: (chart: string, areas: string[], procedures: string[]) => string;
   /** Accessibility mode's camera pad: each button's name; with Pan pressed the arrows move the map instead. */
   camera: { group: string; left: string; right: string; up: string; down: string; zoomIn: string; zoomOut: string; pan: string; panLeft: string; panRight: string; panUp: string; panDown: string };
   /** The generated questions' prompts and their Yes/No answers. */
@@ -144,6 +147,8 @@ export const LABELS: Labels = {
   result: (right, total) => `Placeholder: ${right} of ${total}`,
   nothing: "Placeholder: Nothing to ask here",
   a11y: "Placeholder: Accessibility mode",
+  inView: "Placeholder: In view",
+  summary: (chart, areas, procedures) => `Placeholder: ${chart}. Raised: ${areas.join("; ") || "none"}. Procedures: ${procedures.join("; ") || "none"}.`,
   camera: {
     group: "Placeholder: Camera",
     left: "Placeholder: Turn left",

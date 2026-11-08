@@ -32,6 +32,7 @@ export declare const ICONS: {
     view: string[];
     full: string[];
     close: string[];
+    list: string[];
 };
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;
