@@ -18,8 +18,8 @@ export function classAt(data, grid, lat, lon, ft) {
     const agl = ft - groundFt(data, grid, lat, lon);
     const ins = data.areas.filter((a) => within(a, lat, lon));
     const slab = (a) => a.floor <= ft && ft < a.ceiling;
-    // The (b)(3) rule is about the surface area of a B or C, so a shelf's outline does not count, and only above its ceiling.
-    const overBC = ins.some((a) => (a.kind === "B" || a.kind === "C") && surface(data, a) && ft >= a.ceiling);
+    // 91.215(b)(3): above the ceiling and within the lateral boundaries of a B or C area, outer shelves included.
+    const overBC = ins.some((a) => (a.kind === "B" || a.kind === "C") && ft >= a.ceiling);
     const veil = ins.some((a) => a.kind === "MODEC" && slab(a));
     const hit = (k) => ins.find((a) => a.kind === k && slab(a) && (k !== "E" || surface(data, a)));
     for (const k of ["B", "C", "D", "E"]) {

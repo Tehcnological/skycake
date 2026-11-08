@@ -63,11 +63,30 @@ test("what a point needs", () => {
   assert.equal(needs(at({ kind: "E", agl: 9000 }), 9999).transponder, false); // below 10,000, no veil, not over B or C
   assert.equal(needs(at({ kind: "E", veil: true, agl: 2000 }), 10000).transponder, false); // the veil stops below 10,000
 });
-test("only the surface area of a B or C counts as 'over' it, and only above its ceiling", () => {
+test("over a B or C: inside any piece's outline (shelves too), at or above that piece's ceiling", () => {
   const c = data.areas.find((a) => a.id === "c-tucson-international-airport-class-c-sfc-66")!;
   const [lat, lon] = deepest(c.rings[0]) as [number, number];
   assert.equal(classAt(data, grid, lat, lon, c.ceiling - 100).overBC, false);
   assert.equal(classAt(data, grid, lat, lon, c.ceiling + 100).overBC, true);
+});
+test("Tucson Class C outer shelf, outside the core and the veil: 7,500 MSL needs a transponder, 3,500 does not", () => {
+  const core = data.areas.find((a) => a.id === "c-tucson-international-airport-class-c-sfc-66")!;
+  const shelf = data.areas.find((a) => a.id === "c-tucson-international-airport-class-c-42-66")!;
+  const veils = data.areas.filter((a) => a.kind === "MODEC");
+  const [s, n, w, e] = [Math.min(...shelf.rings[0].map((p) => p[0])), Math.max(...shelf.rings[0].map((p) => p[0])), Math.min(...shelf.rings[0].map((p) => p[1])), Math.max(...shelf.rings[0].map((p) => p[1]))];
+  let pt: [number, number] | null = null;
+  for (let i = 0; i <= 40 && !pt; i++) for (let j = 0; j <= 40 && !pt; j++) {
+    const p: [number, number] = [s + ((n - s) * i) / 40, w + ((e - w) * j) / 40];
+    if (inRing(p, shelf.rings[0]) && !inRing(p, core.rings[0]) && !veils.some((v) => inRing(p, v.rings[0])) && !nearBoundary(data, grid, p[0], p[1], 7500) && !nearBoundary(data, grid, p[0], p[1], 3500)) pt = p;
+  }
+  assert.ok(pt, "no clear point in the shelf");
+  const hi = classAt(data, grid, pt![0], pt![1], 7500); // above the 6,600 ceiling, below 10,000
+  assert.equal(hi.overBC, true);
+  assert.equal(needs(hi, 7500).transponder, true);
+  const lo = classAt(data, grid, pt![0], pt![1], 3500); // below the 4,200 floor
+  assert.notEqual(lo.kind, "C");
+  assert.equal(lo.overBC, false);
+  assert.equal(needs(lo, 3500).transponder, false);
 });
 test("near a shelf's floor or edge counts as near a boundary", () => {
   const [lat, lon] = inside("b-phoenix-class-b-50-90-4");
