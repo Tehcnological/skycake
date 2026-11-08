@@ -28,7 +28,7 @@ npm install
 npm test
 npm run typecheck
 npm run build          # commit dist/ with the change
-npm run data           # every 28 days; commit data/
+npm run data           # the Data cycle workflow does this every 28 days and opens a PR
 npm run app            # SkyCake Viewer into www/ (not committed)
 ```
 

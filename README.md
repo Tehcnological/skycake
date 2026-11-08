@@ -36,7 +36,15 @@ mount(document.querySelector("#airspace")!, {
 
 ## Data
 
-`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; rerun it then and commit the result. `npm run data -- miami` builds one area, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md).
+`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
+
+### Data cycle workflow
+
+[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, SkyCake Viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
+
+It needs one repo setting: Settings, Actions, General, Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests". Without it the PR step fails, and the branch is pushed with no PR.
+
+The app switches to new data when the PR is merged, on or after the effective date, not ahead of it.
 
 ## Develop
 
@@ -58,7 +66,7 @@ Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/sup
 
 `www/` is ignored by git and is not in `files`, so sites that install skycake never get it, and nothing here builds on install.
 
-For now the current-through date is the chart edition plus 27 days, the last day of the first 28-day procedure cycle in that edition. The scheduled data pipeline should write the real cycle instead.
+The current-through date is the last day of the area's procedure cycle. Data built before `cycle` was recorded falls back to the chart edition, the earliest cycle it can be from.
 
 ### Hosting on Cloudflare Pages
 
