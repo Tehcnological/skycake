@@ -762,6 +762,23 @@ export async function build(
     }
     return null;
   };
+  // A fix sits at its altitude, so the ground under a tap on it can be miles past it in a tilted view: a tap on a shown
+  // fix's tag, or within 24 px of its point, is at the fix.
+  const fixAt = (e: PointerEvent): [lat: number, lon: number] | null => {
+    if (!tagsOn) return null;
+    const r = renderer.domElement.getBoundingClientRect();
+    let best: Fix | null = null, bestD = 24;
+    for (const { fix, tag } of shownFixes) {
+      if (!tag.live()) continue;
+      const b = tag.el.getBoundingClientRect();
+      if (tag.el.style.visibility === "visible" && e.clientX > b.left - 6 && e.clientX < b.right + 6 && e.clientY > b.top - 6 && e.clientY < b.bottom + 6) return [fix.lat, fix.lon];
+      v.set(tag.at.x, tag.at.y * world.scale.y, tag.at.z).project(camera);
+      if (v.z >= 1) continue;
+      const d = Math.hypot(r.left + (v.x * 0.5 + 0.5) * r.width - e.clientX, r.top + (-v.y * 0.5 + 0.5) * r.height - e.clientY);
+      if (d < bestD) [best, bestD] = [fix, d];
+    }
+    return best && [best.lat, best.lon];
+  };
   const pick = (e: PointerEvent): Live | null => {
     const r = renderer.domElement.getBoundingClientRect();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
@@ -883,8 +900,8 @@ export async function build(
     if (tag) return tapAirport(tag.el.textContent!);
     const l = pick(e);
     if (tapFn) {
-      const p = groundHit();
-      if (p) tapFn({ area: l?.area.id ?? null, at: latLon(p.x, p.z) });
+      const fix = fixAt(e), p = fix ? null : groundHit();
+      if (fix || p) tapFn({ area: l?.area.id ?? null, at: fix ?? latLon(p!.x, p!.z) });
       return tell(l, e);
     }
     if (l && l.goal === 1 && picked === l) {
@@ -974,8 +991,8 @@ export async function build(
       for (const t of airportTags) t.el.classList.toggle("hl", hl.some((x) => "airport" in x && x.airport === t.el.textContent));
       // A procedure with draw grows path by path over the timeline; each fix tag shows once its point is drawn.
       const shows = new Map<Fix, number>();
-      procs.forEach((a, i) => {
-        const draw = sc.procedures[i]?.draw, n = a.paths.length, o = dim(hlProcs.includes(a));
+      procs.forEach((a) => {
+        const draw = sc.procedures.find((r) => same(r, a))?.draw, n = a.paths.length, o = dim(hlProcs.includes(a));
         a.paths.forEach((p, k) => {
           const pts = p.pts.map(toLocal), run = runOf(pts);
           const main = p.seg === "final" || p.seg === "common";
@@ -1006,7 +1023,8 @@ export async function build(
       if (plane && !flight) console.warn("skycake: the airplane's procedure was not passed to apply");
       planeTag = null;
       if (flight) {
-        addTag(el("div", "tag plane"), planeAt, -1, () => !!craft, approachTags);
+        // The altitude shows even if the model fails to load: an airplane question is asked about it.
+        addTag(el("div", "tag plane"), planeAt, -1, () => true, approachTags);
         planeTag = approachTags[approachTags.length - 1];
         void loadCraft();
       }

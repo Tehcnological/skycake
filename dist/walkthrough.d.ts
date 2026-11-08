@@ -29,6 +29,7 @@ export declare function play(p: Play): Play;
 export declare const pause: (p: Play) => Play;
 export declare function tick(p: Play, w: Walkthrough, dt: number): Play;
 export declare const next: (p: Play, w: Walkthrough) => Play;
+/** From the end, Back replays the last step. */
 export declare const back: (p: Play, w: Walkthrough) => Play;
 export declare const moved: (p: Play) => Play;
 export declare const answered: (p: Play, w: Walkthrough) => Play;

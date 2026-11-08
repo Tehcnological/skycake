@@ -26,6 +26,7 @@ export function tick(p, w, dt) {
     return go(p, w, p.step + 1);
 }
 export const next = (p, w) => go(p, w, p.step + 1);
-export const back = (p, w) => ({ ...go(p, w, p.step - 1), done: false });
+/** From the end, Back replays the last step. */
+export const back = (p, w) => ({ ...go(p, w, p.done ? p.step : p.step - 1), done: false });
 export const moved = (p) => ({ ...p, playing: false, moved: true });
 export const answered = (p, w) => go({ ...p, playing: true }, w, p.step + 1);

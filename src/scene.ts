@@ -78,9 +78,6 @@ export function stripPlayback(scene: Scene): Scene {
 }
 
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
-/** Every procedure a scene loads: drawn, framed only, and the one the airplane flies. */
-export const sceneRefs = (scene: Scene): ProcedureRef[] => [...(scene.procedures ?? []), ...framedOnly(scene), ...(scene.airplane && "along" in scene.airplane ? [scene.airplane.along] : [])];
-
 export function framedOnly(scene: Scene): ProcedureRef[] {
   const cam = scene.camera;
   if (!cam || typeof cam !== "object" || !("frame" in cam)) return [];
@@ -93,6 +90,9 @@ export function framedOnly(scene: Scene): ProcedureRef[] {
   }
   return out;
 }
+
+/** Every procedure a scene loads: drawn, framed only, and the one the airplane flies. */
+export const sceneRefs = (scene: Scene): ProcedureRef[] => [...(scene.procedures ?? []), ...framedOnly(scene), ...(scene.airplane && "along" in scene.airplane ? [scene.airplane.along] : [])];
 
 /**
  * The scene without each field that names something the data lacks, so the rest still shows; warn() says what was

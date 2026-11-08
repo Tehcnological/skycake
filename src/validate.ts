@@ -16,6 +16,13 @@ function sceneProblems(scene: Scene | undefined, data: AirspaceFile, hasFix: (na
   return out;
 }
 
+/** Whether a fix name is known where the browser looks for a scene's fixes: the procedures it loads, then the area's waypoints. */
+function fixesIn(data: AirspaceFile, loaded: Procedure[], scene: Scene): (name: string) => boolean {
+  const refs = sceneRefs(scene);
+  const locate = locator(data, loaded.filter((p) => refs.some((r) => r.airport === p.airport && r.name === p.name)));
+  return (name) => !!locate({ fix: name });
+}
+
 /** Problems with a find question's answer: what the browser can tap and locate. loaded: every procedure of the area. */
 function answerProblems(q: Extract<Question, { type: "find" }>, data: AirspaceFile, hasFix: (name: string) => boolean, loaded: Procedure[]): string[] {
   const t: unknown = q.answer;
@@ -25,15 +32,13 @@ function answerProblems(q: Extract<Question, { type: "find" }>, data: AirspaceFi
   const area = "area" in q.answer ? q.answer.area : null;
   const kind = data.areas.find((a) => a.id === area)?.kind;
   if (kind === "E700" || kind === "MODEC") out.push(`area ${area} is ${kind}, which cannot be tapped`);
-  // The browser locates a fix in the procedures the question's scene loads, then the area's waypoints.
-  const shown = sceneRefs(questionScene(q));
-  if ("fix" in q.answer && !locator(data, loaded.filter((p) => shown.some((r) => r.airport === p.airport && r.name === p.name)))(q.answer)) out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
+  if ("fix" in q.answer && !fixesIn(data, loaded, questionScene(q))(q.answer.fix)) out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
   return out;
 }
 
 /** Problems with a question, without a prefix; the quiz validator reuses this. loaded: every procedure of the area. */
 export function questionProblems(q: Question, data: AirspaceFile, hasFix: (name: string) => boolean, loaded: Procedure[]): string[] {
-  const out = sceneProblems(q.scene, data, hasFix);
+  const out = sceneProblems(q.scene, data, fixesIn(data, loaded, questionScene(q)));
   if (q.type === "find") out.push(...answerProblems(q, data, hasFix, loaded));
   else if (!("choices" in q) && !("number" in q)) out.push("no choices or number");
   if (q.answerArea !== undefined) out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
@@ -67,7 +72,7 @@ export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, pr
     const problems: string[] = [];
     if (typeof s.caption !== "string") problems.push("caption is not text");
     if (s.seconds !== undefined && !(s.seconds > 0)) problems.push("seconds must be above 0");
-    problems.push(...sceneProblems(s.scene, data, hasFix), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+    problems.push(...sceneProblems(s.scene, data, fixesIn(data, loaded, s.scene ?? {})), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
     out.push(...problems.map((p) => at + p));
   });
   return out;
@@ -79,8 +84,13 @@ export async function validateQuiz(q: Quiz, data: AirspaceFile, procedures: (air
   if (q.area !== area) out.push(`${q.id}: area ${q.area}, data is ${area}`);
   const { loaded, hasFix } = await load(data, procedures);
   const make = maker({ data, grid: null, procedures: loaded, ask: LABELS.ask }, seeded(0));
+  const ids = new Set<string>();
   q.items.forEach((it, i) => {
     const problems: string[] = [];
+    if ("id" in it && it.id !== undefined) {
+      if (ids.has(it.id)) problems.push(`id ${it.id} repeats`);
+      ids.add(it.id);
+    }
     if (!("generate" in it)) problems.push(...questionProblems(it, data, hasFix, loaded));
     else {
       if (!(it.count >= 1)) problems.push("count must be at least 1");

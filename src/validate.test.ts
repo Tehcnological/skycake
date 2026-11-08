@@ -87,6 +87,16 @@ test("a fix on the procedure the airplane flies counts as shown", async () => {
   const q = { ...goodQuiz, items: [{ type: "find", prompt: "?", answer: { fix: "ZINGA" }, scene: { airplane: { along: { airport: "KPHX", name: "ILS RWY 07L" }, seconds: 30 } } }] } as Quiz;
   assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), []);
 });
+test("a fix is known only from the scene's own procedures and the waypoints, as in the browser", async () => {
+  const off = { ...good, steps: [{ caption: "a", scene: { highlight: [{ fix: "ZINGA" }] } }] };
+  assert.deepEqual(await validateWalkthrough(off, data, files, "phoenix"), ["t step 1: no fix ZINGA"]);
+  const on = { ...good, steps: [{ caption: "a", scene: { highlight: [{ fix: "ZINGA" }], procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } }] };
+  assert.deepEqual(await validateWalkthrough(on, data, files, "phoenix"), []);
+});
+test("written item ids must not repeat", async () => {
+  const q = { ...goodQuiz, items: [{ id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 0 }, { id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 1 }] } as Quiz;
+  assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 2: id a repeats"]);
+});
 test("a walkthrough with no steps", async () => assert.deepEqual(await validateWalkthrough({ ...good, steps: [] }, data, files, "phoenix"), ["t: no steps"]));
 test("the demo samples have no problems", async () => {
   assert.deepEqual(await validateQuiz(JSON.parse(readFileSync("demo/class-b-quiz.json", "utf8")), data, files, "phoenix"), []);

@@ -123,7 +123,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   const next = () => {
     if (!a || a.done) return;
     a = advance(a, make, rng);
-    if (!a.done || a.practice) return void ask(); // practice ends only when nothing more can be made
+    if (!a.done) return void ask(); // practice is done only when nothing more can be made; it ends with its score too
     report({ quiz: id, end: true, right: a.right, total: a.items.length });
     note(
       L.result(a.right, a.items.length),

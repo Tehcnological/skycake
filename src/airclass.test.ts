@@ -37,6 +37,15 @@ test("Class E from 1,200 AGL outside E700, and above 14,500 MSL", () => {
   assert.equal(classAt(data, grid, lat, lon, g + 1100).kind, "G");
   assert.equal(classAt(data, grid, lat, lon, g + 1300).kind, "E");
   assert.equal(classAt(data, grid, lat, lon, 14500).kind, "E");
+  // "At and above": the floors themselves are Class E.
+  assert.equal(classAt(data, grid, lat, lon, g + 1200).kind, "E");
+});
+test("Class A from 18,000 MSL: clearance, radio and transponder", () => {
+  const [lat, lon] = [data.bounds.s + 0.02, data.bounds.w + 0.02];
+  assert.equal(classAt(data, grid, lat, lon, 17900).kind, "E");
+  const a = classAt(data, grid, lat, lon, 18000);
+  assert.equal(a.kind, "A");
+  assert.deepEqual(needs(a, 18000), { clearance: true, radio: true, transponder: true });
 });
 test("Class G near the chart's edge at 500 AGL", () => {
   const [lat, lon] = [data.bounds.s + 0.02, data.bounds.w + 0.02];

@@ -1,6 +1,6 @@
 import { type AirspaceFile } from "./airspace.js";
 export type Class = {
-    kind: "B" | "C" | "D" | "E" | "G";
+    kind: "A" | "B" | "C" | "D" | "E" | "G";
     area: string | null;
     veil: boolean;
     overBC: boolean;

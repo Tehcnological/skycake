@@ -155,7 +155,8 @@ function procedure(g, rng) {
             },
             missed: () => {
                 const f = p.fixes.find((x) => x.seg === "missed");
-                return f && make(ask.missed, f.name, p.fixes.filter((x) => x.role !== "MAP").map((x) => x.name));
+                // Wrong choices leave out the MAP and every other missed approach fix (the hold is on the missed approach too).
+                return f && make(ask.missed, f.name, p.fixes.filter((x) => x.role !== "MAP" && x.seg !== "missed").map((x) => x.name));
             },
         };
         for (const k of shuffled(Object.keys(subs), rng)) {

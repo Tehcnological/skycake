@@ -22,20 +22,23 @@ export function classAt(data, grid, lat, lon, ft) {
     const overBC = ins.some((a) => (a.kind === "B" || a.kind === "C") && ft >= a.ceiling);
     const veil = ins.some((a) => a.kind === "MODEC" && slab(a));
     const hit = (k) => ins.find((a) => a.kind === k && slab(a) && (k !== "E" || surface(data, a)));
+    if (ft >= 18000)
+        return { kind: "A", area: null, veil, overBC, agl }; // 71.33: Class A from 18,000 MSL
     for (const k of ["B", "C", "D", "E"]) {
         const a = hit(k);
         if (a)
             return { kind: k, area: a.id, veil, overBC, agl };
     }
     const e = ins.some((a) => a.kind === "E700") ? 700 : 1200;
-    return { kind: agl > e || ft > 14500 ? "E" : "G", area: null, veil, overBC, agl };
+    // Class E from 1,200 AGL (700 in an E700 area) and from 14,500 MSL, the floors included.
+    return { kind: agl >= e || ft >= 14500 ? "E" : "G", area: null, veil, overBC, agl };
 }
 export function needs(c, ft) {
-    const transponder = c.kind === "B" || c.kind === "C" || // (b)(1)
+    const transponder = c.kind === "A" || c.kind === "B" || c.kind === "C" || // 91.135(c); (b)(1)
         (ft < 10000 && (c.veil || c.overBC)) || // (b)(2), (b)(4)
         (ft >= 10000 && c.agl > 2500); // (b)(5)(i)
-    // Clearance: 91.131(a). Radio: 91.131(c)(1) in B, 91.130(c) in C, 91.129(c) in D.
-    return { clearance: c.kind === "B", radio: c.kind !== "E" && c.kind !== "G", transponder };
+    // Clearance: 91.131(a), and 91.135(a) in A (IFR). Radio: 91.135(b) in A, 91.131(c)(1) in B, 91.130(c) in C, 91.129(c) in D.
+    return { clearance: c.kind === "A" || c.kind === "B", radio: c.kind !== "E" && c.kind !== "G", transponder };
 }
 /** NM from a point to the nearest edge of a ring, flat-earth. */
 function edgeNm(lat, lon, r) {

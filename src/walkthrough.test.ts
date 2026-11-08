@@ -46,6 +46,11 @@ test("back and next jump whole steps and keep play or pause", () => {
   assert.equal(back(back(p, w), w).step, 0);
   assert.equal(next(next(next(p, w), w), w).done, true);
 });
+test("back from the end replays the last step", () => {
+  const end = next(next(next(play(begin()), w), w), w);
+  assert.equal(end.done, true);
+  assert.deepEqual([back(end, w).step, back(end, w).done], [w.steps.length - 1, false]);
+});
 test("dragging pauses; play resumes from the step's start", () => {
   let p = moved(tick(play(begin()), w, 2));
   assert.deepEqual([p.playing, p.moved], [false, true]);

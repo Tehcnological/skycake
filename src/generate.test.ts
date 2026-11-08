@@ -200,6 +200,9 @@ test("the missed approach question leaves the MAP out of the wrong choices", () 
       if (q?.prompt !== ask.missed) continue;
       asked++;
       if (q.choices[q.answer] !== map) assert.ok(!q.choices.includes(map), `${p.name}: ${q.choices}`);
+      // Every other missed approach fix stays out too: the holding fix is on the missed approach.
+      const missed = p.fixes.filter((f) => f.seg === "missed").map((f) => f.name);
+      assert.ok(q.choices.filter((c, i) => i !== q.answer).every((c) => !missed.includes(c)), `${p.name}: ${q.choices}`);
     }
   }
   assert.ok(asked > 0);
