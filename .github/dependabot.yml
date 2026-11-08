@@ -1,0 +1,10 @@
+# Keeps the actions in .github/workflows/ current, majors included. npm security updates are on in the repo settings.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

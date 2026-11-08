@@ -1,3 +1,21 @@
+# dist/ and data/ are committed on purpose: sites install skycake straight from GitHub.
 node_modules/
 .cache/
 www/
+
+# Claude Code's local settings and plugin scratch.
+.claude/
+.superpowers/
+
+# Secrets: none in this public repo.
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+
+# Logs, npm pack output, OS files.
+*.log
+*.tgz
+.DS_Store
+Thumbs.db

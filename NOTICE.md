@@ -11,4 +11,4 @@ Everything in `data/` is built by `scripts/build-area.ts` from public domain US 
 
 None of it is for navigation. Procedures are drawn from the coded legs with simple assumptions (300 ft per NM climbs, corners for turns, radar vectors as straight lines); they are not flown profiles.
 
-skycake uses three.js (MIT) in the browser, installed by the site as a peer dependency. Build-time tools (pdf.js, geotiff.js, proj4, sharp and others) are not shipped.
+skycake uses three.js (MIT) in the browser, installed by the site as a peer dependency. SkyCake Viewer (`app/`) bundles three.js into `www/` with esbuild, which keeps three.js's license comment in the bundle. Build-time tools (pdf.js, geotiff.js, proj4, sharp, esbuild and others) are not shipped.
