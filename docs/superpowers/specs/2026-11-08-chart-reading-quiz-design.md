@@ -108,6 +108,7 @@ Shows the sectional top-down, framed on one symbol, with that point highlighted 
 3. Ask "Tap the private airport" (`ask.hunt(kindLabel)`), top-down, sectional, nothing raised, tags off.
 4. Any printed instance of that kind is right, including one the student pans to, within `nm` (about 0.4 NM, a symbol's radius at that zoom). A tap elsewhere is wrong.
 5. A countdown of `seconds` (default 30), shown as a number with a draining line or circle, something obvious (Chris). At 0 the question scores wrong and the reveal rings every instance.
+6. In accessibility mode (see below): a number on every symbol in view, chosen by typing or picking the number, and no countdown.
 
 Kinds for the hunt and "what is this", by how sure we are the symbol is printed:
 
@@ -116,6 +117,14 @@ Kinds for the hunt and "what is this", by how sure we are the symbol is printed:
 | A | public airport towered / non-towered, seaplane base, military airport, VOR, VORTAC, VOR/DME, NDB, VFR waypoint (`CHARTS` has SECTIONAL) | NASR | always, by charting rules |
 | B | private airport, heliport, ultralight park, gliderport, obstacle, group obstacle, obstacle 1,000 ft AGL or higher, parachute area | NASR, DOF | only some: asked only where the image match confirms a symbol at the data point |
 | C, later | abandoned airport | none | found by image matching, confirmed once by Chris; Chris named it as an example, so not in v1 |
+
+## Accessibility mode
+
+Chris, 2026-11-08: skycake gets an accessibility mode, as instrumentready.com has (its toggle sets `data-a11y` on the page and is kept as `ir-a11y`; it raises contrast, swaps instant changes for explicit buttons and drops single-key shortcuts).
+
+- **Turning it on:** a new `mount` option `a11y?: boolean`, which instrumentready.com sets from its own toggle (and updates when the toggle changes); SkyCake Viewer gets its own toggle. Skycake already follows the system's reduced motion setting.
+- **For these questions:** the hunt shows a number on every symbol in view and is answered by the number, with no countdown (time limits must be adjustable for accessibility); the table sheet and the ring highlight follow the mode's higher contrast; every multiple choice question already works from the keyboard.
+- **The rest of skycake** (the map, walkthroughs, other quiz types) in accessibility mode is a design of its own, in a separate spec, as it "changes a lot of things".
 
 ## Data
 
@@ -140,7 +149,7 @@ SUA areas gain `times?: string`, `agency?: string`, `tni?: boolean` from the fie
 
 ### The margin table: `sua-table.webp`
 
-Cropped from the native GeoTIFF by a pixel box per chart in `AREAS` (as the IFR sheets' `panel` is today), webp, native scale, about 650 KB. The Data cycle PR shows the crop so a moved table is caught when the PR is reviewed.
+Cropped from the native GeoTIFF by a pixel box per chart in `AREAS` (as the IFR sheets' `panel` is today), webp, native scale, about 650 KB. The Data cycle PR shows the crop so a moved table is caught when the PR is reviewed. On screen: a Table button on the card opens it full screen with pan and zoom (Chris, 2026-11-08).
 
 ### Image matching (`scripts/symbols.ts`, build time only)
 
@@ -159,7 +168,8 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 - **`src/scene.ts`:** add `table?: boolean` (show the margin table). The hunt needs a way to show the chart with nothing over it; if flat airspace draws over the chart, a scene field to hide it.
 - **`src/generate.ts`:** four generators, `block`, `sua`, `symbol`, `hunt`. `Gen` gains `chart: ChartFile | null` and `symbols?: SymbolKind[]`. A null `chart` (an area built before this) makes `block`, `symbol` and `hunt` return null, so practice skips them.
 - **`src/quiz.ts`:** `Generate` and Practice filters gain `symbols?: SymbolKind[]` and `seconds?: number`. One filter alone keeps to its side, as today: `symbols` alone asks only `symbol` and `hunt`; `kinds` naming only SUA kinds asks `find` and `sua`; `airports` alone also asks `block` about those airports.
-- **`src/quizui.ts`:** the countdown, the table panel, time up.
+- **`src/quizui.ts`:** the countdown, the Table button and its full-screen sheet, time up, the hunt's numbered markers in accessibility mode.
+- **`src/ui.ts` `Options`:** `a11y?: boolean`.
 - **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, date, utc)`, `ask.suaUtc(name, date)`, `ask.suaRules`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
 - **Validation (`src/validate.ts`):** authored questions may name a symbol by `id`; the validator checks it against `chart.json` as it does fixes and areas.
 
@@ -167,7 +177,7 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 
 - **Phoenix and Miami (v1):** about 1 MB more per area (`chart.json`, `sua-table.webp`). Same git, npm and Pages path as today.
 - **Later (Chris, 2026-11-08):** more areas, up to the whole country, each served on its own when a student opens it, never all at once. Worked out when that work starts. Notes for then: a 3D area is about 10 MB today, so dozens of them in git and the npm package every 56 days would be heavy; a lighter chart-only pack per sectional (tiles, `chart.json`, `sua-table.webp`, no terrain or procedures, roughly 15 to 20 MB) could be built in Actions and uploaded straight to Cloudflare Pages instead of committed. That is where approach B (flat crops, no 3D) would come in.
-- **Symbology does not need the current edition.** Hunt and symbol packs could be refreshed yearly instead of every 56 days; the SUA table should follow the edition.
+- **Rebuilt every 56 days with the chart** (Chris, 2026-11-08): the symbols sit on the area's chart image, so `chart.json` and `sua-table.webp` are rebuilt with it.
 
 ## Testing
 
@@ -183,11 +193,7 @@ Maximum elevation figures, landmarks, MTR routes, TFRs, the TAC, IFR chart symbo
 
 ## Open questions for Chris
 
-Still open:
-
-1. **The margin table:** how it shows on screen (recommended: a Table button on the card opening a full-screen sheet with pan and zoom, as the table is 13,000 px wide).
-2. **The hunt for keyboard and screen reader users** (accessibility): numbered markers chosen by number, or leave the hunt pointer-only and give those users "what is this" questions instead.
-3. **How often the symbol data is rebuilt:** every 56 days with the chart (recommended: in v1 the symbols sit on the area's chart image, which is rebuilt every 56 days, so the data must match it) or yearly.
+None. The accessibility mode for the rest of skycake gets its own spec.
 
 Settled with Chris (2026-11-08):
 
@@ -199,4 +205,7 @@ Settled with Chris (2026-11-08):
 - Hunt window: the same size as the normal map, with pan and zoom as usual.
 - The SUA rules sub is in.
 - All times in UTC.
+- The margin table: a Table button opening a full-screen sheet with pan and zoom.
+- Accessibility mode: skycake gets one (host option and the Viewer's own toggle); in it the hunt uses numbered markers and no countdown.
+- Symbol data is rebuilt every 56 days with the chart.
 - Everything else in this spec is approved.
