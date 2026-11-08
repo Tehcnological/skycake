@@ -4,7 +4,8 @@ import { nm } from "./cifp.js";
 import type { Procedure } from "./procedure.js";
 import type { AreaRef, Scene, Target } from "./scene.js";
 
-export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string } & (
+/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area). */
+export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; answerArea?: string } & (
   | { type: "find"; answer: Target }
   | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number }
   | { type: "read"; number: { answer: number; tolerance: number; unit?: string } }
@@ -56,7 +57,7 @@ export function revealScene(q: Question): Scene {
   const s = questionScene(q);
   const areas = (ts: Target[]) => ts.filter((t): t is AreaRef => "area" in t);
   const answer = q.type === "find" ? [q.answer] : [];
-  const raise = areas([...answer, ...(q.scene?.highlight ?? [])]);
+  const raise = areas([...answer, ...(q.scene?.highlight ?? []), ...(q.answerArea ? [{ area: q.answerArea }] : [])]);
   const frame = s.camera && typeof s.camera === "object" && "frame" in s.camera ? s.camera.frame : [...answer, ...(q.scene?.highlight ?? [])];
   return { ...s, raise, tags: true, camera: frame.length ? { frame, tilt: 32 } : s.camera };
 }

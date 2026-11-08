@@ -4,7 +4,8 @@
 import { card } from "./card.js";
 import { ICONS, h, icon } from "./freeroam.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
-import { framedOnly, resolve, stripPlayback, usable } from "./scene.js";
+import { stripPlayback } from "./scene.js";
+import { scenes } from "./scenes.js";
 import { answered, back, begin, moved, next, pause, play, stepSeconds, tick } from "./walkthrough.js";
 const PLAYER = {
     play: ["M7 4.5v15L19.5 12 7 4.5Z"],
@@ -37,50 +38,13 @@ export function player(c, w, nextLink, explore) {
     const big = h("button", { type: "button", class: "sc-big-play", "aria-label": L.play }, icon(PLAYER.play));
     fig.querySelector(".view").after(top, big);
     fig.append(box);
-    const caption = fig.querySelector(".sc-caption");
     let p = begin();
     const frac = () => (p.done ? 1 : p.t / stepSeconds(w.steps[p.step]));
     // The timeline fraction the view shows now.
     let drawn = -1;
-    // A walkthrough replays its steps, so each missing name is reported once.
-    const warned = new Set();
-    const warn = (m) => {
-        if (warned.has(m))
-            return;
-        warned.add(m);
-        console.warn(`skycake: ${m}`);
-    };
-    // Every scene goes through here. Files load out of order, so only the newest scene asked for shows.
-    let ticket = 0;
-    let files = [];
-    // The scene on screen (a step's, or a check's question or reveal), for Explore.
-    let onScreen = {};
-    const show = async (scene, now = false) => {
-        const mine = ++ticket;
-        const plane = scene.airplane && "along" in scene.airplane ? [scene.airplane.along] : [];
-        const load = (refs) => Promise.all(refs.map(async (r) => (await c.procedures(r.airport)).find((x) => x.name === r.name)));
-        // The airplane's procedure goes in too: the viewer flies only a route it was passed.
-        const found = (await load([...(scene.procedures ?? []), ...framedOnly(scene), ...plane])).filter((x) => !!x);
-        if (mine !== ticket)
-            return;
-        const locate = locator(data, found);
-        const ok = usable(scene, data, (fix) => !!locate({ fix }), warn);
-        let r;
-        try {
-            r = resolve(ok, data);
-        }
-        catch (e) {
-            // Never stop on a bad step: its caption shows over the view as it was.
-            warn(`${e instanceof Error ? e.message : e}; leaving the view as it was`);
-            return;
-        }
-        onScreen = ok;
-        files = found;
-        if (caption)
-            caption.textContent = L.caption(data.edition, r.chart);
-        drawn = frac();
-        await v.apply(r, r.procedures.flatMap((x) => found.find((f) => f.airport === x.airport && f.name === x.name) ?? []), now, found, drawn);
-    };
+    // Every scene goes through here; the step's timeline fraction is what the view shows then.
+    const stage = scenes(c, () => (drawn = frac()));
+    const show = stage.show;
     // A quick check: the shared question card in the caption's place. Not scored; Continue plays on.
     let open = null;
     const closeCard = () => {
@@ -94,7 +58,7 @@ export function player(c, w, nextLink, explore) {
         const q = w.steps[p.step].check;
         closeCard();
         const k = card(q, L, v, (a) => {
-            const right = score(q, a, locator(data, files));
+            const right = score(q, a, locator(data, stage.files()));
             void show(revealScene(q));
             k.reveal(right, null, L.continue, () => set(answered(p, w)));
         });
@@ -180,13 +144,13 @@ export function player(c, w, nextLink, explore) {
     const leave = () => {
         cancelAnimationFrame(raf);
         off.abort();
-        ticket++;
+        stage.stop();
         closeCard();
         top.remove();
         big.remove();
         box.remove();
         fig.querySelector(".view")?.focus();
-        explore(stripPlayback({ ...onScreen, camera: v.camera() }));
+        explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));
     };
     exploreTop.addEventListener("click", leave);
     exploreEnd.addEventListener("click", leave);

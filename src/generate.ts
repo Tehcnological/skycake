@@ -99,7 +99,7 @@ function airplane(g: Gen, rng: Rng): Made | null {
     if (nearBoundary(data, grid, lat, lon, ft)) continue;
     const c = classAt(data, grid, lat, lon, ft);
     const area = data.areas.find((a) => a.id === c.area);
-    const base = { type: "airplane" as const, scene: { airplane: { at: [lat, lon, ft] as [number, number, number] } }, facts: area ? factsOf(g, area) : null };
+    const base = { type: "airplane" as const, scene: { airplane: { at: [lat, lon, ft] as [number, number, number] } }, facts: area ? factsOf(g, area) : null, ...(area && { answerArea: area.id }) };
     const kind = (["class", "clearance", "radio", "transponder"] as const)[Math.floor(rng() * 4)];
     if (kind === "class") return { ...base, prompt: ask.airplaneClass, ...choose(c.kind, shuffled(["B", "C", "D", "E", "G"], rng), rng)! };
     return { ...base, prompt: ask[kind], choices: [ask.yes, ask.no], answer: needs(c, ft)[kind] ? 0 : 1 };

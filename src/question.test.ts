@@ -35,6 +35,11 @@ test("the reveal raises the answer and tilts to 3D", () => {
   assert.deepEqual([revealScene(q).raise, revealScene(q).camera, revealScene(q).tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 32 }, true]);
   const f = revealScene({ type: "find", prompt: "", answer: { area: "y" } });
   assert.deepEqual([f.raise, f.camera], [[{ area: "y" }], { frame: [{ area: "y" }], tilt: 32 }]);
+  // An airplane's class area rises, with the camera still on the airplane.
+  const plane = { type: "airplane", prompt: "", choices: ["a", "b"], answer: 0, scene: { airplane: { at: [33.4, -112, 4500] } } } satisfies Question;
+  const p = revealScene({ ...plane, answerArea: "b-1" });
+  assert.deepEqual([p.raise, (p.camera as { frame: unknown[] }).frame.length, p.tags], [[{ area: "b-1" }], 4, true]);
+  assert.deepEqual(revealScene(plane).raise, []);
 });
 
 test("locator finds loaded procedure fixes first, then waypoints, airports and points", () => {

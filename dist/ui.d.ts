@@ -44,6 +44,8 @@ export type Labels = {
     submit: string;
     continue: string;
     facts: (name: string, floor: string, ceiling: string) => string;
+    /** After a wrong answer: the right one. */
+    answerWas: (answer: string) => string;
     /** The walkthrough player: its buttons, the button that leaves into free roam, and the step count ("4/8"). */
     play: string;
     pause: string;

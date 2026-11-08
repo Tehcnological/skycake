@@ -1,11 +1,13 @@
 import type { AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import type { Scene, Target } from "./scene.js";
+/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area). */
 export type Question = {
     id?: string;
     prompt: string;
     scene?: Scene;
     explanation?: string;
+    answerArea?: string;
 } & ({
     type: "find";
     answer: Target;

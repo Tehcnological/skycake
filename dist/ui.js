@@ -35,6 +35,7 @@ export const LABELS = {
     submit: "Check",
     continue: "Continue",
     facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
+    answerWas: (answer) => `Answer: ${answer}`,
     play: "Play",
     pause: "Pause",
     back: "Back",

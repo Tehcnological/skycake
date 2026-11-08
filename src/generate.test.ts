@@ -84,6 +84,18 @@ test("airplane points are never near a boundary and stay in the altitude limits"
     assert.ok(lat >= data.bounds.s && lat <= data.bounds.n && lon >= data.bounds.w && lon <= data.bounds.e);
   }
 });
+test("airplane questions carry the class area at the point, for the reveal to raise", () => {
+  const rng = seeded(7);
+  let some = 0;
+  for (let i = 0; i < 100; i++) {
+    const q = generate("airplane", g, rng)!;
+    const [lat, lon, ft] = (q.scene!.airplane as { at: [number, number, number] }).at;
+    const area = classAt(data, grid, lat, lon, ft).area;
+    assert.equal(q.answerArea, area ?? undefined);
+    if (area) some++;
+  }
+  assert.ok(some > 0);
+});
 test("filters: kinds and airports are respected; nothing left gives null", () => {
   const p = generate("find", { ...g, kinds: ["P"], procedures: [] }, seeded(1));
   if (data.areas.some((a) => a.kind === "P")) assert.equal(data.areas.find((a) => "area" in (p as any).answer && a.id === (p as any).answer.area)!.kind, "P");

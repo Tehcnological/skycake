@@ -4,10 +4,10 @@
 import { card } from "./card.js";
 import { h, type Context } from "./freeroam.js";
 import { areaFacts, type QuestionType } from "./generate.js";
-import type { Procedure } from "./procedure.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice, type Attempt, type Generate, type Item, type QuizResult } from "./quiz.js";
-import { framedOnly, resolve, stripPlayback, usable, type ProcedureRef, type Scene } from "./scene.js";
+import { stripPlayback, type Scene } from "./scene.js";
+import { scenes } from "./scenes.js";
 import type { QuizMode } from "./ui.js";
 
 const TYPES: QuestionType[] = ["find", "read", "airplane", "procedure"];
@@ -25,7 +25,6 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   viewEl.after(top);
   fig.append(box);
   fig.classList.add("sc-quizzing");
-  const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
   // Generated questions draw from the terrain the view loaded and, when a generator can ask about them, the procedures.
   const filters = { kinds: mode.kinds, airports: mode.airports };
@@ -37,36 +36,8 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   const make = maker({ data, grid: v.dem(), procedures, ask: L.ask, facts: L.facts }, rng);
   const start = (): Attempt | null => (mode.quiz === "practice" ? practice(make, mode.types ?? TYPES, filters, rng) : attempt(mode.quiz, make, rng));
 
-  // Questions repeat little, but a written one may name something missing: each warning once.
-  const warned = new Set<string>();
-  const warn = (m: string) => {
-    if (warned.has(m)) return;
-    warned.add(m);
-    console.warn(`skycake: ${m}`);
-  };
-  // Files load out of order, so only the newest scene asked for shows.
-  let ticket = 0;
-  let files: Procedure[] = [];
-  let onScreen: Scene = {};
-  const show = async (scene: Scene, now = false) => {
-    const mine = ++ticket;
-    const plane = scene.airplane && "along" in scene.airplane ? [scene.airplane.along] : [];
-    const load = (refs: ProcedureRef[]) => Promise.all(refs.map(async (r) => (await c.procedures(r.airport)).find((x) => x.name === r.name)));
-    const found = (await load([...(scene.procedures ?? []), ...framedOnly(scene), ...plane])).filter((x): x is Procedure => !!x);
-    if (mine !== ticket) return;
-    const ok = usable(scene, data, (fix) => !!locator(data, found)({ fix }), warn);
-    let r;
-    try {
-      r = resolve(ok, data);
-    } catch (e) {
-      warn(`${e instanceof Error ? e.message : e}; leaving the view as it was`);
-      return;
-    }
-    onScreen = ok;
-    files = found;
-    if (caption) caption.textContent = L.caption(data.edition, r.chart);
-    await v.apply(r, r.procedures.flatMap((x) => found.find((f) => f.airport === x.airport && f.name === x.name) ?? []), now, found);
-  };
+  const stage = scenes(c);
+  const show = stage.show;
 
   // The box holds one thing: the open card, the end or the nothing-to-ask note. Focus follows when it was in the box.
   let open: ReturnType<typeof card> | null = null;
@@ -109,7 +80,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     let shownAt = 0;
     const k = card(it.q, L, v, (ans) => {
       if (!a || a.done || open !== k) return;
-      const right = score(it.q, ans, locator(data, files));
+      const right = score(it.q, ans, locator(data, stage.files()));
       a = answer(a, right);
       drawCount();
       onResult({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
@@ -140,14 +111,14 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   };
 
   function leave() {
-    ticket++;
+    stage.stop();
     open?.remove();
     open = null;
     top.remove();
     box.remove();
     fig.classList.remove("sc-quizzing");
     viewEl.focus();
-    explore(stripPlayback({ ...onScreen, camera: v.camera() }));
+    explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));
   }
   exploreTop.addEventListener("click", leave);
 

@@ -14,6 +14,7 @@ const icon = (right) => {
     svg.append(path);
     return svg;
 };
+const SETTLE_MS = 300;
 /** The card that owns the view's tap, focus ring and hints now; an older card closing later leaves them alone. */
 const owner = new WeakMap();
 export function card(q, L, view, onAnswer) {
@@ -22,17 +23,23 @@ export function card(q, L, view, onAnswer) {
     live.setAttribute("aria-live", "polite");
     el.append(live);
     const controls = [];
+    const choiceButtons = [];
     let answered = false;
+    // The card opens where the last one's Next or the end's Again was: a double click, a quick second Enter or a held
+    // key would answer for the student. Nothing counts in its first moments.
+    const born = performance.now();
     const answer = (a) => {
-        if (answered)
-            return;
+        if (answered || performance.now() - born < SETTLE_MS)
+            return false;
         answered = true;
         onAnswer(a);
+        return true;
     };
+    el.addEventListener("keydown", (e) => e.repeat && (e.key === "Enter" || e.key === " ") && e.preventDefault());
     const button = (cls, text, onClick) => {
         const b = h("button", cls, text);
         b.type = "button";
-        b.addEventListener("click", onClick);
+        b.addEventListener("click", (e) => e.detail > 1 || onClick());
         controls.push(b);
         return b;
     };
@@ -46,10 +53,8 @@ export function card(q, L, view, onAnswer) {
     if ("choices" in q) {
         const list = h("div", "sc-choices");
         q.choices.forEach((c, i) => {
-            const b = button("sc-choice", c, () => {
-                b.setAttribute("aria-pressed", "true");
-                answer({ choice: i });
-            });
+            const b = button("sc-choice", c, () => answer({ choice: i }) && b.setAttribute("aria-pressed", "true"));
+            choiceButtons.push(b);
             list.append(b);
         });
         el.append(list);
@@ -119,6 +124,14 @@ export function card(q, L, view, onAnswer) {
                 c.disabled = true;
             done();
             live.append(h("p", `sc-result ${right ? "right" : "wrong"}`, icon(right), right ? L.right : L.wrong));
+            // A wrong answer still teaches the right one: in words, and marked with the check on its choice.
+            const shown = "choices" in q ? q.choices[q.answer] : "number" in q ? `${q.number.answer.toLocaleString("en-US")}${q.number.unit ? ` ${q.number.unit}` : ""}` : null;
+            if (!right && shown !== null) {
+                live.append(h("p", "sc-facts", L.answerWas(shown)));
+                const b = "choices" in q ? choiceButtons[q.answer] : undefined;
+                b?.classList.add("sc-answer");
+                b?.prepend(icon(true));
+            }
             if (facts)
                 live.append(h("p", "sc-facts", facts));
             if (q.explanation)

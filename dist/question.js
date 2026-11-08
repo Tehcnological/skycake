@@ -45,7 +45,7 @@ export function revealScene(q) {
     const s = questionScene(q);
     const areas = (ts) => ts.filter((t) => "area" in t);
     const answer = q.type === "find" ? [q.answer] : [];
-    const raise = areas([...answer, ...(q.scene?.highlight ?? [])]);
+    const raise = areas([...answer, ...(q.scene?.highlight ?? []), ...(q.answerArea ? [{ area: q.answerArea }] : [])]);
     const frame = s.camera && typeof s.camera === "object" && "frame" in s.camera ? s.camera.frame : [...answer, ...(q.scene?.highlight ?? [])];
     return { ...s, raise, tags: true, camera: frame.length ? { frame, tilt: 32 } : s.camera };
 }

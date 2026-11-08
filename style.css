@@ -205,6 +205,9 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-card .sc-choice:disabled, .skycake .sc-card .sc-number:disabled { opacity: 0.6; cursor: default; }
 .skycake .sc-card .sc-submit, .skycake .sc-card .sc-next { text-align: center; border-color: var(--sc-accent); background: var(--sc-accent-bg); }
 .skycake .sc-card .sc-result { display: flex; align-items: center; gap: 8px; margin: 0; font: 700 14px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; }
+/* The right choice, marked after a wrong answer: the check and an outline, not color alone. */
+.skycake .sc-card .sc-choice.sc-answer { border-color: var(--sc-ink); opacity: 1; }
+.skycake .sc-card .sc-choice.sc-answer svg { width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .skycake .sc-card .sc-result svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .skycake .sc-card .sc-facts, .skycake .sc-card .sc-explain { margin: 0; font-size: 14px; color: var(--sc-soft); }
 /* Visually hidden, still in the tab order. */

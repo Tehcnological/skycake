@@ -89,7 +89,7 @@ function airplane(g, rng) {
             continue;
         const c = classAt(data, grid, lat, lon, ft);
         const area = data.areas.find((a) => a.id === c.area);
-        const base = { type: "airplane", scene: { airplane: { at: [lat, lon, ft] } }, facts: area ? factsOf(g, area) : null };
+        const base = { type: "airplane", scene: { airplane: { at: [lat, lon, ft] } }, facts: area ? factsOf(g, area) : null, ...(area && { answerArea: area.id }) };
         const kind = ["class", "clearance", "radio", "transponder"][Math.floor(rng() * 4)];
         if (kind === "class")
             return { ...base, prompt: ask.airplaneClass, ...choose(c.kind, shuffled(["B", "C", "D", "E", "G"], rng), rng) };
