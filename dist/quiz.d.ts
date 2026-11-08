@@ -19,12 +19,13 @@ export type Item = {
     key: string;
     facts: string | null;
 };
-/** pool: practice only, the draws advance() may append (one per allowed type). */
+/** pool: practice only, the draws advance() may append (one per allowed type). skipped: items skipped in accessibility mode. */
 export type Attempt = {
     items: Item[];
     i: number;
     right: number;
     answered: number;
+    skipped: number;
     done: boolean;
     practice: boolean;
     pool?: Generate[];
@@ -32,11 +33,13 @@ export type Attempt = {
 export type Make = (g: Generate) => (Question & {
     facts: string | null;
 }) | null;
+/** skipped: the student skipped the item (accessibility mode); right is false and it should not count. */
 export type QuizResult = {
     quiz: string;
     item: string;
     right: boolean;
     ms: number;
+    skipped?: true;
 } | {
     quiz: string;
     end: true;
@@ -54,4 +57,11 @@ export declare function practice(make: Make, types: QuestionType[], filters: {
     airports?: string[];
 }, rng: Rng): Attempt | null;
 export declare const answer: (a: Attempt, right: boolean) => Attempt;
+/** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
+export declare const skip: (a: Attempt) => Attempt;
+/** A fixed quiz's count: question n of total, skips taken out. */
+export declare const progress: (a: Attempt) => {
+    n: number;
+    total: number;
+};
 export declare function advance(a: Attempt, make: Make, rng: Rng): Attempt;

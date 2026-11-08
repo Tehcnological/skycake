@@ -35,7 +35,7 @@ export function attempt(quiz, make, rng) {
     });
     if (quiz.shuffle)
         items = shuffle(items, rng);
-    return { items, i: 0, right: 0, answered: 0, done: items.length === 0, practice: false };
+    return { items, i: 0, right: 0, answered: 0, skipped: 0, done: items.length === 0, practice: false };
 }
 function draw(pool, make, rng, n) {
     for (const g of shuffle(pool, rng)) {
@@ -50,9 +50,13 @@ function draw(pool, make, rng, n) {
 export function practice(make, types, filters, rng) {
     const pool = types.map((generate) => ({ generate, count: 1, ...filters }));
     const first = draw(pool, make, rng, 0);
-    return first && { items: [first], i: 0, right: 0, answered: 0, done: false, practice: true, pool };
+    return first && { items: [first], i: 0, right: 0, answered: 0, skipped: 0, done: false, practice: true, pool };
 }
 export const answer = (a, right) => ({ ...a, right: a.right + (right ? 1 : 0), answered: a.answered + 1 });
+/** A skipped item is neither right nor answered, and a fixed quiz's total drops by one. */
+export const skip = (a) => ({ ...a, skipped: a.skipped + 1 });
+/** A fixed quiz's count: question n of total, skips taken out. */
+export const progress = (a) => ({ n: a.answered + 1, total: a.items.length - a.skipped });
 export function advance(a, make, rng) {
     if (a.practice && a.pool) {
         const next = draw(a.pool, make, rng, a.items.length);

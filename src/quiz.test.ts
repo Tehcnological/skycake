@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import type { AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { LABELS } from "./ui.js";
-import { advance, answer, attempt, maker, practice, type Make, type Quiz } from "./quiz.js";
+import { advance, answer, attempt, maker, practice, progress, skip, type Make, type Quiz } from "./quiz.js";
 import type { Question } from "./question.js";
 
 let n = 0;
@@ -70,4 +70,23 @@ test("maker: one filter alone keeps to its side; nothing to ask gives practice n
   assert.equal(m({ generate: "airplane", count: 1, airports: ["KCHD"] }), null);
   assert.ok(m({ generate: "airplane", count: 1, kinds: ["B"] }));
   assert.ok(m({ generate: "procedure", count: 1 }) && m({ generate: "read", count: 1 }));
+});
+
+const quiz5: Quiz = { id: "q5", title: "", area: "phoenix", items: ["a", "b", "c", "d", "e"].map(w) };
+test("skip drops the total by one and scores nothing", () => {
+  const rng = seeded(1);
+  let a = attempt(quiz5, make, rng);
+  a = skip(a);
+  assert.deepEqual(progress(a), { n: 1, total: 4 });
+  assert.equal(a.right, 0);
+  a = advance(a, make, rng);
+  a = answer(a, true);
+  assert.deepEqual(progress(a), { n: 2, total: 4 });
+});
+test("skipping every item ends with the skips taken out", () => {
+  const rng = seeded(1);
+  let a = attempt(quiz5, make, rng);
+  for (let i = 0; i < 5; i++) a = advance(skip(a), make, rng);
+  assert.equal(a.done, true);
+  assert.deepEqual(progress(a), { n: 1, total: 0 });
 });
