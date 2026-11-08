@@ -17,7 +17,7 @@ export function score(q, a, locate) {
         if (!("area" in a))
             return false;
         if ("area" in q.answer)
-            return a.area === q.answer.area;
+            return a.area === q.answer.area || (a.area !== null && !!q.also?.includes(a.area));
         const p = locate(q.answer);
         return !!(p && a.at && nm(p[0], p[1], a.at[0], a.at[1]) <= FIND_NM);
     }
@@ -58,7 +58,7 @@ export const questionScene = (q) => ({ ...defaults(q), ...q.scene });
 export function revealScene(q) {
     const s = questionScene(q);
     const areas = (ts) => ts.filter((t) => "area" in t);
-    const answer = q.type === "find" && q.answer ? [q.answer] : [];
+    const answer = q.type === "find" && q.answer ? [q.answer, ...(q.also ?? []).map((area) => ({ area }))] : [];
     const raise = areas([...answer, ...(q.scene?.highlight ?? []), ...(q.answerArea ? [{ area: q.answerArea }] : [])]);
     const frame = s.camera && typeof s.camera === "object" && "frame" in s.camera ? s.camera.frame : [...answer, ...(q.scene?.highlight ?? [])];
     return { ...s, raise, tags: true, camera: frame.length ? { frame, tilt: 32 } : s.camera };

@@ -30,6 +30,12 @@ test("default scenes per type, with the question's own fields winning", () => {
   const proc = questionScene({ type: "procedure", prompt: "", choices: ["a", "b"], answer: 0, scene: { procedures: [{ airport: "KCHD", name: "I04R" }] } });
   assert.deepEqual(proc.camera, { frame: [{ procedure: { airport: "KCHD", name: "I04R" } }] });
 });
+test("a find question's also areas score right too, and rise with the answer", () => {
+  const q = { type: "find", prompt: "", answer: { area: "b-1" }, also: ["b-2"] } satisfies Question;
+  const none: Locate = () => null;
+  assert.deepEqual([score(q, { area: "b-1", at: null }, none), score(q, { area: "b-2", at: null }, none), score(q, { area: "b-3", at: null }, none)], [true, true, false]);
+  assert.deepEqual(revealScene(q).raise, [{ area: "b-1" }, { area: "b-2" }]);
+});
 test("the reveal raises the answer and tilts to 3D", () => {
   const q = { type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } } satisfies Question;
   assert.deepEqual([revealScene(q).raise, revealScene(q).camera, revealScene(q).tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 32 }, true]);

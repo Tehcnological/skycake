@@ -1,7 +1,8 @@
 import type { AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import type { Scene, Target } from "./scene.js";
-/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area). */
+/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area).
+ * also: on a find question for an area, other areas that are right too (every piece of the Phoenix Class B). */
 export type Question = {
     id?: string;
     prompt: string;
@@ -11,6 +12,7 @@ export type Question = {
 } & ({
     type: "find";
     answer: Target;
+    also?: string[];
 } | {
     type: "read" | "airplane" | "procedure";
     choices: string[];

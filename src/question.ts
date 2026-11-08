@@ -4,9 +4,10 @@ import { nm } from "./cifp.js";
 import type { Procedure } from "./procedure.js";
 import type { AreaRef, Scene, Target } from "./scene.js";
 
-/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area). */
+/** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area).
+ * also: on a find question for an area, other areas that are right too (every piece of the Phoenix Class B). */
 export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; answerArea?: string } & (
-  | { type: "find"; answer: Target }
+  | { type: "find"; answer: Target; also?: string[] }
   | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number }
   | { type: "read"; number: { answer: number; tolerance: number; unit?: string } }
 );
@@ -29,7 +30,7 @@ export function score(q: Question, a: Answer, locate: Locate): boolean {
     if ("choices" in q) return "choice" in a && a.choice === q.answer;
     if ("number" in q) return "number" in a && Math.abs(a.number - q.number.answer) <= q.number.tolerance;
     if (!("area" in a)) return false;
-    if ("area" in q.answer) return a.area === q.answer.area;
+    if ("area" in q.answer) return a.area === q.answer.area || (a.area !== null && !!q.also?.includes(a.area));
     const p = locate(q.answer);
     return !!(p && a.at && nm(p[0], p[1], a.at[0], a.at[1]) <= FIND_NM);
   } catch (e) {
@@ -70,7 +71,7 @@ export const questionScene = (q: Question): Scene => ({ ...defaults(q), ...q.sce
 export function revealScene(q: Question): Scene {
   const s = questionScene(q);
   const areas = (ts: Target[]) => ts.filter((t): t is AreaRef => "area" in t);
-  const answer = q.type === "find" && q.answer ? [q.answer] : [];
+  const answer = q.type === "find" && q.answer ? [q.answer, ...(q.also ?? []).map((area) => ({ area }))] : [];
   const raise = areas([...answer, ...(q.scene?.highlight ?? []), ...(q.answerArea ? [{ area: q.answerArea }] : [])]);
   const frame = s.camera && typeof s.camera === "object" && "frame" in s.camera ? s.camera.frame : [...answer, ...(q.scene?.highlight ?? [])];
   return { ...s, raise, tags: true, camera: frame.length ? { frame, tilt: 32 } : s.camera };

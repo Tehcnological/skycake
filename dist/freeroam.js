@@ -328,3 +328,26 @@ export function freeRoam(c) {
     sheet(null);
     return refresh(true);
 }
+/**
+ * Walkthroughs and quizzes on a phone: the view in the page lets the page scroll past it until a tap wakes it, and it
+ * sleeps again once scrolled out of sight. The player and question card stay live throughout. Returns the undo.
+ */
+export function wakeOnTap(c) {
+    const { fig, labels: L } = c;
+    const phone = matchMedia("(max-width: 860px) and (pointer: coarse)");
+    const button = h("button", { type: "button", class: "sc-wake" }, h("span", { class: "sc-pill" }, L.wake));
+    fig.querySelector(".view").append(button);
+    const asleep = (on) => fig.classList.toggle("sc-asleep", on && phone.matches);
+    button.addEventListener("click", () => asleep(false));
+    const seen = new IntersectionObserver(([e]) => e.isIntersecting || asleep(true));
+    seen.observe(fig);
+    const change = () => asleep(true);
+    phone.addEventListener("change", change);
+    asleep(true);
+    return () => {
+        seen.disconnect();
+        phone.removeEventListener("change", change);
+        button.remove();
+        fig.classList.remove("sc-asleep");
+    };
+}

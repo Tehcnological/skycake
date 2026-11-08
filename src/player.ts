@@ -2,7 +2,7 @@
 // player along the bottom (phone: the player is the 76 px bar). Timing is walkthrough.ts; this draws it and shows each
 // step's scene. One DOM for desktop and phone; style.css decides the layout.
 import { card } from "./card.js";
-import { ICONS, h, icon, type Context } from "./freeroam.js";
+import { ICONS, h, icon, wakeOnTap, type Context } from "./freeroam.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
 import { stripPlayback, type Scene } from "./scene.js";
 import { scenes } from "./scenes.js";
@@ -45,6 +45,7 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   const big = h("button", { type: "button", class: "sc-big-play", "aria-label": L.play }, icon(PLAYER.play));
   fig.querySelector(".view")!.after(top, big);
   fig.append(box);
+  const unwake = wakeOnTap(c);
 
   let p: Play = begin();
   const frac = () => (p.done ? 1 : p.t / stepSeconds(w.steps[p.step]));
@@ -155,6 +156,7 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   const leave = () => {
     cancelAnimationFrame(raf);
     off.abort();
+    unwake();
     stage.stop();
     closeCard();
     top.remove();

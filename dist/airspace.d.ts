@@ -71,6 +71,8 @@ export declare function classKind(cls: string | null, localType: string | null, 
 export declare function suaKind(typeCode: string | null): Kind | null;
 /** An altitude in feet MSL. SFC values are heights above the ground; FL values are hundreds of feet. */
 export declare function feet(val: number, uom: string | null, code: string | null, ground: number): number;
+/** An altitude as the answer card says it: SFC at the surface, else feet with a thousands comma (5,000). */
+export declare const feetText: (ft: number, ground: number) => string;
 /** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
 export declare const hundreds: (ft: number, ground: number) => string;
 /**

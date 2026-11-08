@@ -92,7 +92,7 @@ export function card(q, L, view, say, onAnswer) {
                 list.replaceChildren();
                 controls.length = 0;
                 view.onScreen().forEach((c) => {
-                    const b = button("sc-hidden", c.name, () => answer("area" in c ? { area: c.area, at: null } : { area: null, at: c.at }));
+                    const b = button("sc-hidden", "area" in c ? L.facts(c.name, c.floor, c.ceiling) : c.name, () => answer("area" in c ? { area: c.area, at: null } : { area: null, at: c.at }));
                     b.addEventListener("focus", () => view.focus(c));
                     b.addEventListener("blur", () => view.focus(null));
                     list.append(b);

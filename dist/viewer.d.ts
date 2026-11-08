@@ -40,7 +40,7 @@ export type View = {
     onScreen(): Candidate[];
     /** Outlines the area, or rings the fix or airport, as focused. */
     focus(c: Candidate | null): void;
-    /** Off: the tip and fix tags keep their names but not their altitudes or roles, which would give an answer away. */
+    /** Off, while a question is open: no hover tip (read the chart), and fix tags keep their names but not their altitudes or roles. */
     hints(on: boolean): void;
     /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
     orbit(azimuth: number, polar: number): void;
@@ -49,9 +49,12 @@ export type View = {
     /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
     dem(): Int16Array | null;
 };
+/** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
 export type Candidate = {
     area: string;
     name: string;
+    floor: string;
+    ceiling: string;
 } | {
     fix: string;
     name: string;

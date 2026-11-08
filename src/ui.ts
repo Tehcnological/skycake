@@ -27,6 +27,8 @@ export type Labels = {
   fullScreen: string;
   /** On phones: the map in the page opens full screen, and the tab bar closes it. */
   open: string;
+  /** Walkthroughs and quizzes on a phone: the view in the page takes touches only after this is tapped. */
+  wake: string;
   close: string;
   finalCourse: string;
   glidepath: string;
@@ -67,6 +69,8 @@ export type Labels = {
   /** The generated questions' prompts and their Yes/No answers. */
   ask: {
     findArea: (name: string) => string;
+    /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
+    findPiece: (name: string, floor: string, ceiling: string) => string;
     findFix: (fix: string) => string;
     floor: string;
     ceiling: string;
@@ -101,6 +105,7 @@ export const LABELS: Labels = {
   height: "Height scale",
   fullScreen: "Full screen",
   open: "Open 3D view",
+  wake: "Tap to move the map",
   close: "Close",
   finalCourse: "Final course",
   glidepath: "Glidepath",
@@ -132,6 +137,7 @@ export const LABELS: Labels = {
   nothing: "Nothing to ask here",
   ask: {
     findArea: (name) => `Tap the ${name}`,
+    findPiece: (name, floor, ceiling) => `Tap the ${name} from ${floor} to ${ceiling}`,
     findFix: (fix) => `Tap ${fix}`,
     floor: "What is the floor of the highlighted airspace?",
     ceiling: "What is its ceiling?",
@@ -245,8 +251,9 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   });
 
   // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
-  // the page. sc-preview (free roam's map in the page on a phone) leaves them to the page.
-  const taken = () => !fig.classList.contains("sc-preview");
+  // the page. sc-preview (free roam's map in the page on a phone) and sc-asleep (a walkthrough's or quiz's, until tapped)
+  // leave them to the page.
+  const taken = () => !fig.classList.contains("sc-preview") && !(fig.classList.contains("sc-asleep") && !fig.classList.contains("full"));
   for (const t of ["gesturestart", "gesturechange", "gestureend"]) fig.addEventListener(t, (e) => taken() && e.preventDefault());
   fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
   fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });

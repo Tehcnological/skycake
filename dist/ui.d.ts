@@ -24,6 +24,8 @@ export type Labels = {
     fullScreen: string;
     /** On phones: the map in the page opens full screen, and the tab bar closes it. */
     open: string;
+    /** Walkthroughs and quizzes on a phone: the view in the page takes touches only after this is tapped. */
+    wake: string;
     close: string;
     finalCourse: string;
     glidepath: string;
@@ -64,6 +66,8 @@ export type Labels = {
     /** The generated questions' prompts and their Yes/No answers. */
     ask: {
         findArea: (name: string) => string;
+        /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
+        findPiece: (name: string, floor: string, ceiling: string) => string;
         findFix: (fix: string) => string;
         floor: string;
         ceiling: string;

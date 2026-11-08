@@ -19,6 +19,7 @@ export const LABELS = {
     height: "Height scale",
     fullScreen: "Full screen",
     open: "Open 3D view",
+    wake: "Tap to move the map",
     close: "Close",
     finalCourse: "Final course",
     glidepath: "Glidepath",
@@ -50,6 +51,7 @@ export const LABELS = {
     nothing: "Nothing to ask here",
     ask: {
         findArea: (name) => `Tap the ${name}`,
+        findPiece: (name, floor, ceiling) => `Tap the ${name} from ${floor} to ${ceiling}`,
         findFix: (fix) => `Tap ${fix}`,
         floor: "What is the floor of the highlighted airspace?",
         ceiling: "What is its ceiling?",
@@ -136,8 +138,9 @@ export async function mount(host, o) {
         act[e.key]();
     });
     // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
-    // the page. sc-preview (free roam's map in the page on a phone) leaves them to the page.
-    const taken = () => !fig.classList.contains("sc-preview");
+    // the page. sc-preview (free roam's map in the page on a phone) and sc-asleep (a walkthrough's or quiz's, until tapped)
+    // leave them to the page.
+    const taken = () => !fig.classList.contains("sc-preview") && !(fig.classList.contains("sc-asleep") && !fig.classList.contains("full"));
     for (const t of ["gesturestart", "gesturechange", "gestureend"])
         fig.addEventListener(t, (e) => taken() && e.preventDefault());
     fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());

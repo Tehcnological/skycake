@@ -102,6 +102,10 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* The map in the page on a phone: one big button the page scrolls past. */
 .skycake .sc-open { display: none; position: absolute; inset: 0; z-index: 3; align-items: center; justify-content: center; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
 .skycake.sc-preview .sc-open { display: flex; }
+/* A walkthrough's or quiz's view in the page on a phone, until tapped: the page scrolls past it. Full screen takes touches. */
+.skycake .sc-wake { display: none; position: absolute; inset: 0; z-index: 2; align-items: flex-end; justify-content: center; padding: 0 0 16px; border: 0; background: none; color: inherit; cursor: pointer; }
+.skycake.sc-asleep:not(.full) .sc-wake { display: flex; }
+.skycake .sc-wake .sc-pill { align-self: flex-end; }
 .skycake .sc-open .sc-pill { align-self: center; }
 .skycake.sc-preview .sc-tl, .skycake.sc-preview .sc-tr, .skycake.sc-preview .sc-br, .skycake.sc-preview .sc-tabs { display: none; }
 
@@ -149,7 +153,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .view .tag.hl { border-color: #fff; box-shadow: 0 0 0 2px #fff, 0 0 12px rgb(255 255 255 / 0.6); }
 .skycake .view .tag.plane { z-index: 2; padding: 2px 6px; border: 1.5px solid #fff; border-radius: 5px; background: #14171cf0; color: #fff; font-weight: 700; }
 /* While a question is open: names only: no altitudes, and no FAF or MAP on a fix. */
-.skycake .view.sc-no-hints .tip > :not(.name), .skycake .view.sc-no-hints .fix .alt, .skycake .view.sc-no-hints .fix i { display: none; }
+.skycake .view.sc-no-hints .tip, .skycake .view.sc-no-hints .fix .alt, .skycake .view.sc-no-hints .fix i { display: none; }
 /* Airways' names and their fixes' names, in IFR. */
 .skycake .view .awy { padding: 1px 5px; border-radius: 3px; background: #00707f; color: #fff; font-weight: 700; }
 .skycake .view .wp { padding: 1px 4px; border-radius: 3px; background: #14171ce0; color: #dff6fa; font-weight: 500; font-size: 10px; }

@@ -2,7 +2,7 @@
 // answer area under the view). The attempt is quiz.ts; this draws it, shows each question's scene and reports each
 // answer to the site. One DOM for desktop and phone; style.css decides the layout.
 import { card } from "./card.js";
-import { h } from "./freeroam.js";
+import { h, wakeOnTap } from "./freeroam.js";
 import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
@@ -25,6 +25,7 @@ export async function quiz(c, mode, onResult, explore) {
     viewEl.after(top);
     fig.append(box);
     fig.classList.add("sc-quizzing");
+    const unwake = wakeOnTap(c);
     // Generated questions draw from the terrain the view loaded and, when a generator can ask about them, the procedures.
     const filters = { kinds: mode.kinds, airports: mode.airports };
     const gens = mode.quiz === "practice" ? (mode.types ?? TYPES).map((generate) => ({ generate, count: 1, ...filters })) : mode.quiz.items.filter((x) => "generate" in x);
@@ -132,6 +133,7 @@ export async function quiz(c, mode, onResult, explore) {
         }), pill(L.explore, leave));
     };
     function leave() {
+        unwake();
         stage.stop();
         open?.remove();
         open = null;

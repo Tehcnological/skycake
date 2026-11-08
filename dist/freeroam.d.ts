@@ -31,3 +31,8 @@ export declare const ICONS: {
 };
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;
+/**
+ * Walkthroughs and quizzes on a phone: the view in the page lets the page scroll past it until a tap wakes it, and it
+ * sleeps again once scrolled out of sight. The player and question card stay live throughout. Returns the undo.
+ */
+export declare function wakeOnTap(c: Context): () => void;

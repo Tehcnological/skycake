@@ -13,7 +13,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { groundFt } from "./airclass.js";
-import { clipRing, deepest, hundreds, inRing, modeOf, shownIn } from "./airspace.js";
+import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn } from "./airspace.js";
 import { isTap, twoFingers } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import { along, flightLine } from "./fly.js";
@@ -1104,7 +1104,7 @@ airport = () => { }) {
             const areas = tappable.filter((l) => inMode(l) && (l.rings.some((r) => inRing([cx, cz], r)) || l.rings.some((r) => r.some(([x, z]) => seen(x, l.goal ? nm(l.area.ceiling) : groundAt(x, z), z)))));
             const at = (lat, lon) => [lat, lon];
             return [
-                ...areas.map((l) => ({ area: l.area.id, name: l.area.name })),
+                ...areas.map((l) => ({ area: l.area.id, name: l.area.name, floor: feetText(l.area.floor, data.ground), ceiling: feetText(l.area.ceiling, data.ground) })),
                 ...shownFixes.filter(({ fix: f, tag }) => tag.live() && seen(X(f.lon), nm(f.ft), Z(f.lat))).map(({ fix: f }) => ({ fix: f.name, name: f.name, at: at(f.lat, f.lon) })),
                 ...data.airports.filter((a) => a.procedures.length && seen(X(a.lon), nm(a.elev), Z(a.lat))).map((a) => ({ airport: a.id, name: a.name, at: at(a.lat, a.lon) })),
             ];

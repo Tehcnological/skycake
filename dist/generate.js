@@ -1,6 +1,6 @@
 // Quiz questions drawn from the FAA data: seeded and pure, so the same seed asks the same questions. Every answer and
 // every wrong choice comes from the area's airspace, terrain and procedures; the class rules live in airclass.ts.
-import { deepest, hundreds, inRing, KINDS } from "./airspace.js";
+import { deepest, feetText, hundreds, inRing, KINDS } from "./airspace.js";
 import { classAt, groundFt, nearBoundary, needs } from "./airclass.js";
 import { flightLine } from "./fly.js";
 import { LABELS } from "./ui.js";
@@ -29,7 +29,6 @@ function choose(right, wrong, rng) {
     const choices = shuffled([right, ...w], rng);
     return { choices, answer: choices.indexOf(right) };
 }
-const feetText = (ft, ground) => (ft <= ground ? "SFC" : ft.toLocaleString("en-US"));
 /** The answer card's line for an area: its name, floor and ceiling ("CHANDLER CLASS D · SFC to 3,900"). */
 export const areaFacts = (facts, data, a) => facts(a.name, feetText(a.floor, data.ground), feetText(a.ceiling, data.ground));
 const factsOf = (g, a) => areaFacts(g.facts ?? LABELS.facts, g.data, a);
@@ -37,8 +36,9 @@ const allowed = (g) => g.data.areas.filter((a) => (g.kinds ?? KINDS).includes(a.
 const procs = (g) => g.procedures.filter((p) => !g.airports || g.airports.includes(p.airport));
 const sceneOf = (p) => ({ procedures: [{ airport: p.airport, name: p.name }] });
 function find(g, rng) {
-    // A name that repeats cannot be tapped by name: the score is by id. The view does not make E700 or MODEC tappable.
-    const areas = allowed(g).filter((a) => a.kind !== "E700" && a.kind !== "MODEC" && g.data.areas.filter((o) => o.name === a.name).length === 1);
+    // The view does not make E700 or MODEC tappable. Names are drawn evenly, not pieces: Phoenix B has 21.
+    const tappable = allowed(g).filter((a) => a.kind !== "E700" && a.kind !== "MODEC");
+    const areas = [...new Set(tappable.map((a) => a.name))];
     const ps = procs(g).filter((p) => p.fixes.some((f) => p.fixes.filter((o) => o.name === f.name).length === 1));
     if (ps.length && (!areas.length || rng() < 0.5)) {
         const p = ps[Math.floor(rng() * ps.length)];
@@ -48,8 +48,17 @@ function find(g, rng) {
     }
     if (!areas.length)
         return null;
-    const a = areas[Math.floor(rng() * areas.length)];
-    return { type: "find", prompt: g.ask.findArea(a.name), answer: { area: a.id }, facts: factsOf(g, a) };
+    const name = areas[Math.floor(rng() * areas.length)];
+    const pieces = tappable.filter((a) => a.name === name);
+    const others = (xs, one) => (xs.length > 1 ? { also: xs.filter((x) => x !== one).map((x) => x.id) } : {});
+    // A name in many pieces is asked two ways: any piece (beginner), or the piece at the altitudes the chart prints (advanced).
+    if (pieces.length === 1 || rng() < 0.5) {
+        const floor = Math.min(...pieces.map((x) => x.floor)), ceiling = Math.max(...pieces.map((x) => x.ceiling));
+        return { type: "find", prompt: g.ask.findArea(name), answer: { area: pieces[0].id }, ...others(pieces, pieces[0]), facts: (g.facts ?? LABELS.facts)(name, feetText(floor, g.data.ground), feetText(ceiling, g.data.ground)) };
+    }
+    const p = pieces[Math.floor(rng() * pieces.length)];
+    const same = pieces.filter((x) => x.floor === p.floor && x.ceiling === p.ceiling);
+    return { type: "find", prompt: g.ask.findPiece(name, feetText(p.floor, g.data.ground), feetText(p.ceiling, g.data.ground)), answer: { area: p.id }, ...others(same, p), facts: factsOf(g, p) };
 }
 const middles = new WeakMap();
 const middle = (a) => middles.get(a) ?? (middles.set(a, deepest(a.rings[0])), middles.get(a));

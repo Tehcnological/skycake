@@ -13,7 +13,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { groundFt } from "./airclass.js";
-import { clipRing, deepest, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
+import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
 import { isTap, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
@@ -112,7 +112,7 @@ export type View = {
   onScreen(): Candidate[];
   /** Outlines the area, or rings the fix or airport, as focused. */
   focus(c: Candidate | null): void;
-  /** Off: the tip and fix tags keep their names but not their altitudes or roles, which would give an answer away. */
+  /** Off, while a question is open: no hover tip (read the chart), and fix tags keep their names but not their altitudes or roles. */
   hints(on: boolean): void;
   /** Keyboard: turns the camera around the target (radians), within the same limits as the mouse. */
   orbit(azimuth: number, polar: number): void;
@@ -121,7 +121,8 @@ export type View = {
   /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
   dem(): Int16Array | null;
 };
-export type Candidate = { area: string; name: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] };
+/** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
+export type Candidate = { area: string; name: string; floor: string; ceiling: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] };
 type Tag = { el: HTMLElement; at: THREE.Vector3; pri: number; live: () => boolean; w: number; h: number };
 /** A drawn path growing over the timeline from `from` to `to`; run: distance to each point; quads: curtain quads before each point. */
 type Grow = { from: number; to: number; pts: THREE.Vector3[]; run: number[]; lines: Line2[]; curtain: THREE.Mesh; quads: number[] };
@@ -1094,7 +1095,7 @@ export async function build(
       const areas = tappable.filter((l) => inMode(l) && (l.rings.some((r) => inRing([cx, cz], r)) || l.rings.some((r) => r.some(([x, z]) => seen(x, l.goal ? nm(l.area.ceiling) : groundAt(x, z), z)))));
       const at = (lat: number, lon: number): [lat: number, lon: number] => [lat, lon];
       return [
-        ...areas.map((l) => ({ area: l.area.id, name: l.area.name })),
+        ...areas.map((l) => ({ area: l.area.id, name: l.area.name, floor: feetText(l.area.floor, data.ground), ceiling: feetText(l.area.ceiling, data.ground) })),
         ...shownFixes.filter(({ fix: f, tag }) => tag.live() && seen(X(f.lon), nm(f.ft), Z(f.lat))).map(({ fix: f }) => ({ fix: f.name, name: f.name, at: at(f.lat, f.lon) })),
         ...data.airports.filter((a) => a.procedures.length && seen(X(a.lon), nm(a.elev), Z(a.lat))).map((a) => ({ airport: a.id, name: a.name, at: at(a.lat, a.lon) })),
       ];

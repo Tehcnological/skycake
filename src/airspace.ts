@@ -53,6 +53,8 @@ export function feet(val: number, uom: string | null, code: string | null, groun
   return uom === "FL" ? val * 100 : val;
 }
 
+/** An altitude as the answer card says it: SFC at the surface, else feet with a thousands comma (5,000). */
+export const feetText = (ft: number, ground: number) => (ft <= ground ? "SFC" : ft.toLocaleString("en-US"));
 /** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
 export const hundreds = (ft: number, ground: number) => (ft <= ground ? "SFC" : String(Math.round(ft / 100)));
 

@@ -112,18 +112,27 @@ test("filters: kinds and airports are respected; nothing left gives null", () =>
   assert.equal(generate("procedure", { ...g, procedures: [] }, seeded(2)), null);
 });
 test("same seed, same questions", () => assert.deepEqual(generate("read", g, seeded(7)), generate("read", g, seeded(7))));
-test("find prompts name exactly one area or one fix of the shown procedure", () => {
+test("a find prompt's right areas are exactly what it names: every piece of a name, or the pieces at given altitudes", () => {
   const rng = seeded(11);
+  const asked = { name: 0, piece: 0 };
   for (let i = 0; i < 400; i++) {
     const q = generate("find", g, rng)! as Extract<Question, { type: "find" }>;
     if ("area" in q.answer) {
       const a = data.areas.find((x) => x.id === (q.answer as { area: string }).area)!;
-      assert.equal(data.areas.filter((x) => x.name === a.name).length, 1);
+      const right = new Set([a.id, ...(q.also ?? [])]);
+      const ft = (n: number) => (n <= data.ground ? "SFC" : n.toLocaleString("en-US"));
+      const byName = q.prompt === ask.findArea(a.name);
+      if (!byName) assert.equal(q.prompt, ask.findPiece(a.name, ft(a.floor), ft(a.ceiling)));
+      const named = data.areas.filter((x) => x.name === a.name && (byName || (x.floor === a.floor && x.ceiling === a.ceiling)));
+      assert.deepEqual(right, new Set(named.map((x) => x.id)), q.prompt);
+      if (data.areas.filter((x) => x.name === a.name).length > 1) asked[byName ? "name" : "piece"]++;
     } else {
       const r = q.scene!.procedures![0], p = procedures.find((x) => x.airport === r.airport && x.name === r.name)!;
       assert.equal(p.fixes.filter((f) => f.name === (q.answer as { fix: string }).fix).length, 1);
     }
   }
+  // Names in many pieces (Phoenix B) are asked both ways: by name (beginner) and by piece (advanced).
+  assert.ok(asked.name > 0 && asked.piece > 0, JSON.stringify(asked));
 });
 const kindOf = (id: string) => data.areas.find((a) => a.id === id)!.kind;
 test("find never asks for an area the view cannot tap (E700, MODEC); a fix shows tags", () => {

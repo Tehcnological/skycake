@@ -93,6 +93,10 @@ test("a fix is known only from the scene's own procedures and the waypoints, as 
   const on = { ...good, steps: [{ caption: "a", scene: { highlight: [{ fix: "ZINGA" }], procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } }] };
   assert.deepEqual(await validateWalkthrough(on, data, files, "phoenix"), []);
 });
+test("a find question's also areas must exist", async () => {
+  const q = { ...goodQuiz, items: [{ type: "find", prompt: "?", answer: { area: data.areas[0].id }, also: ["nope"] }] } as Quiz;
+  assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 1: no area nope"]);
+});
 test("written item ids must not repeat", async () => {
   const q = { ...goodQuiz, items: [{ id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 0 }, { id: "a", type: "read", prompt: "?", choices: ["x", "y"], answer: 1 }] } as Quiz;
   assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 2: id a repeats"]);

@@ -38,6 +38,8 @@ export function questionProblems(q, data, hasFix, loaded) {
         out.push(...answerProblems(q, data, hasFix, loaded));
     else if (!("choices" in q) && !("number" in q))
         out.push("no choices or number");
+    if (q.type === "find" && q.also !== undefined)
+        out.push(...(Array.isArray(q.also) ? sceneProblems({ highlight: q.also.map((area) => ({ area })) }, data, hasFix) : ["also must be a list of area ids"]));
     if (q.answerArea !== undefined)
         out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
     if (typeof q.prompt !== "string" || !q.prompt.trim())
