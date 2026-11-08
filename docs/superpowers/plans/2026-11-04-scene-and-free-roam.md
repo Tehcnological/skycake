@@ -402,7 +402,7 @@ git commit -m "skycake 0.2.0: scenes and the new free-roam layout"
 git push origin main
 ```
 
-- [ ] **Step 2: In instrumentready.com,** run `npm install github:Tehcnological/skycake`, then `npm test` and `npm run build`. Expected: both pass; `package-lock.json` points at the new skycake commit.
+- [ ] **Step 2: In instrumentready.com,** run `npm install github:Tehcnological/skycake#<commit>` (the new commit, so package.json stays pinned), then `npm test` and `npm run build`. Expected: both pass; package.json and `package-lock.json` point at the new skycake commit.
 
 - [ ] **Step 3: Check `/test/` in the dev server** (temporary ungated page as before, deleted afterwards) at desktop and iPhone 13 emulation: same checks as Task 6 Step 4.
 

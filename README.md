@@ -11,8 +11,10 @@ It is also its own app, SkyCake Viewer, a free web app for skycake.app with offl
 ## Use it on a site
 
 ```sh
-npm install github:Tehcnological/skycake three@0.180.0
+npm install github:Tehcnological/skycake#<commit> three@0.180.0
 ```
+
+Pin a commit, so package.json names it and `npm update` can't move it. To update, run the same command with the new commit.
 
 1. Serve an area's data folder: copy `node_modules/skycake/data/phoenix/` or `data/miami/` into the site's public files (about 12 MB each), for example at `/skycake/phoenix/`.
 2. Load `skycake/style.css`.
