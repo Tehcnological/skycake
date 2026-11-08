@@ -24,7 +24,7 @@ Two ways, and the host picks:
 
 - **The host drives it: `mount` option `a11y?: boolean`.** When a site passes it, the site's own toggle is the only switch and skycake shows no row of its own. instrumentready.com passes `a11y: a11yOn()` from `Airspace3D.astro`; its toggle reloads the page, so a change reaches skycake through a fresh `mount`. No live update API (Chris: reload is enough).
 - **skycake drives it: `a11y` left out.** Standalone (SkyCake Viewer, or a site with no toggle), skycake shows a labeled row, "Accessibility mode" with a switch, in its View controls (desktop: under the view buttons, bottom right; phone: at the foot of the View sheet). It is kept per browser as `skycake-a11y` in localStorage. SkyCake Viewer's start screen has the same labeled row (same key), and sets `data-a11y` on its `<html>` so `app.css` raises the start screen's contrast too.
-- **Flipping the row mid-session rebuilds in place.** `mount` keeps the loaded area data; the row tears down the view and the mode's UI and builds them again with the new setting and the scene on screen. Free roam keeps its place (camera, raised areas, procedures, chart). A walkthrough resumes at its current step, paused. A quiz keeps its attempt and asks the current question again, unanswered; nothing extra is sent to `onResult`.
+- **Flipping the row switches in place.** The row is in free roam's View controls (walkthroughs and quizzes have none; sites drive the mode there), so a flip only ever happens in free roam. Free roam's new controls are always built and shown by CSS under `data-a11y`, and the view switches live (`View.setA11y`), so free roam keeps its place (camera, raised areas, procedures, chart) with no rebuild and no new WebGL context.
 - **Inside skycake:** `mount` sets `data-a11y` on the `.skycake` figure (the same attribute name as instrumentready.com, scoped to the figure) and passes `a11y` on in `Context` and to `build()`.
 - **System settings keep working alone:** `prefers-reduced-motion` (already read in `src/viewer.ts`) and `prefers-contrast: more` (new, the same tokens as the mode, as instrumentready.com does). Neither turns the whole mode on.
 
@@ -102,7 +102,7 @@ instrumentready.com swaps instant saves for an explicit button. The quiz's insta
 - **Number questions:** unchanged (they already have Check and a labeled field).
 - **Airplane questions:** the airplane's altitude is its tag on the chart; the prompt is already in the live region.
 - **The camera pad shows in quizzes too,** since find and hunt questions need the map moved to bring the answer into view.
-- While a question is open, the map's summary (section 7) says only the chart, as `hints(false)` hides the tip and fix altitudes, so it never gives an answer away.
+- The map's summary (section 7) is free roam's only, so it never gives an answer away during a question.
 
 ### 10. Phone target sizes
 
@@ -126,11 +126,11 @@ instrumentready.com swaps instant saves for an explicit button. The quiz's insta
 
 ## Code touched (for the plan, not now)
 
-- `src/ui.ts`: `Options.a11y`; `data-a11y` on the figure; the accessibility row when `a11y` is left out, `skycake-a11y`, and rebuild in place; `Context.a11y`; new placeholder labels (the row, In view, the camera pad's buttons, Pan, Skip, the map summary).
+- `src/ui.ts`, `src/a11y.ts`: `Options.a11y`; `data-a11y` on the figure; `skycake-a11y` and the row when `a11y` is left out; `Context.a11y`; new placeholder labels (the row, In view, the camera pad's buttons, Pan, Skip, the map summary).
 - `src/viewer.ts`: `still` from `a11y`; `pan()`; the number badge layer; airport tags out of the tab order; wider rims; bigger tags.
 - `src/gesture.ts`: `isTap` thresholds as parameters.
-- `src/walkthrough.ts`: `hold` in `tick()`; `src/player.ts`: start at a given step (for the rebuild).
-- `src/quiz.ts`: `QuizResult.skipped`; skipping an item; `src/quizui.ts`: resume an attempt (for the rebuild), focus into new cards, the camera pad.
+- `src/walkthrough.ts`: `hold` in `tick()`; `src/player.ts`: passes it.
+- `src/quiz.ts`: `QuizResult.skipped`; skipping an item; `src/quizui.ts`: focus into new cards, the camera pad.
 - `src/card.ts`: the numbered picker in place of the hidden list; chosen then Check; Skip.
 - `src/freeroam.ts`: In view panel and tab, camera pad, Escape on sheets, the summary.
 - `style.css`: the mode's tokens, `prefers-contrast: more`, focus ring, tag sizes, badges, In view, camera pad, the row.
@@ -142,8 +142,8 @@ No new dependency.
 
 ## Testing
 
-- Unit (Vitest, as today): `tick()` with `hold` stops at each step's end and Next goes on; `isTap` with the mode's thresholds; the numbered picker's order and numbering match `onScreen()`; the chosen-then-Check card scores only on Check; Skip drops a fixed quiz's total by one and reports `skipped`; a resumed attempt asks the same question.
-- Manual, each mode (free roam, walkthrough, quiz) with `a11y: true` and with the row: keyboard only on Windows (Chrome, Firefox); NVDA with Firefox; VoiceOver on an iPhone (real device emulation for layout, a real phone for VoiceOver); 200% page zoom; Windows High Contrast check that controls stay visible; flipping the row mid-quiz and mid-walkthrough.
+- Unit (Vitest, as today): `tick()` with `hold` stops at each step's end and Next goes on; `isTap` with the mode's thresholds; the numbered picker's order and numbering match `onScreen()`; the chosen-then-Check card scores only on Check; Skip drops a fixed quiz's total by one and reports `skipped`.
+- Manual, each mode (free roam, walkthrough, quiz) with `a11y: true` and with the row: keyboard only on Windows (Chrome, Firefox); NVDA with Firefox; VoiceOver on an iPhone (real device emulation for layout, a real phone for VoiceOver); 200% page zoom; Windows High Contrast check that controls stay visible; flipping the row in free roam keeps the camera and what is shown.
 - The demo page gets an `a11y` switch for these checks.
 
 ## Not in v1
@@ -162,7 +162,7 @@ No new dependency.
 - Chosen then Check: the mode only.
 - Reload is enough for hosts; no live API.
 - No camera pad or In view on walkthroughs in v1.
-- Standalone: a labeled row inside skycake (View controls; the Viewer's start screen too). A host that passes `a11y` drives it instead and the row is gone. Flipping the row rebuilds in place.
+- Standalone: a labeled row inside skycake (View controls; the Viewer's start screen too). A host that passes `a11y` drives it instead and the row is gone. Flipping the row switches in place (free roam only, as the row lives there; no WebGL rebuild).
 - Focus ring: text color with a dark halo.
 - Tags bigger (13 px, opaque, solid fix borders) and 3D lines wider (2.4 px).
 - Number badges: white circle, dark number.
