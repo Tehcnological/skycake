@@ -50,6 +50,38 @@ npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?sc
 
 Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/superpowers/specs/2026-11-03-3d-airspace-design.md).
 
+## CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs one job, `build-and-test`, on every pull request to main and every push to main. It uses a standard GitHub-hosted runner, which is free for public repos, and no secrets. It stops at the first failure, which shows as a failed check on the PR with the step named:
+
+1. `npm ci`
+2. `npm run typecheck`
+3. `npm test`
+4. Deletes `dist/`, runs `npm run build` and fails if the result differs from what is committed
+5. Fails if a file in `data/` is over 24 MiB
+6. Installs the commit from git, as a site does, then imports `mount` and checks for `style.css`, `three` and `data/phoenix`
+
+A new push to a PR cancels that PR's older run. There are no path filters on purpose: a required check whose workflow is filtered out never reports, and its PR waits forever.
+
+The workflow token is read-only. Fork PRs run on `pull_request`, so they get no secrets, and first-time contributors need approval before they run. Cursor Bugbot and Codex are separate GitHub apps that CI neither touches nor depends on. Leave them out of required checks, so a skipped review can't block a merge.
+
+Not covered:
+
+- Linting: no linter is configured, so strict `tsc` is the only static check.
+- A browser: `viewer.ts`, `ui.ts`, `freeroam.ts` and touch gestures on real devices are not exercised.
+- `npm run data`: it downloads from the FAA and USGS, so only the committed data's size and presence are checked.
+- Node versions other than 22, the `engines` floor.
+- instrumentready.com's own build, which is in a private repo.
+- New major versions of the two actions: `@v7` picks up fixes on its own, and a new major is a manual bump.
+
+A red check blocks merging only if branch protection requires it. These settings do that, and `enforce_admins: false` lets admins still push to main directly, in which case CI reports after the push:
+
+```sh
+gh api -X PUT repos/Tehcnological/skycake/branches/main/protection --input - <<'EOF'
+{"required_status_checks":{"strict":false,"contexts":["build-and-test"]},"enforce_admins":false,"required_pull_request_reviews":null,"restrictions":null}
+EOF
+```
+
 ## License
 
 AGPL-3.0-only ([LICENSE](LICENSE)). Copyright Christopher DeFoe. If you build skycake into your own site or product, the AGPL asks you to publish that code too. See [CONTRIBUTING.md](CONTRIBUTING.md) before sending changes.

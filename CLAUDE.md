@@ -31,4 +31,6 @@ npm run build          # commit dist/ with the change
 npm run data           # every 28 days; commit data/
 ```
 
+GitHub Actions runs on every PR and every push to main, on standard hosted runners, free because this repo is public. Use it. It fails if `dist/` is stale. See "CI" in README.md.
+
 Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`. Headless Chromium will not lay out narrower than 500 px; check phones with real device emulation.
