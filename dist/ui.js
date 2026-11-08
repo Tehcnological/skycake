@@ -41,6 +41,23 @@ export const LABELS = {
     next: "Next",
     explore: "Explore",
     stepOf: (n, total) => `${n}/${total}`,
+    ask: {
+        findArea: (name) => `Tap the ${name}`,
+        findFix: (fix) => `Tap ${fix}`,
+        floor: "What is the floor of the highlighted airspace?",
+        ceiling: "What is its ceiling?",
+        cls: "What class is the highlighted airspace?",
+        airplaneClass: "What airspace is the airplane in?",
+        clearance: "Does the pilot need an ATC clearance here?",
+        radio: "Is two-way radio communication required here?",
+        transponder: "Is an altitude-reporting transponder required here?",
+        yes: "Yes",
+        no: "No",
+        altAt: (fix) => `What altitude is charted at ${fix}?`,
+        after: (fix) => `Which fix comes after ${fix}?`,
+        faf: "Which fix is the final approach fix?",
+        missed: "Which fix starts the missed approach?",
+    },
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);
@@ -57,7 +74,7 @@ function h(tag, attrs = {}, ...kids) {
 }
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host, o) {
-    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
+    const L = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
     const base = new URL(o.base, location.href);
     const url = (p) => new URL(p, base).href;
     const data = await fetch(url("area.json")).then((r) => {

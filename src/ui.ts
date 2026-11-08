@@ -52,6 +52,24 @@ export type Labels = {
   next: string;
   explore: string;
   stepOf: (n: number, total: number) => string;
+  /** The generated questions' prompts and their Yes/No answers. */
+  ask: {
+    findArea: (name: string) => string;
+    findFix: (fix: string) => string;
+    floor: string;
+    ceiling: string;
+    cls: string;
+    airplaneClass: string;
+    clearance: string;
+    radio: string;
+    transponder: string;
+    yes: string;
+    no: string;
+    altAt: (fix: string) => string;
+    after: (fix: string) => string;
+    faf: string;
+    missed: string;
+  };
 };
 
 export const LABELS: Labels = {
@@ -93,6 +111,23 @@ export const LABELS: Labels = {
   next: "Next",
   explore: "Explore",
   stepOf: (n, total) => `${n}/${total}`,
+  ask: {
+    findArea: (name) => `Tap the ${name}`,
+    findFix: (fix) => `Tap ${fix}`,
+    floor: "What is the floor of the highlighted airspace?",
+    ceiling: "What is its ceiling?",
+    cls: "What class is the highlighted airspace?",
+    airplaneClass: "What airspace is the airplane in?",
+    clearance: "Does the pilot need an ATC clearance here?",
+    radio: "Is two-way radio communication required here?",
+    transponder: "Is an altitude-reporting transponder required here?",
+    yes: "Yes",
+    no: "No",
+    altAt: (fix) => `What altitude is charted at ${fix}?`,
+    after: (fix) => `Which fix comes after ${fix}?`,
+    faf: "Which fix is the final approach fix?",
+    missed: "Which fix starts the missed approach?",
+  },
 };
 
 export type Options = {
@@ -106,7 +141,7 @@ export type Options = {
   airport?: string;
   /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
   approach?: string;
-  labels?: Partial<Labels>;
+  labels?: Omit<Partial<Labels>, "ask"> & { ask?: Partial<Labels["ask"]> };
   /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
    * desktop: in place of Full screen) calls this. */
   close?: () => void;
@@ -128,7 +163,7 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
 
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
-  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes } };
+  const L: Labels = { ...LABELS, ...o.labels, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
   const base = new URL(o.base, location.href);
   const url = (p: string) => new URL(p, base).href;
   const data: AirspaceFile = await fetch(url("area.json")).then((r) => {

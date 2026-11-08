@@ -49,6 +49,24 @@ export type Labels = {
     next: string;
     explore: string;
     stepOf: (n: number, total: number) => string;
+    /** The generated questions' prompts and their Yes/No answers. */
+    ask: {
+        findArea: (name: string) => string;
+        findFix: (fix: string) => string;
+        floor: string;
+        ceiling: string;
+        cls: string;
+        airplaneClass: string;
+        clearance: string;
+        radio: string;
+        transponder: string;
+        yes: string;
+        no: string;
+        altAt: (fix: string) => string;
+        after: (fix: string) => string;
+        faf: string;
+        missed: string;
+    };
 };
 export declare const LABELS: Labels;
 export type Options = {
@@ -62,7 +80,9 @@ export type Options = {
     airport?: string;
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;
-    labels?: Partial<Labels>;
+    labels?: Omit<Partial<Labels>, "ask"> & {
+        ask?: Partial<Labels["ask"]>;
+    };
     /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
      * desktop: in place of Full screen) calls this. */
     close?: () => void;
