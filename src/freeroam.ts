@@ -19,6 +19,8 @@ export type Context = {
   /** A procedure file by airport, cached by the caller. */
   procedures: (airport: string) => Promise<Procedure[]>;
   startScale: number;
+  /** See Options.close in ui.ts. */
+  close?: () => void;
 };
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -94,7 +96,7 @@ export function freeRoam(c: Context): Promise<void> {
   const modeButton = round(L.mode, L.mode, [], "sc-mode");
   modeButton.hidden = !chartsIn(data.charts, "ifr").length;
   const chartButton = round(L.chart, L.chart, [], "sc-chart");
-  const fullButton = round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
+  const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
   const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
   const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
@@ -297,14 +299,25 @@ export function freeRoam(c: Context): Promise<void> {
     if (on) fig.requestFullscreen?.().catch(() => {});
     else if (document.fullscreenElement) document.exitFullscreen();
   };
-  fullButton.addEventListener("click", () => goFull(!fig.classList.contains("full")));
+  // The page scrolls again before the site's close runs, in case it stays on this page.
+  const leave = (close: () => void) => {
+    document.documentElement.classList.remove("skycake-full");
+    close();
+  };
+  fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
   openButton.addEventListener("click", () => goFull(true));
   tabs.close.addEventListener("click", () => {
     sheet(null);
     results.hidden = true;
-    goFull(false);
+    if (c.close) leave(c.close);
+    else goFull(false);
   });
   phone.addEventListener("change", drawPhone);
+  // A standalone app: the view fills the window from the start and only close leaves it.
+  if (c.close) {
+    fig.classList.add("full");
+    document.documentElement.classList.add("skycake-full");
+  }
   drawPhone();
 
   // CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms the page.

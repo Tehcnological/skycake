@@ -82,6 +82,9 @@ export type Options = {
   /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
   approach?: string;
   labels?: Partial<Labels>;
+  /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
+   * desktop: in place of Full screen) calls this. */
+  close?: () => void;
 };
 
 function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string | boolean> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] {
@@ -162,5 +165,5 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE });
+  await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
 }

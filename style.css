@@ -10,8 +10,9 @@
   --sc-soft: var(--soft, #b3b6ba);
   --sc-muted: var(--muted, #858a90);
   --sc-dim: var(--dim, #5d6268);
-  --sc-accent: var(--red, #c4473d);
-  --sc-accent-bg: var(--redbg, rgb(196 71 61 / 0.16));
+  /* Blue by default. instrumentready.com's own --red and --redbg keep it red there. */
+  --sc-accent: var(--red, #3d7bc2);
+  --sc-accent-bg: var(--redbg, rgb(61 123 194 / 0.16));
   --sc-head: var(--head, system-ui, sans-serif);
   --sc-sans: var(--sans, system-ui, sans-serif);
   --sc-mono: var(--mono, ui-monospace, monospace);

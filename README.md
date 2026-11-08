@@ -32,7 +32,7 @@ mount(document.querySelector("#airspace")!, {
 });
 ```
 
-`types` and `approach` still work as shorthand for a first scene. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens.
+`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
 ## Data
 
@@ -50,6 +50,41 @@ npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?sc
 
 Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/superpowers/specs/2026-11-03-3d-airspace-design.md).
 
+## SkyCake Viewer (the app)
+
+`app/` is a standalone web app around `mount()`: a start screen lists the areas, each with a button that saves it for offline use and the date its data is current through, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are placeholders.
+
+`npm run app` bundles it with three.js (esbuild) into `www/`, with the library's `style.css`, a copy of `data/`, `data/manifest.json` (per area: edition, current-through date, a revision hash of its files, files and size) and a service worker. The service worker caches the app itself on first load; saved areas go in their own caches, one per area and revision, and count as saved only once every file arrived. Update fetches past the service worker. To try it: `npm run app && npm run demo`, then http://localhost:5179/www/.
+
+`www/` is ignored by git and is not in `files`, so sites that install skycake never get it, and nothing here builds on install.
+
+For now the current-through date is the chart edition plus 27 days, the last day of the first 28-day procedure cycle in that edition. The scheduled data pipeline should write the real cycle instead.
+
+### Hosting on Cloudflare Pages
+
+Free, no payment method needed. In the Cloudflare dashboard: Workers & Pages, Create, Pages, Connect to Git, pick `Tehcnological/skycake`, then:
+
+| Setting | Value |
+| --- | --- |
+| Project name | `skycake` (gives skycake.pages.dev if free) |
+| Production branch | `main` |
+| Framework preset | None |
+| Build command | `npm run app` |
+| Build output directory | `www` |
+| Root directory | (blank) |
+| Environment variable | `NODE_VERSION` = `22` |
+
+Pages runs `npm ci` itself before the build command. Each PR also gets a preview URL. The app has no host name in its code, so a custom domain needs no change here.
+
+### skycake.app
+
+Once the Pages project is up: open it, Custom domains, Set up a custom domain, enter `skycake.app`, then Activate domain. An apex domain like this one has to be a zone on the same Cloudflare account:
+
+- Bought through Cloudflare Registrar: it already is, and Cloudflare adds the DNS record itself.
+- Bought elsewhere: first add it as a domain (`skycake.app`, Free plan) and change the nameservers at the registrar to the two Cloudflare gives you, then add the custom domain.
+
+`.app` is HTTPS only for every browser, which Pages handles with its own certificate. Add `www.skycake.app` the same way if you want it too.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs one job, `build-and-test`, on every pull request to main and every push to main. It uses a standard GitHub-hosted runner, which is free for public repos, and no secrets. It stops at the first failure, which shows as a failed check on the PR with the step named:
@@ -59,7 +94,8 @@ Design notes: [docs/superpowers/specs/2026-11-03-3d-airspace-design.md](docs/sup
 3. `npm test`
 4. Deletes `dist/`, runs `npm run build` and fails if the result differs from what is committed
 5. Fails if a file in `data/` is over 24 MiB
-6. Installs the commit from git, as a site does, then imports `mount` and checks for `style.css`, `three` and `data/phoenix`
+6. `npm run app`: builds SkyCake Viewer into `www/` (see below)
+7. Installs the commit from git, as a site does, then imports `mount` and checks for `style.css`, `three` and `data/phoenix`
 
 A new push to a PR cancels that PR's older run. There are no path filters on purpose: a required check whose workflow is filtered out never reports, and its PR waits forever.
 

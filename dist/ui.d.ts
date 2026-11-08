@@ -49,6 +49,9 @@ export type Options = {
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;
     labels?: Partial<Labels>;
+    /** For a standalone app: the view fills the window from the start, and its close button (phones: the Close tab;
+     * desktop: in place of Full screen) calls this. */
+    close?: () => void;
 };
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export declare function mount(host: HTMLElement, o: Options): Promise<void>;

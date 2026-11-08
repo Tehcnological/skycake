@@ -108,5 +108,5 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE });
+    await freeRoam({ fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close });
 }

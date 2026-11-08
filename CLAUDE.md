@@ -29,6 +29,7 @@ npm test
 npm run typecheck
 npm run build          # commit dist/ with the change
 npm run data           # every 28 days; commit data/
+npm run app            # SkyCake Viewer into www/ (not committed)
 ```
 
 GitHub Actions runs on every PR and every push to main, on standard hosted runners, free because this repo is public. Use it. It fails if `dist/` is stale. See "CI" in README.md.

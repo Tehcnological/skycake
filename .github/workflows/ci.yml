@@ -54,6 +54,15 @@ jobs:
             exit 1
           fi
 
+      # SkyCake Viewer, the standalone web app: Cloudflare runs npm run app and serves www/. Its own asserts check the
+      # data manifest and the service worker's file list.
+      - name: App builds
+        run: |
+          npm run app
+          test -f www/index.html
+          test -f www/sw.js
+          test -f www/data/phoenix/area.json
+
       - name: Installs from git the way a site does
         run: |
           cd "$(mktemp -d)"
