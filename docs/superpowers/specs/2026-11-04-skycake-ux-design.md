@@ -104,12 +104,12 @@ All four share `prompt`, optional `scene` (default chosen per type, below), opti
 
 | Type | Student does | Answer | Default scene |
 |---|---|---|---|
-| `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM on the ground) | `camera: "top"`, nothing raised |
+| `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM; a tap on a fix's tag, or near its point at altitude, is the fix) | `camera: "top"`, nothing raised |
 | `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target flat on the chart, camera moved top-down to it |
 | `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, camera moved top-down over it |
-
-Any question answered by reading the chart starts with the camera moved top-down, so the sectional can be read; nothing locks it there, and the student can still turn and tilt (Chris, 2026-11-07). Tags, and the floor and ceiling in the hover tip, stay hidden until the answer, since they would give it away. The 3D reveal comes after the answer.
 | `procedure` | picks a choice | a choice | only the procedures asked about shown, framed |
+
+Any question answered by reading the chart starts with the camera moved top-down, so the sectional can be read; nothing locks it there, and the student can still turn and tilt (Chris, 2026-11-07). While a question is open the hover tip is off, names included, so the chart has to be read (Chris, 2026-11-08), and airspace tags stay off since they would give the answer away. A find-a-fix question shows fix tags: the sectional doesn't print IFR fixes. The 3D reveal comes after the answer.
 
 ### Format
 
@@ -161,7 +161,7 @@ On instrumentready.com: `<Airspace3D />`, `<Airspace3D walkthrough="class-b" />`
 
 ## Later (not in this round)
 
-- A diagram for KLUF (Luke AFB). Its PDF draws its tick labels as shapes, and it is the one of the four below still without a diagram.
+- A diagram for KLUF (Luke AFB). Its PDF draws its tick labels as shapes; the other three such airports (KDVT, KGYR, KIWA) have diagrams now.
 - Recording quiz results on the progress page.
 - Audio narration.
 
