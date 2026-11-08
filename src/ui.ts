@@ -38,6 +38,12 @@ export type Labels = {
   /** The chart button's name in words, and its text for each chart. */
   chart: string;
   charts: Record<ChartName, string>;
+  /** The question card: the result words, the number question's button, the next button, and a revealed area's name and altitudes. */
+  right: string;
+  wrong: string;
+  submit: string;
+  continue: string;
+  facts: (name: string, floor: string, ceiling: string) => string;
 };
 
 export const LABELS: Labels = {
@@ -68,6 +74,11 @@ export const LABELS: Labels = {
   modes: { vfr: "VFR", ifr: "IFR" },
   chart: "Chart",
   charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
+  right: "Right",
+  wrong: "Wrong",
+  submit: "Check",
+  continue: "Continue",
+  facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
 };
 
 export type Options = {

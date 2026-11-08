@@ -30,6 +30,11 @@ export const LABELS = {
     modes: { vfr: "VFR", ifr: "IFR" },
     chart: "Chart",
     charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
+    right: "Right",
+    wrong: "Wrong",
+    submit: "Check",
+    continue: "Continue",
+    facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
 };
 function h(tag, attrs = {}, ...kids) {
     const e = document.createElement(tag);

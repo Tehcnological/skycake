@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { questionScene, revealScene, score, type Locate, type Question } from "./question.js";
+
+const at: Locate = (t) => ("fix" in t && t.fix === "SCADE" ? [33.4, -112.2] : "airport" in t && t.airport === "KCHD" ? [33.27, -111.81] : null);
+test("each type scores right and wrong", () => {
+  const read = { type: "read", prompt: "", choices: ["A", "B"], answer: 1 } satisfies Question;
+  assert.equal(score(read, { choice: 1 }, at), true);
+  assert.equal(score(read, { choice: 0 }, at), false);
+  const num = { type: "read", prompt: "", number: { answer: 5000, tolerance: 100, unit: "ft" } } satisfies Question;
+  assert.equal(score(num, { number: 5099 }, at), true);
+  assert.equal(score(num, { number: 5101 }, at), false);
+  const area = { type: "find", prompt: "", answer: { area: "d-chandler-municipal-airport-class-d" } } satisfies Question;
+  assert.equal(score(area, { area: "d-chandler-municipal-airport-class-d", at: null }, at), true);
+  assert.equal(score(area, { area: "b-phoenix-class-b-sfc-90", at: null }, at), false);
+  const fix = { type: "find", prompt: "", answer: { fix: "SCADE" } } satisfies Question;
+  assert.equal(score(fix, { area: null, at: [33.4, -112.2 + 1.4 / 60 / Math.cos((33.4 * Math.PI) / 180)] }, at), true); // 1.4 NM east
+  assert.equal(score(fix, { area: null, at: [33.4, -112.2 + 1.6 / 60 / Math.cos((33.4 * Math.PI) / 180)] }, at), false);
+  assert.equal(score(fix, { area: null, at: null }, at), false);
+  assert.equal(score({ type: "find", prompt: "", answer: { airport: "KCHD" } }, { area: null, at: [33.27, -111.81] }, at), true);
+});
+test("default scenes per type, with the question's own fields winning", () => {
+  assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" } }), { camera: "top", raise: [], tags: false });
+  assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" }, scene: { raise: ["D"] } }).raise, ["D"]);
+  const read = questionScene({ type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } });
+  assert.deepEqual([read.raise, read.camera], [[], { frame: [{ area: "x" }], tilt: 90 }]); // top-down, flat, to read the chart
+  const plane = questionScene({ type: "airplane", prompt: "", choices: ["a", "b"], answer: 0, scene: { airplane: { at: [33.4, -112, 4500] } } });
+  assert.equal((plane.camera as { tilt: number }).tilt, 90);
+  assert.equal((plane.camera as { frame: unknown[] }).frame.length, 4);
+  const proc = questionScene({ type: "procedure", prompt: "", choices: ["a", "b"], answer: 0, scene: { procedures: [{ airport: "KCHD", name: "I04R" }] } });
+  assert.deepEqual(proc.camera, { frame: [{ procedure: { airport: "KCHD", name: "I04R" } }] });
+});
+test("the reveal raises the answer and tilts to 3D", () => {
+  const q = { type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } } satisfies Question;
+  assert.deepEqual([revealScene(q).raise, revealScene(q).camera, revealScene(q).tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 32 }, true]);
+  const f = revealScene({ type: "find", prompt: "", answer: { area: "y" } });
+  assert.deepEqual([f.raise, f.camera], [[{ area: "y" }], { frame: [{ area: "y" }], tilt: 32 }]);
+});
