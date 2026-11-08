@@ -19,6 +19,7 @@ const TEXT = {
   saved: "Saved",
   failed: "Retry",
   notForNavigation: "Not for navigation",
+  privacy: "Privacy",
 };
 
 const root = document.querySelector<HTMLElement>("#app")!;
@@ -87,7 +88,9 @@ async function startScreen() {
   }
   const section = document.createElement("section");
   section.className = "areas";
-  section.append(h1, list, Object.assign(document.createElement("p"), { textContent: TEXT.notForNavigation }));
+  const foot = Object.assign(document.createElement("p"), { textContent: `${TEXT.notForNavigation} · ` });
+  foot.append(Object.assign(document.createElement("a"), { href: "privacy.html", textContent: TEXT.privacy }));
+  section.append(h1, list, foot);
   root.replaceChildren(section);
 }
 

@@ -104,10 +104,12 @@ All four share `prompt`, optional `scene` (default chosen per type, below), opti
 
 | Type | Student does | Answer | Default scene |
 |---|---|---|---|
-| `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM on the ground) | `camera: "top"`, nothing raised |
-| `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target raised alone, oblique |
-| `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, oblique |
+| `find` | taps the view | an area, fix or airport; a tap counts if it lands on it (fixes and airports within 1.5 NM; a tap on a fix's tag, or near its point at altitude, is the fix) | `camera: "top"`, nothing raised |
+| `read` | picks one of 2 to 4 choices, or types a number | a choice; numbers have a tolerance | the highlighted target flat on the chart, camera moved top-down to it |
+| `airplane` | picks a choice | a choice | airplane shown with an altitude tag, nothing raised, camera moved top-down over it |
 | `procedure` | picks a choice | a choice | only the procedures asked about shown, framed |
+
+Any question answered by reading the chart starts with the camera moved top-down, so the sectional can be read; nothing locks it there, and the student can still turn and tilt (Chris, 2026-11-07). While a question is open the hover tip is off, names included, so the chart has to be read (Chris, 2026-11-08), and airspace tags stay off since they would give the answer away. A find-a-fix question shows fix tags: the sectional doesn't print IFR fixes. The 3D reveal comes after the answer.
 
 ### Format
 
@@ -159,11 +161,16 @@ On instrumentready.com: `<Airspace3D />`, `<Airspace3D walkthrough="class-b" />`
 
 ## Later (not in this round)
 
-- **IFR Low Enroute chart as the base map** for IFR lessons, with **3D airways**: Victor airways and T routes drawn as ribbons at their MEA, from FAA NASR, with MEA and MOCA tags. The area format gains a list of base charts and the scene a `chart` field; nothing in this design blocks it.
-- More areas than Phoenix.
-- Diagrams for KDVT, KGYR, KIWA and KLUF (their PDFs draw tick labels as shapes).
+- A diagram for KLUF (Luke AFB). Its PDF draws its tick labels as shapes; the other three such airports (KDVT, KGYR, KIWA) have diagrams now.
 - Recording quiz results on the progress page.
 - Audio narration.
+
+Done since this spec was approved:
+
+- **IFR charts and airways** (0.5.0, 0.6.0): the IFR area chart and low as base maps behind a VFR/IFR button, and the scene's `chart` field. Low altitude airways stand at their MEA, from the CIFP rather than NASR.
+- **More areas** (0.4.0): Key West to Palm Beach (Miami), beside Phoenix to Tucson.
+- **Diagrams for KDVT, KGYR and KIWA** (0.4.1), read from tick labels drawn as outlines.
+- **The data pipeline** (Data cycle workflow): new FAA data every 28 days, each area recording its procedure `cycle`.
 
 ## Accessibility
 
