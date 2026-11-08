@@ -34,7 +34,9 @@ export function player(c, w, nextLink, explore) {
     const count = h("span", { class: "sc-count" });
     const fullButton = c.close ? round(L.close, ICONS.close) : round(L.fullScreen, ICONS.full, "0 0 12 12");
     const bar = h("div", { class: "sc-bar", role: "group", "aria-label": L.controls }, backButton, playButton, nextButton, h("div", { class: "sc-progress", "aria-hidden": "true" }, ...segments), count, fullButton);
-    const box = h("div", { class: "sc-player" }, stepCard, bar);
+    // The check card's prompt and result go to this region, on the page from the start so they are announced.
+    const live = h("p", { class: "sc-hidden", "aria-live": "polite" });
+    const box = h("div", { class: "sc-player" }, live, stepCard, bar);
     const big = h("button", { type: "button", class: "sc-big-play", "aria-label": L.play }, icon(PLAYER.play));
     fig.querySelector(".view").after(top, big);
     fig.append(box);
@@ -57,7 +59,7 @@ export function player(c, w, nextLink, explore) {
     const ask = () => {
         const q = w.steps[p.step].check;
         closeCard();
-        const k = card(q, L, v, (a) => {
+        const k = card(q, L, v, (t) => live.replaceChildren(t), (a) => {
             const right = score(q, a, locator(data, stage.files()));
             void show(revealScene(q));
             k.reveal(right, null, L.continue, () => set(answered(p, w)));

@@ -212,7 +212,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-card .sc-facts, .skycake .sc-card .sc-explain { margin: 0; font-size: 14px; color: var(--sc-soft); }
 /* Visually hidden, still in the tab order. */
 .skycake .sc-card .sc-onscreen { position: relative; }
-.skycake .sc-card .sc-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skycake .sc-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (max-width: 860px) {
   .skycake .sc-card { left: 0; right: 0; bottom: 0; min-height: 76px; transform: none; width: auto; border-width: 1px 0 0; border-radius: var(--sc-r-card) var(--sc-r-card) 0 0; max-height: 100%; overflow: auto; }
 }

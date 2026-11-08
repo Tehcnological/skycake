@@ -3,8 +3,9 @@
 // answer to the site. One DOM for desktop and phone; style.css decides the layout.
 import { card } from "./card.js";
 import { h, type Context } from "./freeroam.js";
+import { classAt } from "./airclass.js";
 import { areaFacts, type QuestionType } from "./generate.js";
-import { locator, questionScene, revealScene, score } from "./question.js";
+import { locator, questionScene, revealScene, score, type Question } from "./question.js";
 import { advance, answer, attempt, maker, practice, type Attempt, type Generate, type Item, type QuizResult } from "./quiz.js";
 import { stripPlayback, type Scene } from "./scene.js";
 import { scenes } from "./scenes.js";
@@ -21,7 +22,10 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
   const count = h("p", { class: "sc-title sc-score" });
   const exploreTop = h("button", { type: "button", class: "sc-pill" }, L.explore);
   const top = h("div", { class: "sc-wtop" }, count, exploreTop);
-  const box = h("div", { class: "sc-quiz" });
+  // One live region for the whole quiz, on the page before any text goes in, so each question and result is announced.
+  const live = h("p", { class: "sc-hidden", "aria-live": "polite" });
+  const say = (text: string) => live.replaceChildren(text);
+  const box = h("div", { class: "sc-quiz" }, live);
   viewEl.after(top);
   fig.append(box);
   fig.classList.add("sc-quizzing");
@@ -45,7 +49,8 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     const had = box.contains(document.activeElement);
     open?.remove();
     open = null;
-    box.replaceChildren(el);
+    for (const x of [...box.children]) if (x !== live) x.remove();
+    box.append(el);
     return had;
   };
   const pill = (text: string, onClick: () => void) => {
@@ -54,7 +59,24 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     return b;
   };
   const note = (text: string, ...buttons: HTMLButtonElement[]) => {
-    if (put(h("section", { class: "sc-card" }, h("p", { class: "sc-prompt", "aria-live": "polite" }, text), h("div", { class: "sc-end" }, ...buttons)))) buttons[0].focus();
+    say(text);
+    if (put(h("section", { class: "sc-card" }, h("p", { class: "sc-prompt" }, text), h("div", { class: "sc-end" }, ...buttons)))) buttons[0].focus();
+  };
+
+  // A throw in the site's onResult must not stall the quiz.
+  const report = (r: QuizResult) => {
+    try {
+      onResult(r);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  // A written airplane question names no area: the reveal raises the one the airplane is in, as for generated ones.
+  const withArea = (q: Question): Question => {
+    const plane = q.scene?.airplane;
+    if (q.type !== "airplane" || q.answerArea || !plane || !("at" in plane)) return q;
+    const area = classAt(data, v.dem(), ...plane.at).area;
+    return area ? { ...q, answerArea: area } : q;
   };
 
   let a = start();
@@ -78,13 +100,13 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     }
     const it = a.items[a.i];
     let shownAt = 0;
-    const k = card(it.q, L, v, (ans) => {
+    const k = card(it.q, L, v, say, (ans) => {
       if (!a || a.done || open !== k) return;
       const right = score(it.q, ans, locator(data, stage.files()));
       a = answer(a, right);
       drawCount();
-      onResult({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
-      void show(revealScene(it.q));
+      report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
+      void show(revealScene(withArea(it.q)));
       k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next());
     });
     const had = put(k.el);
@@ -99,7 +121,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     if (!a || a.done) return;
     a = advance(a, make, rng);
     if (!a.done || a.practice) return void ask(); // practice ends only when nothing more can be made
-    onResult({ quiz: id, end: true, right: a.right, total: a.items.length });
+    report({ quiz: id, end: true, right: a.right, total: a.items.length });
     note(
       L.result(a.right, a.items.length),
       pill(L.again, () => {

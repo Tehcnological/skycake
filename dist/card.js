@@ -20,11 +20,12 @@ const icon = (right) => {
 const SETTLE_MS = 300;
 /** The card that owns the view's tap, focus ring and hints now; an older card closing later leaves them alone. */
 const owner = new WeakMap();
-export function card(q, L, view, onAnswer) {
+/** say: sets the text of a live region already on the page (a new card's own region would not be announced). */
+export function card(q, L, view, say, onAnswer) {
     const el = h("section", "sc-card");
-    const live = h("div", "sc-live", h("p", "sc-prompt", q.prompt));
-    live.setAttribute("aria-live", "polite");
-    el.append(live);
+    const text = h("div", "sc-text", h("p", "sc-prompt", q.prompt));
+    el.append(text);
+    say(q.prompt);
     const controls = [];
     const choiceButtons = [];
     let answered = false;
@@ -126,19 +127,21 @@ export function card(q, L, view, onAnswer) {
             for (const c of controls)
                 c.disabled = true;
             done();
-            live.append(h("p", `sc-result ${right ? "right" : "wrong"}`, icon(right), right ? L.right : L.wrong));
+            const said = [h("p", `sc-result ${right ? "right" : "wrong"}`, icon(right), right ? L.right : L.wrong)];
             // A wrong answer still teaches the right one: in words, and marked with the check on its choice.
             const shown = "choices" in q ? q.choices[q.answer] : "number" in q ? `${q.number.answer.toLocaleString("en-US")}${q.number.unit ? ` ${q.number.unit}` : ""}` : null;
             if (!right && shown !== null) {
-                live.append(h("p", "sc-facts", L.answerWas(shown)));
+                said.push(h("p", "sc-facts", L.answerWas(shown)));
                 const b = "choices" in q ? choiceButtons[q.answer] : undefined;
                 b?.classList.add("sc-answer");
                 b?.prepend(icon(true));
             }
             if (facts)
-                live.append(h("p", "sc-facts", facts));
+                said.push(h("p", "sc-facts", facts));
             if (q.explanation)
-                live.append(h("p", "sc-explain", q.explanation));
+                said.push(h("p", "sc-explain", q.explanation));
+            text.append(...said);
+            say(said.map((p) => p.textContent).join(" "));
             const next = h("button", "sc-choice sc-next", label);
             next.type = "button";
             next.addEventListener("click", onNext);
