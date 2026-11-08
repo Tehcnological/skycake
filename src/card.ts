@@ -22,7 +22,7 @@ const icon = (right: boolean) => {
 };
 
 /** The card that owns the view's tap, focus ring and hints now; an older card closing later leaves them alone. */
-let current: object | null = null;
+const owner = new WeakMap<View, object>();
 
 export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) => void): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void } {
   const el = h("section", "sc-card");
@@ -45,7 +45,11 @@ export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) =
   };
 
   const me = {};
-  current = me;
+  if (owner.has(view)) {
+    view.tap(null);
+    view.focus(null);
+  }
+  owner.set(view, me);
   view.hints(false);
   if ("choices" in q) {
     const list = h("div", "sc-choices");
@@ -80,16 +84,19 @@ export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) =
     let filling = false;
     const fill = (focusAt = -1) => {
       filling = true;
-      list.replaceChildren();
-      controls.length = 0;
-      view.onScreen().forEach((c: Candidate) => {
-        const b = button("sc-hidden", c.name, () => answer("area" in c ? { area: c.area, at: null } : { area: null, at: c.at }));
-        b.addEventListener("focus", () => view.focus(c));
-        b.addEventListener("blur", () => view.focus(null));
-        list.append(b);
-      });
-      if (focusAt >= 0) (list.children[Math.min(focusAt, list.children.length - 1)] as HTMLElement | undefined)?.focus();
-      filling = false;
+      try {
+        list.replaceChildren();
+        controls.length = 0;
+        view.onScreen().forEach((c: Candidate) => {
+          const b = button("sc-hidden", c.name, () => answer("area" in c ? { area: c.area, at: null } : { area: null, at: c.at }));
+          b.addEventListener("focus", () => view.focus(c));
+          b.addEventListener("blur", () => view.focus(null));
+          list.append(b);
+        });
+        if (focusAt >= 0) (list.children[Math.min(focusAt, list.children.length - 1)] as HTMLElement | undefined)?.focus();
+      } finally {
+        filling = false;
+      }
     };
     list.addEventListener("focusin", (e) => {
       if (!filling && !(e.relatedTarget instanceof Node && list.contains(e.relatedTarget))) fill([...list.children].indexOf(e.target as Element));
@@ -100,9 +107,9 @@ export function card(q: Question, L: Labels, view: View, onAnswer: (a: Answer) =
 
   let closed = false;
   const done = () => {
-    if (closed || current !== me) return;
+    if (closed || owner.get(view) !== me) return;
     closed = true;
-    current = null;
+    owner.delete(view);
     view.hints(true);
     view.tap(null);
     view.focus(null);
