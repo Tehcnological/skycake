@@ -32,7 +32,9 @@
   const mode = quiz
     ? { quiz: quiz === "practice" ? "practice" : await json(`${quiz}-quiz`), kinds: list("kinds"), types: list("types"), airports: list("airports") }
     : walkthrough ? { walkthrough: await json(walkthrough), next: { label: "Quiz", href: "./?quiz=class-b" } } : "explore";
-  mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, onResult: (r) => console.log("skycake result", r), ...(scene ? { scene: JSON.parse(scene) } : {}) });
+  // ?a11y=1 or ?a11y=0: the site drives accessibility mode; left out, skycake shows its own switch in free roam.
+  const a11y = q.get("a11y");
+  mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, onResult: (r) => console.log("skycake result", r), ...(scene ? { scene: JSON.parse(scene) } : {}), ...(a11y !== null ? { a11y: a11y === "1" } : {}) });
 </script>
 </body>
 </html>

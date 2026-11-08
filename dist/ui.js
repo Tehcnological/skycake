@@ -2,6 +2,7 @@
 // chart only when the element comes into sight. Styles are in style.css, which the site loads.
 import { chartsOf } from "./airspace.js";
 import { firstScene } from "./scene.js";
+import { browserStorage, initial, store } from "./a11y.js";
 export const LABELS = {
     kinds: { B: "Class B", C: "Class C", D: "Class D", E: "Class E", E700: "E 700 ft", MODEC: "Mode C", R: "Restricted", P: "Prohibited", W: "Warning", MOA: "MOA", A: "Alert" },
     groups: { IAP: "Approaches", STAR: "Arrivals", SID: "Departures" },
@@ -51,6 +52,7 @@ export const LABELS = {
     again: "Placeholder: Again",
     result: (right, total) => `Placeholder: ${right} of ${total}`,
     nothing: "Placeholder: Nothing to ask here",
+    a11y: "Placeholder: Accessibility mode",
     ask: {
         findArea: (name) => `Placeholder: Tap the ${name}`,
         findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
@@ -102,6 +104,9 @@ export async function mount(host, o) {
     const tip = h("div", { class: "tip", hidden: true });
     const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
     const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, chartsOf(data.charts)[0])));
+    const storage = browserStorage();
+    const a11y = initial(o.a11y, storage);
+    fig.toggleAttribute("data-a11y", a11y.on);
     host.replaceChildren(fig);
     // three.js and the chart load only when the view comes into sight.
     await new Promise((done) => {
@@ -121,7 +126,7 @@ export async function mount(host, o) {
         tip.append(Object.assign(document.createElement("span"), { className: "name", textContent: a.name }), a.kind === "E700" ? h("span", {}, L.floor700) : fraction(a, data.ground));
         tip.style.transform = `translate(${Math.min(x + 12, view.clientWidth - tip.offsetWidth - 8)}px, ${Math.max(y - tip.offsetHeight - 8, 8)}px)`;
     };
-    const v = await build(view, data, show, (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })), (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })));
+    const v = await build(view, data, show, (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })), (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })), a11y.on);
     // Keyboard: arrows turn the view, + and - zoom, only while the view has focus.
     const STEP = Math.PI / 24;
     view.addEventListener("keydown", (e) => {
@@ -158,7 +163,15 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on };
+    // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
+    if (a11y.row)
+        context.setA11y = (on) => {
+            context.a11y = on;
+            fig.toggleAttribute("data-a11y", on);
+            v.setA11y(on);
+            store(storage, on);
+        };
     const mode = o.mode ?? "explore";
     if (mode === "explore")
         return freeRoam(context);

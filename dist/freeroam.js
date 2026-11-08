@@ -80,6 +80,13 @@ export function freeRoam(c) {
     const chartButton = round(L.chart, L.chart, [], "sc-chart");
     const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
     const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
+    // Accessibility mode's own switch, when the site has none: under the view buttons (phone: the foot of the View sheet).
+    if (c.setA11y) {
+        const box = h("input", { type: "checkbox", role: "switch" });
+        box.checked = c.a11y;
+        box.addEventListener("change", () => c.setA11y(box.checked));
+        bottomRight.append(h("label", { class: "sc-row sc-a11y-row" }, h("span", {}, L.a11y), box));
+    }
     const caption = fig.querySelector(".sc-caption");
     // Phone tab bar.
     const tab = (label, paths) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));

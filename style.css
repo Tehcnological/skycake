@@ -267,3 +267,31 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
   .skycake.sc-quizzing .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
 }
+
+/* Accessibility mode (data-a11y on the figure), and anyone whose system asks for more contrast: text at least 4.5:1 and
+   control borders at least 3:1 on the panels. A host's own tokens still win, so instrumentready.com's raised ones apply
+   there (and it stays red). See docs/accessibility.md. */
+.skycake[data-a11y] { --sc-soft: var(--soft, #c5c8cc); --sc-muted: var(--muted, #b0b4b9); --sc-dim: var(--dim, #969ba1); --sc-frame: var(--frame, #767c83); --sc-accent: var(--red, #6aa6e8); }
+@media (prefers-contrast: more) {
+  .skycake { --sc-soft: var(--soft, #c5c8cc); --sc-muted: var(--muted, #b0b4b9); --sc-dim: var(--dim, #969ba1); --sc-frame: var(--frame, #767c83); --sc-accent: var(--red, #6aa6e8); }
+}
+/* One focus ring for everything, seen over light and dark chart: a dark gap, a 3px ring in the text color, a dark halo. */
+.skycake[data-a11y] :focus-visible { outline: 3px solid var(--sc-ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--sc-side); }
+/* The view clips its children, so its ring is drawn inside. */
+.skycake[data-a11y] .view:focus-visible { outline-offset: -5px; box-shadow: none; }
+/* Larger tags on solid backgrounds. */
+.skycake[data-a11y] .view .tag { font-size: 13px; }
+.skycake[data-a11y] .view .fix { border-color: #fff; background: #14171c; }
+.skycake[data-a11y] .view .tag.apt, .skycake[data-a11y] .view .tag.plane, .skycake[data-a11y] .view .wp { background: #14171c; }
+.skycake[data-a11y] .sc-round[data-tip]::after { transition: none; }
+/* The mode's own switch, when the site has none: a pill row under the view buttons; on a phone, the View sheet's foot. */
+.skycake .sc-a11y-row { box-sizing: border-box; padding: 0 8px 0 18px; border: 1.5px solid var(--sc-soft); border-radius: var(--sc-r-pill); background: var(--sc-panel); box-shadow: 0 2px 8px rgb(0 0 0 / 0.45); color: var(--sc-ink); font: 600 13px var(--sc-head); letter-spacing: 0.05em; text-transform: uppercase; }
+.skycake .sc-a11y-row input { width: 22px; height: 22px; }
+.skycake .sc-br { align-items: flex-end; }
+/* The search panel stops above the view buttons, the switch row (44px) and its gap too. */
+.skycake:has(.sc-a11y-row) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 380px); }
+@media (max-width: 860px) {
+  .skycake .sc-br { align-items: flex-start; }
+  .skycake:has(.sc-a11y-row) .sc-tr { max-height: calc((100% - 76px) * 0.6); }
+  .skycake .sc-a11y-row { flex-basis: 100%; margin-top: 8px; box-shadow: none; }
+}

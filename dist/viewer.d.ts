@@ -48,6 +48,8 @@ export type View = {
     zoom(factor: number): void;
     /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
     dem(): Int16Array | null;
+    /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
+    setA11y(on: boolean): void;
 };
 /** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
 export type Candidate = {
@@ -66,5 +68,7 @@ export type Candidate = {
 };
 export declare function build(host: HTMLElement, data: AirspaceFile, label: (a: Area | null, x: number, y: number) => void, raised: (kind: Kind, on: boolean) => void, 
 /** A tap on an airport's tag on the chart. */
-airport?: (id: string) => void): Promise<View>;
+airport?: (id: string) => void, 
+/** Accessibility mode at first; View.setA11y changes it. */
+a11y?: boolean): Promise<View>;
 export {};

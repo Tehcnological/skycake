@@ -82,7 +82,9 @@ export const fraction = (a, ground) => el("div", `frac ${STYLE[a.kind].color ===
 const same = (a, b) => a.airport === b.airport && a.name === b.name;
 export async function build(host, data, label, raised, 
 /** A tap on an airport's tag on the chart. */
-airport = () => { }) {
+airport = () => { }, 
+/** Accessibility mode at first; View.setA11y changes it. */
+a11y = false) {
     const { bounds: b } = data;
     const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
     const k = Math.cos((lat0 * Math.PI) / 180);
@@ -91,7 +93,9 @@ airport = () => { }) {
     const latLon = (x, z) => [lat0 - z / 60, lon0 + x / (60 * k)];
     const nm = (ft) => ft / FT_PER_NM;
     const width = (b.e - b.w) * 60 * k, depth = (b.n - b.s) * 60;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let still = reduced || a11y;
+    let loose = a11y;
     const scene = new THREE.Scene();
     const world = new THREE.Group(); // scaled in y by the exaggeration
     world.scale.y = START_SCALE;
@@ -278,6 +282,15 @@ airport = () => { }) {
     };
     const span2 = ([p, q]) => Math.hypot((q[1] - p[1]) * k, q[0] - p[0]);
     const fat = (color, linewidth, dashed, opacity = 1) => new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
+    // Area rims and walls, drawn half again as wide in accessibility mode: each material with its normal width.
+    const widened = [];
+    const WIDE = 1.5;
+    const wide = (m) => {
+        widened.push([m, m.linewidth]);
+        if (loose)
+            m.linewidth *= WIDE;
+        return m;
+    };
     // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
     let mode = "vfr";
     const inMode = (l) => shownIn(mode, l.area.kind);
@@ -345,12 +358,12 @@ airport = () => { }) {
                     run = 0;
                 }
             });
-            const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), fat(s.color, 1.6, s.line === "dashed"));
+            const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), wide(fat(s.color, 1.6, s.line === "dashed")));
             if (s.line === "dashed")
                 rim.computeLineDistances();
             group.add(rim);
             if (ribs.length)
-                group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), fat(s.color, 1, false, 0.45)));
+                group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), wide(fat(s.color, 1, false, 0.45))));
         }
         if (s.walls) {
             // The chart's own form: ceiling over floor, on the widest ring.
@@ -376,6 +389,9 @@ airport = () => { }) {
             continue;
         const node = el("button", "tag apt", a.id);
         node.setAttribute("type", "button");
+        // In accessibility mode the search box's airport list and In view reach them; the map is not dozens of tab stops.
+        if (loose)
+            node.tabIndex = -1;
         node.addEventListener("click", () => tapAirport(a.id));
         addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
     }
@@ -872,7 +888,7 @@ airport = () => { }) {
         regrip();
         if (fingers.size)
             return;
-        if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }))
+        if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose))
             return;
         // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
         const tag = airportTags.find((t) => {
@@ -915,6 +931,18 @@ airport = () => { }) {
     size();
     const view = {
         dem: () => dem,
+        setA11y: (on) => {
+            loose = on;
+            still = reduced || on;
+            for (const [m, w] of widened)
+                m.linewidth = on ? w * WIDE : w;
+            for (const t of airportTags)
+                t.el.tabIndex = on ? -1 : 0;
+            // The mode's tags are larger: measure them again.
+            for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags])
+                t.w = 0;
+            dirty = true;
+        },
         raise: (kind, on) => {
             for (const l of lives)
                 if (l.area.kind === kind)

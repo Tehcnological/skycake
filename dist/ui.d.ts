@@ -63,6 +63,8 @@ export type Labels = {
     again: string;
     result: (right: number, total: number) => string;
     nothing: string;
+    /** Accessibility mode's own switch, when the site does not drive it. */
+    a11y: string;
     /** The generated questions' prompts and their Yes/No answers. */
     ask: {
         findArea: (name: string) => string;
@@ -114,6 +116,9 @@ export type Options = {
     } | QuizMode;
     /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
     onResult?: (r: QuizResult) => void;
+    /** Accessibility mode, driven by the site's own toggle (instrumentready.com: a11yOn()). Left out, skycake shows its own
+     * switch in free roam's view controls and keeps it per browser as "skycake-a11y". See docs/accessibility.md. */
+    a11y?: boolean;
 };
 export type QuizMode = {
     quiz: Quiz | "practice";

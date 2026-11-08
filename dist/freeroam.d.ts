@@ -15,6 +15,10 @@ export type Context = {
     startScale: number;
     /** See Options.close in ui.ts. */
     close?: () => void;
+    /** Accessibility mode now; questions read it as they open. */
+    a11y: boolean;
+    /** Only when the site does not drive the mode: switches it in place (free roam's row). */
+    setA11y?: (on: boolean) => void;
 };
 export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string, string | boolean | undefined>, ...kids: (Node | string)[]): HTMLElementTagNameMap[K];
 /** An inline stroke icon built as elements, so strict CSPs allow it. */

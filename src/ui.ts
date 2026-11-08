@@ -6,6 +6,8 @@ import { firstScene, type Scene } from "./scene.js";
 import type { QuestionType } from "./generate.js";
 import type { Quiz, QuizResult } from "./quiz.js";
 import type { Walkthrough } from "./walkthrough.js";
+import { browserStorage, initial, store } from "./a11y.js";
+import type { Context } from "./freeroam.js";
 
 /** On-screen words. Each site can supply its own; these are placeholders. */
 export type Labels = {
@@ -66,6 +68,8 @@ export type Labels = {
   again: string;
   result: (right: number, total: number) => string;
   nothing: string;
+  /** Accessibility mode's own switch, when the site does not drive it. */
+  a11y: string;
   /** The generated questions' prompts and their Yes/No answers. */
   ask: {
     findArea: (name: string) => string;
@@ -137,6 +141,7 @@ export const LABELS: Labels = {
   again: "Placeholder: Again",
   result: (right, total) => `Placeholder: ${right} of ${total}`,
   nothing: "Placeholder: Nothing to ask here",
+  a11y: "Placeholder: Accessibility mode",
   ask: {
     findArea: (name) => `Placeholder: Tap the ${name}`,
     findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
@@ -178,6 +183,9 @@ export type Options = {
   mode?: "explore" | { walkthrough: Walkthrough; next?: { label: string; href: string } } | QuizMode;
   /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
   onResult?: (r: QuizResult) => void;
+  /** Accessibility mode, driven by the site's own toggle (instrumentready.com: a11yOn()). Left out, skycake shows its own
+   * switch in free roam's view controls and keeps it per browser as "skycake-a11y". See docs/accessibility.md. */
+  a11y?: boolean;
 };
 export type QuizMode = { quiz: Quiz | "practice"; kinds?: Kind[]; types?: QuestionType[]; airports?: string[] };
 
@@ -209,6 +217,9 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   const tip = h("div", { class: "tip", hidden: true });
   const view = h("div", { class: "view", tabindex: "0", role: "application", "aria-label": L.view }, tip);
   const fig = h("figure", { class: "skycake" }, view, h("p", { class: "sc-caption" }, L.caption(data.edition, chartsOf(data.charts)[0])));
+  const storage = browserStorage();
+  const a11y = initial(o.a11y, storage);
+  fig.toggleAttribute("data-a11y", a11y.on);
   host.replaceChildren(fig);
 
   // three.js and the chart load only when the view comes into sight.
@@ -233,6 +244,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     show,
     (kind, on) => fig.dispatchEvent(new CustomEvent("skycake-raised", { detail: { kind, on } })),
     (airport) => fig.dispatchEvent(new CustomEvent("skycake-airport", { detail: { airport } })),
+    a11y.on,
   );
 
   // Keyboard: arrows turn the view, + and - zoom, only while the view has focus.
@@ -269,7 +281,15 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close };
+  const context: Context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on };
+  // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
+  if (a11y.row)
+    context.setA11y = (on) => {
+      context.a11y = on;
+      fig.toggleAttribute("data-a11y", on);
+      v.setA11y(on);
+      store(storage, on);
+    };
   const mode = o.mode ?? "explore";
   if (mode === "explore") return freeRoam(context);
   const explore = (from: Scene) => void freeRoam({ ...context, first: from });

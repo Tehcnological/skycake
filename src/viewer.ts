@@ -120,6 +120,8 @@ export type View = {
   zoom(factor: number): void;
   /** The elevation grid the view loaded (area.json's dem), or null when it failed to load. */
   dem(): Int16Array | null;
+  /** Accessibility mode: no motion, forgiving taps, wider area rims and walls, airport tags out of the tab order. */
+  setA11y(on: boolean): void;
 };
 /** floor, ceiling: as the answer card says them (SFC, 5,000), so a list of same-named pieces can be told apart. */
 export type Candidate = { area: string; name: string; floor: string; ceiling: string } | { fix: string; name: string; at: [lat: number, lon: number] } | { airport: string; name: string; at: [lat: number, lon: number] };
@@ -136,6 +138,8 @@ export async function build(
   raised: (kind: Kind, on: boolean) => void,
   /** A tap on an airport's tag on the chart. */
   airport: (id: string) => void = () => {},
+  /** Accessibility mode at first; View.setA11y changes it. */
+  a11y = false,
 ): Promise<View> {
   const { bounds: b } = data;
   const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
@@ -145,7 +149,9 @@ export async function build(
   const latLon = (x: number, z: number): [lat: number, lon: number] => [lat0 - z / 60, lon0 + x / (60 * k)];
   const nm = (ft: number) => ft / FT_PER_NM;
   const width = (b.e - b.w) * 60 * k, depth = (b.n - b.s) * 60;
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let still = reduced || a11y;
+  let loose = a11y;
 
   const scene = new THREE.Scene();
   const world = new THREE.Group(); // scaled in y by the exaggeration
@@ -331,6 +337,14 @@ export async function build(
   const span2 = ([p, q]: number[][]) => Math.hypot((q[1] - p[1]) * k, q[0] - p[0]);
   const fat = (color: number, linewidth: number, dashed: boolean, opacity = 1) =>
     new LineMaterial({ color, linewidth, transparent: true, opacity, dashed, dashSize: 0.5, gapSize: 0.35 });
+  // Area rims and walls, drawn half again as wide in accessibility mode: each material with its normal width.
+  const widened: [LineMaterial, number][] = [];
+  const WIDE = 1.5;
+  const wide = (m: LineMaterial) => {
+    widened.push([m, m.linewidth]);
+    if (loose) m.linewidth *= WIDE;
+    return m;
+  };
 
   // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
   let mode: Mode = "vfr";
@@ -399,10 +413,10 @@ export async function build(
           run = 0;
         }
       });
-      const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), fat(s.color, 1.6, s.line === "dashed"));
+      const rim = new LineSegments2(new LineSegmentsGeometry().setPositions(rims), wide(fat(s.color, 1.6, s.line === "dashed")));
       if (s.line === "dashed") rim.computeLineDistances();
       group.add(rim);
-      if (ribs.length) group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), fat(s.color, 1, false, 0.45)));
+      if (ribs.length) group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(ribs), wide(fat(s.color, 1, false, 0.45))));
     }
     if (s.walls) {
       // The chart's own form: ceiling over floor, on the widest ring.
@@ -425,6 +439,8 @@ export async function build(
     if (!a.procedures.length) continue;
     const node = el("button", "tag apt", a.id);
     node.setAttribute("type", "button");
+    // In accessibility mode the search box's airport list and In view reach them; the map is not dozens of tab stops.
+    if (loose) node.tabIndex = -1;
     node.addEventListener("click", () => tapAirport(a.id));
     addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
   }
@@ -892,7 +908,7 @@ export async function build(
     const touch = fingers.delete(e.pointerId);
     regrip();
     if (fingers.size) return;
-    if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 })) return;
+    if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose)) return;
     // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
     const tag = airportTags.find((t) => {
       const r = t.el.getBoundingClientRect();
@@ -932,6 +948,15 @@ export async function build(
 
   const view: View = {
     dem: () => dem,
+    setA11y: (on) => {
+      loose = on;
+      still = reduced || on;
+      for (const [m, w] of widened) m.linewidth = on ? w * WIDE : w;
+      for (const t of airportTags) t.el.tabIndex = on ? -1 : 0;
+      // The mode's tags are larger: measure them again.
+      for (const t of [...approachTags, ...airportTags, ...airwayTags, ...shelfTags]) t.w = 0;
+      dirty = true;
+    },
     raise: (kind, on) => {
       for (const l of lives) if (l.area.kind === kind) set(l, on);
       setKind(kind);

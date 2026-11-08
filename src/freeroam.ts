@@ -21,6 +21,10 @@ export type Context = {
   startScale: number;
   /** See Options.close in ui.ts. */
   close?: () => void;
+  /** Accessibility mode now; questions read it as they open. */
+  a11y: boolean;
+  /** Only when the site does not drive the mode: switches it in place (free roam's row). */
+  setA11y?: (on: boolean) => void;
 };
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -98,6 +102,13 @@ export function freeRoam(c: Context): Promise<void> {
   const chartButton = round(L.chart, L.chart, [], "sc-chart");
   const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
   const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
+  // Accessibility mode's own switch, when the site has none: under the view buttons (phone: the foot of the View sheet).
+  if (c.setA11y) {
+    const box = h("input", { type: "checkbox", role: "switch" });
+    box.checked = c.a11y;
+    box.addEventListener("change", () => c.setA11y!(box.checked));
+    bottomRight.append(h("label", { class: "sc-row sc-a11y-row" }, h("span", {}, L.a11y), box));
+  }
   const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
   // Phone tab bar.
