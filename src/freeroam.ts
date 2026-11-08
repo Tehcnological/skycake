@@ -320,13 +320,7 @@ export function freeRoam(c: Context): Promise<void> {
   }
   drawPhone();
 
-  // CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms the page.
-  const taken = () => !fig.classList.contains("sc-preview");
-  for (const t of ["gesturestart", "gesturechange", "gestureend"]) fig.addEventListener(t, (e) => taken() && e.preventDefault());
-  fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
-  fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
-  // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
-  if (matchMedia("(pointer: coarse)").matches) fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
+  // The page's own gestures over the map are stopped in mount() (ui.ts), for every mode.
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) setFull(false);
   });

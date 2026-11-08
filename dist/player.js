@@ -53,6 +53,8 @@ export function player(c, w, nextLink, explore) {
     // Every scene goes through here. Files load out of order, so only the newest scene asked for shows.
     let ticket = 0;
     let files = [];
+    // The scene on screen (a step's, or a check's question or reveal), for Explore.
+    let onScreen = {};
     const show = async (scene, now = false) => {
         const mine = ++ticket;
         const plane = scene.airplane && "along" in scene.airplane ? [scene.airplane.along] : [];
@@ -62,7 +64,17 @@ export function player(c, w, nextLink, explore) {
         if (mine !== ticket)
             return;
         const locate = locator(data, found);
-        const r = resolve(usable(scene, data, (fix) => !!locate({ fix }), warn), data);
+        const ok = usable(scene, data, (fix) => !!locate({ fix }), warn);
+        let r;
+        try {
+            r = resolve(ok, data);
+        }
+        catch (e) {
+            // Never stop on a bad step: its caption shows over the view as it was.
+            warn(`${e instanceof Error ? e.message : e}; leaving the view as it was`);
+            return;
+        }
+        onScreen = ok;
         files = found;
         if (caption)
             caption.textContent = L.caption(data.edition, r.chart);
@@ -174,7 +186,7 @@ export function player(c, w, nextLink, explore) {
         big.remove();
         box.remove();
         fig.querySelector(".view")?.focus();
-        explore(stripPlayback({ ...usable(w.steps[p.step].scene, data, () => true, () => { }), camera: v.camera() }));
+        explore(stripPlayback({ ...onScreen, camera: v.camera() }));
     };
     exploreTop.addEventListener("click", leave);
     exploreEnd.addEventListener("click", leave);

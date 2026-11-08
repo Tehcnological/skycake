@@ -111,6 +111,16 @@ export async function mount(host, o) {
         e.preventDefault();
         act[e.key]();
     });
+    // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
+    // the page. sc-preview (free roam's map in the page on a phone) leaves them to the page.
+    const taken = () => !fig.classList.contains("sc-preview");
+    for (const t of ["gesturestart", "gesturechange", "gestureend"])
+        fig.addEventListener(t, (e) => taken() && e.preventDefault());
+    fig.addEventListener("dblclick", (e) => taken() && !(e.target instanceof HTMLInputElement) && e.preventDefault());
+    fig.addEventListener("touchmove", (e) => fig.classList.contains("full") && e.touches.length > 1 && e.preventDefault(), { passive: false });
+    // A long press on the map would open the browser's menu. The search box keeps its own, for paste.
+    if (matchMedia("(pointer: coarse)").matches)
+        fig.addEventListener("contextmenu", (e) => e.target instanceof HTMLInputElement || e.preventDefault());
     const loaded = new Map();
     const procedures = (id) => {
         if (!loaded.has(id))
