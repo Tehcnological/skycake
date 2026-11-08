@@ -8,13 +8,14 @@ Status: spec for Chris to review. No code. Builds on walkthroughs and quizzes (P
 
 ## Understanding
 
-Students practise reading a VFR sectional the way they will on a checkride: find things, read what the chart prints next to them, and look things up in the chart's margin. Three new question families, all generated from FAA data like the ones in #16:
+Students practise reading a VFR sectional the way they will on a checkride: find things, read what the chart prints next to them, and look things up in the chart's margin. Four new question families, all generated from FAA data like the ones in #16:
 
-1. **Special use airspace.** Reading a MOA or restricted area's altitudes and times. On the sectional these are mostly not printed on the map (a MOA shows only its name, a restricted area only its number): they are in the special use airspace table in the margin. So these questions are where "the blurb" comes in.
-2. **Chart symbology.** What a symbol is, and what the chart prints beside it (an airport's data block, an obstacle's heights, a navaid's box).
-3. **Symbol hunt.** A small random patch of the sectional, crowded with symbols; tap the one named ("the abandoned airport") within about 30 seconds.
+1. **Airport data blocks.** "The blurb underneath" (Chris, 2026-11-08): the name, identifier, tower or CTAF frequency, elevation, runway length and the rest printed under each airport symbol.
+2. **Special use airspace.** Reading a MOA or restricted area's altitudes and times. On the sectional these are mostly not printed on the map (a MOA shows only its name, a restricted area only its number): they are in the special use airspace table in the chart's margin, so those questions show that table too.
+3. **Chart symbology.** What a symbol is, and what the chart prints beside other symbols (an obstacle's heights, a navaid's box).
+4. **Symbol hunt.** A small random patch of the sectional, crowded with symbols; tap the one named ("the private airport") within about 30 seconds.
 
-Success: every answer comes from public domain FAA or USGS data and matches what the chart prints; a question that cannot be checked is never asked; Phoenix and Miami work first, and the design has a path to every sectional in the country inside Cloudflare's free tier.
+Success: every answer comes from public domain FAA or USGS data and matches what the chart prints; a question that cannot be checked is never asked; Phoenix and Miami work first. More areas, up to the whole country, come later, each served on its own when opened.
 
 Assumptions (not said by Chris, please correct): sectional only for v1 (not the TAC); the hunt is a practice game inside a quiz, not a separate mode; times are asked as the table prints them (local), not converted.
 
@@ -24,7 +25,8 @@ Assumptions (not said by Chris, please correct): sectional only for v1 (not the 
 - **The area texture is sharp enough for symbols.** `data/phoenix/sectional.webp` (3,827 x 4,096 over the area, about 1,670 px per degree, roughly 0.75 of native) shows private airports, data blocks, obstacles and abandoned airports clearly. The hunt and symbol questions can use the existing 3D view and texture; no new imagery is needed for Phoenix and Miami.
 - **Special use airspace times are in ADDS.** The `Special_Use_Airspace` layer `build-area.ts` already queries has `TIMESOFUSE` ("0600 - 1900, MON - FRI; OTHER TIMES BY NOTAM"), `CONT_AGENT` ("FAA, ALBUQUERQUE ARTCC"), `UPPER_DESC` ("TNI", to but not including) and the altitudes. The build drops these today. Frequencies are not in the layer.
 - **NASR 28-day CSVs** (public, `nfdc.faa.gov/webContent/28DaySub/extra/<date>_<SUBJECT>_CSV.zip`) hold:
-  - `APT_BASE`: site type (A airport, H heliport, C seaplane, U ultralight, G glider, B balloon), public or private (`FACILITY_USE_CODE`), tower (`TWR_TYPE_CODE`: ATCT or NON-ATCT), elevation, beacon schedule, ownership (military), status (O, CI closed indefinitely, CP closed permanently). `APT_RWY` has runway lengths.
+  - `APT_BASE`: site type (A airport, H heliport, C seaplane, U ultralight, G glider, B balloon), public or private (`FACILITY_USE_CODE`), tower (`TWR_TYPE_CODE`: ATCT or NON-ATCT), elevation, beacon schedule, ownership (military), status (O, CI closed indefinitely, CP closed permanently), fuel types. `APT_RWY` has runway lengths; `APT_RWY_END` has `RIGHT_HAND_TRAFFIC_PAT_FLAG`. Runway lighting is not usable: `LGT_SKED` reads "SEE RMK" for the Phoenix airports checked.
+  - `FRQ`: per airport, the tower frequency (`FREQ_USE` "LCL/P") and `TOWER_HRS` ("0600-0000", so part-time), CTAF, UNICOM, ATIS, ASOS or AWOS. Checked on DVT, E60 and P08.
   - `NAV`: VOR, VORTAC, VOR/DME, NDB, TACAN with frequencies.
   - `FIX`: 673 VFR waypoints nationwide (`FIX_USE_CODE` VFR); `CHARTS` says SECTIONAL or VFR TERMINAL AREA.
   - `PJA` (parachute jumping), `MAA` (glider, hang glider, ultralight, aerobatic areas), `MTR`, `FRQ` (CTAF, tower).
@@ -46,13 +48,35 @@ Assumptions (not said by Chris, please correct): sectional only for v1 (not the 
 
 **C. Detect every symbol from the image.** Image matching over the whole chart, no data. Covers anything printed, but answers would rest on detection alone.
 
-Recommendation: A, plus a narrow use of C: image matching only to confirm that a data point's symbol is printed, and to find abandoned airports, with Chris confirming each new abandoned airport once. B stays the path for chart-only areas nationwide (see Scaling).
+Recommendation: A, plus a narrow use of C: image matching only to confirm that a data point's symbol is printed, and later, if wanted, to find abandoned airports (no data at all) with Chris confirming each one once. B stays the path for chart-only areas nationwide (see Scaling).
 
 ## Question families
 
 Each family is a new generator name in `QuestionType` (the Practice "types" filter). Each produces an existing question `type` (`read` or `find`), so scoring and the card mostly stay as they are.
 
-### 1. `sua`: special use airspace
+### 1. `block`: the airport data block
+
+Shows the sectional top-down, framed on one airport so its whole data block is in view, the airport highlighted (`highlight: [{ airport }]`). The prompt names nothing the block prints. Airports filter: when `airports` is set, only those.
+
+| Sub | Asks | Answer from | Asked only when |
+|---|---|---|---|
+| identifier | "What is this airport's identifier?" | `ARPT_ID` (ICAO id where the chart prints it) | always |
+| towered | "Does this airport have a control tower?" (blue or magenta) | `TWR_TYPE_CODE` | always |
+| tower frequency | "What is the tower frequency?" | `FRQ` "LCL/P" | the airport has exactly one LCL/P frequency |
+| part-time tower | "Is the tower open all the time?" (the star) | `TOWER_HRS` | the hours are given |
+| CTAF | "What is the CTAF?" | `FRQ` "CTAF" | non-towered, one CTAF |
+| UNICOM / ATIS / AWOS | "What is the ATIS frequency?", and so on | `FRQ` | one frequency of that kind |
+| elevation | "What is the field elevation?" | `ELEV`, rounded to feet | always; wrong choices from nearby airports |
+| longest runway | "How long is the longest runway?" (hundreds of feet, as printed) | `APT_RWY` | always |
+| right traffic | "Which runways have right traffic?" (RP) | `APT_RWY_END` | at least one runway end flagged |
+| beacon | "Does this airport have a rotating beacon?" (the star by the symbol) | `BCN_LGT_SKED` | always |
+| fuel | "Is fuel available?" (the ticks) | `FUEL_TYPES` | always |
+
+Not asked: runway lighting (L, *L), FAR 93, NO SVFR, weather cameras; the data does not say them reliably.
+
+Where the chart and NASR could disagree (the chart's cutoff is weeks before its edition), the build uses the NASR cycle of the chart's edition (see Edition alignment). Chris checks the first build's answers against the chart by eye for a handful of airports.
+
+### 2. `sua`: special use airspace
 
 | Sub | Shows | Asks | Answer from | Wrong choices from |
 |---|---|---|---|---|
@@ -65,27 +89,21 @@ Each family is a new generator name in `QuestionType` (the Practice "types" filt
 
 The `find` generator already asks for SUA by name (kinds R, P, W, MOA, A); nothing changes there. Kinds filter: `sua` asks only about SUA kinds in `kinds`. What a student must do before entering each kind (a rules table like `airclass.ts`) is a possible later sub; Chris to say whether he wants it.
 
-### 2. `symbol`: what is it, and what does it say
+### 3. `symbol`: what is it, and what does it say
 
 Shows the sectional top-down, framed on one symbol, with that point highlighted (`highlight: [{ point }]` already exists in `Scene`).
 
 | Sub | Asks | Answer from |
 |---|---|---|
 | what is this | "What does this symbol show?" | the symbol's kind; wrong choices from other kinds in the same group (airports with airports, navaids with navaids, obstacles with obstacles) |
-| towered | "Does this airport have a control tower?" (blue or magenta) | `TWR_TYPE_CODE` |
-| elevation | "What is the field elevation?" | `APT_BASE.ELEV`; wrong choices from nearby airports |
-| longest runway | "How long is the longest runway?" (hundreds of feet, as printed) | `APT_RWY` |
-| CTAF or tower | "What frequency do you call on?" | `FRQ` (CT or CTAF as the data block prints it) |
 | obstacle | "How high is this obstacle above sea level?" / "...above the ground?" | DOF `AMSL` / `AGL`; wrong choices at least 100 ft apart |
 | navaid | "What is this VOR's frequency?" | `NAV` |
 
-Airports filter: when `airports` is set, the airport subs ask only about those.
-
-### 3. `hunt`: find it in 30 seconds
+### 4. `hunt`: find it in 30 seconds
 
 1. Pick a symbol kind the area has (respecting the `symbols` filter).
 2. Pick a random window about 6 to 10 NM across (zoom to be tuned on a phone) that holds at least one printed instance at least 1 NM inside the edges and at least 6 symbols of at least 4 kinds, from `chart.json`. Up to 200 tries, then give up (null, as the other generators do).
-3. Ask "Tap the abandoned airport" (`ask.hunt(kindLabel)`), top-down, sectional, nothing raised, tags off.
+3. Ask "Tap the private airport" (`ask.hunt(kindLabel)`), top-down, sectional, nothing raised, tags off.
 4. Any printed instance of that kind in the window is right, within `nm` (about 0.4 NM, a symbol's radius at that zoom). A tap elsewhere is wrong.
 5. A countdown of `seconds` (default 30). At 0 the question scores wrong and the reveal rings every instance.
 
@@ -95,7 +113,7 @@ Kinds for the hunt and "what is this", by how sure we are the symbol is printed:
 |---|---|---|---|
 | A | public airport towered / non-towered, seaplane base, military airport, VOR, VORTAC, VOR/DME, NDB, VFR waypoint (`CHARTS` has SECTIONAL) | NASR | always, by charting rules |
 | B | private airport, heliport, ultralight park, gliderport, obstacle, group obstacle, obstacle 1,000 ft AGL or higher, parachute area | NASR, DOF | only some: asked only where the image match confirms a symbol at the data point |
-| C | abandoned airport | none | found by image matching, confirmed once by Chris |
+| C, later | abandoned airport | none | found by image matching, confirmed once by Chris; Chris named it as an example, so not in v1 |
 
 ## Data
 
@@ -106,7 +124,9 @@ type SymbolKind = "towered" | "nontowered" | "private" | "military" | "heliport"
   | "abandoned" | "vor" | "vortac" | "vordme" | "ndb" | "obstacle" | "obstacleTall" | "obstacleGroup" | "vfrWaypoint" | "parachute";
 /** printed: how we know it is on the chart: charting rules (tier A), an image match at the data point (B), Chris's confirmation (C). */
 type Sym = { kind: SymbolKind; lat: number; lon: number; id?: string; name?: string; printed: "rule" | "matched" | "confirmed";
-  elev?: number; rwy?: number; freq?: string; ct?: boolean; agl?: number; msl?: number };
+  elev?: number; rwy?: number; freq?: string; agl?: number; msl?: number;
+  /** Airports: what the data block prints. */
+  block?: { ident: string; towered: boolean; tower?: string; towerHrs?: string; ctaf?: string; unicom?: string; atis?: string; awos?: string; rp?: string[]; beacon: boolean; fuel: boolean } };
 type ChartFile = { edition: string; nasr: string; dof: string; symbols: Sym[]; table?: { url: string; w: number; h: number } };
 ```
 
@@ -125,7 +145,7 @@ Cropped from the native GeoTIFF by a pixel box per chart in `AREAS` (as the IFR 
 - Glyphs cut once from the sectional legend (FAA, public domain), committed as small PNGs under `scripts/glyphs/`.
 - On the area texture: a colour mask (magenta, blue, black) and normalized cross-correlation at the texture's known scale, in plain TypeScript over `sharp` pixels. No new dependency.
 - Tier B: a match within a few pixels of the data point marks the symbol `matched`; no match, the symbol is left out.
-- Tier C: scan the texture for the abandoned airport glyph. Positions Chris has confirmed live in `data/<area>/marks.json` (committed). New candidates, and confirmed ones no longer found, go into the Data cycle PR as a contact sheet; nothing new is asked until Chris confirms it.
+- Tier C (later): scan the texture for the abandoned airport glyph. Positions Chris has confirmed live in `data/<area>/marks.json` (committed). New candidates, and confirmed ones no longer found, go into the Data cycle PR as a contact sheet; nothing new is asked until Chris confirms it.
 
 ### Edition alignment
 
@@ -135,17 +155,16 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 
 - **`src/question.ts`:** `Question` gains `seconds?: number` (any type). Find gains `near?: [lat, lon][]` (other right answers) and `nm?: number` (tolerance, default today's 1.5). `score` checks `near` too. The card's elapsed time is already reported in `QuizResult.ms`.
 - **`src/scene.ts`:** add `table?: boolean` (show the margin table). The hunt needs a way to show the chart with nothing over it; if flat airspace draws over the chart, a scene field to hide it.
-- **`src/generate.ts`:** three generators, `sua`, `symbol`, `hunt`. `Gen` gains `chart: ChartFile | null` and `symbols?: SymbolKind[]`. A null `chart` (an area built before this) makes `symbol` and `hunt` return null, so practice skips them.
-- **`src/quiz.ts`:** `Generate` and Practice filters gain `symbols?: SymbolKind[]` and `seconds?: number`. One filter alone keeps to its side, as today: `symbols` alone asks only `symbol` and `hunt`; `kinds` naming only SUA kinds asks `find` and `sua`.
+- **`src/generate.ts`:** four generators, `block`, `sua`, `symbol`, `hunt`. `Gen` gains `chart: ChartFile | null` and `symbols?: SymbolKind[]`. A null `chart` (an area built before this) makes `block`, `symbol` and `hunt` return null, so practice skips them.
+- **`src/quiz.ts`:** `Generate` and Practice filters gain `symbols?: SymbolKind[]` and `seconds?: number`. One filter alone keeps to its side, as today: `symbols` alone asks only `symbol` and `hunt`; `kinds` naming only SUA kinds asks `find` and `sua`; `airports` alone also asks `block` about those airports.
 - **`src/quizui.ts`:** the countdown, the table panel, time up.
-- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, day, time)`, `ask.byNotam`, `ask.towered`, `ask.elevation`, `ask.runway`, `ask.frequency`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
+- **Labels (`src/ui.ts`), all placeholders, Chris writes the copy:** `symbols: Record<SymbolKind, string>`, `timeUp`, `ask.hunt(kind)`, `ask.whatSymbol`, `ask.suaFloor(name)`, `ask.suaCeiling(name)`, `ask.suaTimes(name)`, `ask.suaAgency(name)`, `ask.suaKind`, `ask.inSua(name)`, `ask.suaInUse(name, day, time)`, `ask.byNotam`, `ask.identifier`, `ask.towered`, `ask.towerFreq`, `ask.towerHours`, `ask.ctaf`, `ask.unicom`, `ask.atis`, `ask.awos`, `ask.elevation`, `ask.runway`, `ask.rightTraffic`, `ask.beacon`, `ask.fuel`, `ask.obstacleMsl`, `ask.obstacleAgl`, `ask.navaidFreq`.
 - **Validation (`src/validate.ts`):** authored questions may name a symbol by `id`; the validator checks it against `chart.json` as it does fixes and areas.
 
 ## Scaling
 
 - **Phoenix and Miami (v1):** about 1 MB more per area (`chart.json`, `sua-table.webp`). Same git, npm and Pages path as today.
-- **More 3D areas:** each is about 10 MB today. A dozen more is fine; every sectional as a 3D area (about 37 in the contiguous US, plus Alaska and Hawaii) would put several hundred MB into git and the npm package every 56 days. Not that way.
-- **Whole country, chart reading only:** a lighter "chart pack" per sectional: the sectional at about today's resolution cut into tiles under 25 MiB each, `chart.json`, `sua-table.webp`. No terrain, procedures, TAC or IFR charts. Roughly 15 to 20 MB per sectional, 600 to 750 MB in all. That is too much for git or npm on a 56-day cycle. Proposed: the Data cycle workflow builds the packs and uploads them straight to Cloudflare Pages (skycake.app) with direct upload, never committing them; instrumentready.com loads them from skycake.app with CORS headers. Free tier: up to 20,000 files per site, 25 MiB per file; GitHub Actions is free for this public repo. Needs a Cloudflare API token as a GitHub secret. Chris's call. This is where approach B (flat crops, no 3D) would come in.
+- **Later (Chris, 2026-11-08):** more areas, up to the whole country, each served on its own when a student opens it, never all at once. Worked out when that work starts. Notes for then: a 3D area is about 10 MB today, so dozens of them in git and the npm package every 56 days would be heavy; a lighter chart-only pack per sectional (tiles, `chart.json`, `sua-table.webp`, no terrain or procedures, roughly 15 to 20 MB) could be built in Actions and uploaded straight to Cloudflare Pages instead of committed. That is where approach B (flat crops, no 3D) would come in.
 - **Symbology does not need the current edition.** Hunt and symbol packs could be refreshed yearly instead of every 56 days; the SUA table should follow the edition.
 
 ## Testing
@@ -153,27 +172,32 @@ The sectional is built from NASR and DOF at its own cutoff. The build uses the N
 - Generators: seeded tests on a fixture `chart.json` as `generate.test.ts` does today: every answer is in the data, wrong choices are distinct, filters hold, null when nothing fits.
 - The `TIMESOFUSE` grammar: the strings it accepts and the ones it must skip, taken from the Phoenix and Miami records.
 - Scoring: `near` and `nm`, time up.
-- Image matching: a few committed texture crops with known symbols (including the two abandoned airports near Wittmann) and known empty spots.
+- Image matching: a few committed texture crops with known symbols (private airports and obstacles near Wittmann) and known empty spots.
 - By hand: phone emulation at 390 px with touch, a full hunt with the timer.
 
 ## Not in scope
 
-Maximum elevation figures, landmarks, MTR routes, TFRs, the TAC, IFR chart symbols, special use airspace frequencies, converting times to UTC, nationwide 3D areas.
+Maximum elevation figures, landmarks, MTR routes, TFRs, the TAC, IFR chart symbols, special use airspace frequencies, converting times to UTC, abandoned airports (later, see tier C), more areas (later, see Scaling).
 
 ## Open questions for Chris
 
 Visual direction (none of this is settled; nothing new is designed until Chris says):
 
 1. **Countdown:** a thin bar draining across the top of the card, a number, or a ring around the prompt? Does it pause when the tab is hidden?
-2. **Symbol highlight** for "what does this symbol show": the existing highlight style, a ring, or crosshairs? It must not cover the symbol.
+2. **Highlight** for "what does this symbol show" and the data block questions: the existing highlight style, a ring, or crosshairs? It must not cover the symbol or its data block.
 3. **The margin table:** a panel under the card that scrolls sideways at native scale, a full-screen sheet with pinch zoom, or the table cropped to the rows near the asked area (needs row positions, so more work)?
 4. **The hunt on a keyboard:** numbered markers on every symbol in the window, chosen by number; or the hunt is pointer-only and keyboard users get "what is this" questions instead?
 5. **Hunt window size** on a phone: how many NM across, and does the student get to zoom?
 
 Decisions:
 
-6. **Abandoned airports:** image matching with a contact sheet for Chris to confirm (recommended), or Chris marks them by hand, or leave them out?
-7. **Whole country:** Pages direct upload of chart packs built in Actions (needs a Cloudflare API token secret), more 3D areas only where Chris wants them, or both?
-8. **The SUA rules sub** (what a student must do before entering each kind): wanted? Chris would write or approve the rules table.
-9. **Times:** keep "in use at" questions in local time as the table prints them?
-10. **Edition for symbology packs:** refresh yearly, or every 56 days with the rest?
+6. **The SUA rules sub** (what a student must do before entering each kind): wanted? Chris would write or approve the rules table.
+7. **Times:** keep "in use at" questions in local time as the table prints them?
+8. **Edition for symbology packs:** refresh yearly, or every 56 days with the rest?
+
+Settled with Chris (2026-11-08):
+
+- "The blurb underneath" is the airport data block; the SUA table questions stay as well.
+- The abandoned airport was an example: not in v1.
+- The whole country comes later, each area served on its own, never all at once.
+- Everything else in this spec is approved; the visual questions above are Chris's to look at.
