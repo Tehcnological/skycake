@@ -19,8 +19,8 @@ await cp("data", `${out}/data`, { recursive: true });
 
 // The data manifest: per area, its edition, the date it is current through, a revision that changes with any file,
 // and its files for an offline copy.
-// shortcut: through is the chart edition plus one 28-day procedure cycle, the earliest the data can be out of date;
-// phase 2's data pipeline should write the real cycle into each area instead.
+// Through: the last day of the area's 28-day procedure cycle. Areas built before the cycle was recorded fall back to
+// their chart edition, the earliest cycle they can be from.
 const areas = {};
 for (const id of (await readdir("data")).sort()) {
   const files = [];
@@ -33,9 +33,10 @@ for (const id of (await readdir("data")).sort()) {
     bytes += s.size;
     rev.update(f).update(await readFile(`data/${id}/${f}`));
   }
-  const { edition } = JSON.parse(await readFile(`data/${id}/area.json`, "utf8"));
+  const { edition, cycle = edition } = JSON.parse(await readFile(`data/${id}/area.json`, "utf8"));
   assert.match(edition, /^\d{4}-\d{2}-\d{2}$/, `${id}: edition`);
-  const through = new Date(Date.parse(edition) + 27 * DAY).toISOString().slice(0, 10);
+  assert.match(cycle, /^\d{4}-\d{2}-\d{2}$/, `${id}: cycle`);
+  const through = new Date(Date.parse(cycle) + 27 * DAY).toISOString().slice(0, 10);
   areas[id] = { edition, through, rev: rev.digest("hex").slice(0, 12), bytes, files };
 }
 assert.deepEqual(Object.keys(areas), ["miami", "phoenix"]);

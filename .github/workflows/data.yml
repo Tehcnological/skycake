@@ -1,0 +1,88 @@
+name: Data cycle
+
+# The FAA publishes new procedures every 28 days and new charts every 56, effective at 0901Z. Once a day this checks
+# whether a new 28-day cycle is in effect and, if so, rebuilds data/ and opens a PR. Merging it ships the data to the
+# sites (from git) and to SkyCake Viewer (Cloudflare rebuilds main). See "Data" in README.md.
+on:
+  schedule:
+    - cron: "30 10 * * *"
+  workflow_dispatch:
+
+# Push the branch, open the PR, start CI on it. Nothing else; no secrets.
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: data-cycle
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Due when the committed data is from an older cycle and no PR branch for this one exists yet.
+      - name: New cycle?
+        id: cycle
+        run: |
+          cycle=$(npx tsx scripts/build-area.ts --cycle)
+          echo "cycle=$cycle" >> "$GITHUB_OUTPUT"
+          for a in data/*/area.json; do
+            if [ "$(jq -r '.cycle // ""' "$a")" != "$cycle" ]; then due=1; fi
+          done
+          if [ -n "$due" ] && ! git ls-remote --exit-code origin "refs/heads/data/$cycle" > /dev/null; then
+            echo "due=1" >> "$GITHUB_OUTPUT"
+            echo "Cycle $cycle: rebuilding."
+          else
+            echo "Cycle $cycle: nothing to do."
+          fi
+
+      - name: Build the data
+        if: steps.cycle.outputs.due
+        shell: bash
+        run: npm run data 2>&1 | tee data.log
+
+      - name: Data files fit Cloudflare
+        if: steps.cycle.outputs.due
+        run: |
+          if find data -type f -size +24M | grep .; then
+            echo "::error::Data files above are over 24 MiB. Keep each one well under 25 MiB."
+            exit 1
+          fi
+
+      - name: Open a PR
+        if: steps.cycle.outputs.due
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CYCLE: ${{ steps.cycle.outputs.cycle }}
+        run: |
+          branch="data/$CYCLE"
+          git switch -c "$branch"
+          git add data
+          if git diff --cached --quiet; then echo "No data changes."; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Data for the $CYCLE cycle"
+          git push origin "$branch"
+          {
+            echo "FAA data for the cycle effective $CYCLE, built by the Data cycle workflow. Check the notes below, then merge."
+            echo
+            echo '```'
+            grep -E "left out|ticks fit|airports|IAP|SID|STAR|^[A-Z]+ [0-9]+," data.log || true
+            echo '```'
+            echo
+            git diff --stat HEAD~1 | tail -1
+          } > body.md
+          gh pr create --base main --head "$branch" --title "Data: $CYCLE cycle" --body-file body.md
+          # A PR opened with this workflow's token starts no other workflows, so start CI on the branch here.
+          gh workflow run ci.yml --ref "$branch"
