@@ -14,6 +14,8 @@ const icon = (right) => {
     svg.append(path);
     return svg;
 };
+/** The card that owns the view's tap, focus ring and hints now; an older card closing later leaves them alone. */
+let current = null;
 export function card(q, L, view, onAnswer) {
     const el = h("section", "sc-card");
     const live = h("div", "sc-live", h("p", "sc-prompt", q.prompt));
@@ -34,6 +36,8 @@ export function card(q, L, view, onAnswer) {
         controls.push(b);
         return b;
     };
+    const me = {};
+    current = me;
     view.hints(false);
     if ("choices" in q) {
         const list = h("div", "sc-choices");
@@ -68,7 +72,9 @@ export function card(q, L, view, onAnswer) {
         view.tap((hit) => answer(hit));
         // The same answers for a keyboard: what is on screen, as hidden buttons. Rebuilt as Tab enters, since the camera moves.
         const list = h("div", "sc-onscreen");
+        let filling = false;
         const fill = (focusAt = -1) => {
+            filling = true;
             list.replaceChildren();
             controls.length = 0;
             view.onScreen().forEach((c) => {
@@ -79,15 +85,21 @@ export function card(q, L, view, onAnswer) {
             });
             if (focusAt >= 0)
                 list.children[Math.min(focusAt, list.children.length - 1)]?.focus();
+            filling = false;
         };
         list.addEventListener("focusin", (e) => {
-            if (!(e.relatedTarget instanceof Node && list.contains(e.relatedTarget)))
+            if (!filling && !(e.relatedTarget instanceof Node && list.contains(e.relatedTarget)))
                 fill([...list.children].indexOf(e.target));
         });
         fill();
         el.append(list);
     }
+    let closed = false;
     const done = () => {
+        if (closed || current !== me)
+            return;
+        closed = true;
+        current = null;
         view.hints(true);
         view.tap(null);
         view.focus(null);
