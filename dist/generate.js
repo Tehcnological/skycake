@@ -1,6 +1,6 @@
 // Quiz questions drawn from the FAA data: seeded and pure, so the same seed asks the same questions. Every answer and
 // every wrong choice comes from the area's airspace, terrain and procedures; the class rules live in airclass.ts.
-import { deepest, hundreds, KINDS } from "./airspace.js";
+import { deepest, hundreds, inRing, KINDS } from "./airspace.js";
 import { classAt, groundFt, nearBoundary, needs } from "./airclass.js";
 import { flightLine } from "./fly.js";
 import { LABELS } from "./ui.js";
@@ -37,14 +37,14 @@ const allowed = (g) => g.data.areas.filter((a) => (g.kinds ?? KINDS).includes(a.
 const procs = (g) => g.procedures.filter((p) => !g.airports || g.airports.includes(p.airport));
 const sceneOf = (p) => ({ procedures: [{ airport: p.airport, name: p.name }] });
 function find(g, rng) {
-    // A name that repeats cannot be tapped by name: the score is by id.
-    const areas = allowed(g).filter((a) => g.data.areas.filter((o) => o.name === a.name).length === 1);
+    // A name that repeats cannot be tapped by name: the score is by id. The view does not make E700 or MODEC tappable.
+    const areas = allowed(g).filter((a) => a.kind !== "E700" && a.kind !== "MODEC" && g.data.areas.filter((o) => o.name === a.name).length === 1);
     const ps = procs(g).filter((p) => p.fixes.some((f) => p.fixes.filter((o) => o.name === f.name).length === 1));
     if (ps.length && (!areas.length || rng() < 0.5)) {
         const p = ps[Math.floor(rng() * ps.length)];
         const ones = p.fixes.filter((f) => p.fixes.filter((o) => o.name === f.name).length === 1);
         const fix = ones[Math.floor(rng() * ones.length)].name;
-        return { type: "find", prompt: g.ask.findFix(fix), answer: { fix }, scene: sceneOf(p), facts: null };
+        return { type: "find", prompt: g.ask.findFix(fix), answer: { fix }, scene: { ...sceneOf(p), tags: true }, facts: null };
     }
     if (!areas.length)
         return null;
@@ -54,6 +54,8 @@ function find(g, rng) {
 const middles = new WeakMap();
 const middle = (a) => middles.get(a) ?? (middles.set(a, deepest(a.rings[0])), middles.get(a));
 const CLASSES = ["B", "C", "D", "E"];
+/** The kinds whose floor or ceiling is asked: one charted and meaningful (a Class D floor is the surface). */
+const READS = { floor: ["B", "C"], ceiling: ["B", "C", "D"] };
 function read(g, rng) {
     const { data, ask } = g;
     const areas = allowed(g);
@@ -66,6 +68,8 @@ function read(g, rng) {
                 made = choose(a.kind, shuffled(data.areas.map((x) => x.kind).filter((k) => CLASSES.includes(k)), rng), rng);
             }
             else {
+                if (!READS[sub].includes(a.kind))
+                    continue;
                 const show = (x) => hundreds(x[sub], data.ground);
                 const [y, x] = middle(a);
                 const away = (o) => Math.hypot(middle(o)[0] - y, middle(o)[1] - x);
@@ -78,13 +82,28 @@ function read(g, rng) {
     }
     return null;
 }
+/** An area's outline box, inside the data's bounds. */
+function boxOf(data, a) {
+    const ys = a.rings.flat().map((p) => p[0]), xs = a.rings.flat().map((p) => p[1]);
+    return { s: Math.max(data.bounds.s, Math.min(...ys)), n: Math.min(data.bounds.n, Math.max(...ys)), w: Math.max(data.bounds.w, Math.min(...xs)), e: Math.min(data.bounds.e, Math.max(...xs)) };
+}
 function airplane(g, rng) {
     const { data, grid, ask } = g;
-    const { s, w, n, e } = data.bounds;
+    // A uniform draw is nearly all Class E, so about half the questions aim inside a B, C or D area's slab (decided once
+    // per question, as aimed draws are skipped more often); after 100 misses the draw goes uniform.
+    const targets = allowed(g).filter((a) => ["B", "C", "D"].includes(a.kind));
+    const aim = targets.length > 0 && rng() < 0.5;
     for (let i = 0; i < 200; i++) {
+        const t = aim && i < 100 ? targets[Math.floor(rng() * targets.length)] : null;
+        const { s, w, n, e } = t ? boxOf(data, t) : data.bounds;
         const [lat, lon] = [s + rng() * (n - s), w + rng() * (e - w)];
-        const lo = Math.ceil((groundFt(data, grid, lat, lon) + 500) / 100) * 100;
-        const ft = lo + Math.floor((rng() * (17500 - lo)) / 100) * 100;
+        if (t && !t.rings.some((r) => inRing([lat, lon], r)))
+            continue;
+        const ground = Math.ceil((groundFt(data, grid, lat, lon) + 500) / 100) * 100;
+        const [lo, hi] = t ? [Math.max(ground, Math.ceil(t.floor / 100) * 100), Math.min(17500, t.ceiling)] : [ground, 17500];
+        if (lo >= hi)
+            continue;
+        const ft = lo + Math.floor((rng() * (hi - lo)) / 100) * 100;
         if (nearBoundary(data, grid, lat, lon, ft))
             continue;
         const c = classAt(data, grid, lat, lon, ft);
@@ -97,10 +116,18 @@ function airplane(g, rng) {
     }
     return null;
 }
-/** The fix names along the flight line, in order. */
-const route = (p) => {
-    const names = flightLine(p).map((pt) => p.fixes.find((f) => Math.abs(f.lat - pt[0]) < 1e-4 && Math.abs(f.lon - pt[1]) < 1e-4)?.name);
+/** The fix names along points, in order. */
+const named = (p, pts) => {
+    const names = pts.map((pt) => p.fixes.find((f) => Math.abs(f.lat - pt[0]) < 1e-4 && Math.abs(f.lon - pt[1]) < 1e-4)?.name);
     return names.filter((x) => !!x).filter((x, i, a) => x !== a[i - 1]); // a hold repeats its fix
+};
+/** Fixes with more than one next fix across the paths, missed approach aside: where transitions split, "after" has no one answer. */
+const splits = (p) => {
+    const next = new Map();
+    for (const path of p.paths)
+        if (path.seg !== "missed")
+            named(p, path.pts).forEach((x, i, a) => i && next.set(a[i - 1], (next.get(a[i - 1]) ?? new Set()).add(x)));
+    return new Set([...next].filter(([, v]) => v.size > 1).map(([k]) => k));
 };
 function procedure(g, rng) {
     const { ask } = g;
@@ -111,14 +138,15 @@ function procedure(g, rng) {
             const c = choose(right, shuffled(wrong, rng), rng);
             return c && { type: "procedure", prompt, scene: sceneOf(p), ...c, facts: null };
         };
-        const line = route(p);
+        const line = named(p, flightLine(p));
+        const split = splits(p);
         const subs = {
             alt: () => {
                 const f = shuffled(p.fixes.filter((x) => x.alt && once(x.name)), rng)[0];
                 return f && make(ask.altAt(f.name), f.alt, p.fixes.map((x) => x.alt).filter((x) => !!x));
             },
             after: () => {
-                const i = shuffled(line.map((_, k) => k).filter((k) => k < line.length - 1 && once(line[k])), rng)[0];
+                const i = shuffled(line.map((_, k) => k).filter((k) => k < line.length - 1 && once(line[k]) && !split.has(line[k])), rng)[0];
                 return i === undefined ? null : make(ask.after(line[i]), line[i + 1], names.filter((x) => x !== line[i]));
             },
             faf: () => {
@@ -127,7 +155,7 @@ function procedure(g, rng) {
             },
             missed: () => {
                 const f = p.fixes.find((x) => x.seg === "missed");
-                return f && make(ask.missed, f.name, names);
+                return f && make(ask.missed, f.name, p.fixes.filter((x) => x.role !== "MAP").map((x) => x.name));
             },
         };
         for (const k of shuffled(Object.keys(subs), rng)) {

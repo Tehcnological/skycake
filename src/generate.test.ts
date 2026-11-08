@@ -125,3 +125,82 @@ test("find prompts name exactly one area or one fix of the shown procedure", () 
     }
   }
 });
+const kindOf = (id: string) => data.areas.find((a) => a.id === id)!.kind;
+test("find never asks for an area the view cannot tap (E700, MODEC); a fix shows tags", () => {
+  const rng = seeded(13);
+  for (let i = 0; i < 400; i++) {
+    const q = generate("find", g, rng)! as Extract<Question, { type: "find" }>;
+    if ("area" in q.answer) assert.ok(!["E700", "MODEC"].includes(kindOf(q.answer.area)), q.answer.area);
+    else assert.equal(q.scene!.tags, true); // names only: hints stay off
+  }
+  assert.equal(generate("find", { ...g, kinds: ["E700", "MODEC"], procedures: [] }, seeded(1)), null);
+});
+test("read asks a floor only of B and C, a ceiling only of B, C and D", () => {
+  const rng = seeded(17);
+  for (let i = 0; i < 400; i++) {
+    const q = generate("read", g, rng)!;
+    const kind = kindOf((q.scene!.highlight![0] as { area: string }).area);
+    if (q.prompt === ask.floor) assert.ok(["B", "C"].includes(kind), kind);
+    if (q.prompt === ask.ceiling) assert.ok(["B", "C", "D"].includes(kind), kind);
+  }
+  assert.equal(generate("read", { ...g, kinds: ["MOA", "R", "A", "E700", "MODEC"] }, seeded(1)), null);
+});
+test("airplane: B, C and D answers are a good share, each requirement is sometimes Yes, and kinds steer the target", () => {
+  const rng = seeded(19);
+  const n = 400;
+  let bcd = 0;
+  const yes: Record<string, number> = { [ask.clearance]: 0, [ask.radio]: 0, [ask.transponder]: 0 };
+  for (let i = 0; i < n; i++) {
+    const q = generate("airplane", g, rng)! as Extract<Question, { choices: string[] }>;
+    const [lat, lon, ft] = (q.scene!.airplane as { at: [number, number, number] }).at;
+    if (["B", "C", "D"].includes(classAt(data, grid, lat, lon, ft).kind)) bcd++;
+    if (q.prompt in yes && q.choices[q.answer] === ask.yes) yes[q.prompt]++;
+  }
+  assert.ok(bcd / n >= 0.3, `B, C or D ${bcd} of ${n}`);
+  for (const [k, v] of Object.entries(yes)) assert.ok(v > 0, `no Yes for ${k}`);
+  const r = seeded(23);
+  let c = 0;
+  for (let i = 0; i < 100; i++) {
+    const [lat, lon, ft] = (generate("airplane", { ...g, kinds: ["C"] }, r)!.scene!.airplane as { at: [number, number, number] }).at;
+    if (classAt(data, grid, lat, lon, ft).kind === "C") c++;
+  }
+  assert.ok(c >= 25, `Class C ${c} of 100`);
+});
+/** Each fix's distinct next fixes along the procedure's paths, missed approach aside. */
+const successors = (p: Procedure) => {
+  const out = new Map<string, Set<string>>();
+  for (const path of p.paths.filter((x) => x.seg !== "missed")) {
+    const names = path.pts.map((pt) => p.fixes.find((f) => Math.abs(f.lat - pt[0]) < 1e-4 && Math.abs(f.lon - pt[1]) < 1e-4)?.name).filter((x): x is string => !!x).filter((x, i, a) => x !== a[i - 1]);
+    names.slice(1).forEach((b, i) => out.set(names[i], (out.get(names[i]) ?? new Set()).add(b)));
+  }
+  return out;
+};
+test("after never asks about a fix where the routes split (TUS9 after TUS, SCOT7 after JONHH)", () => {
+  const split = (airport: string, name: string, fix: string) => {
+    const p = procedures.find((x) => x.airport === airport && x.name === name)!;
+    assert.ok(successors(p).get(fix)!.size > 1, `${fix} splits in ${name}`);
+    for (let s = 0; s < 300; s++) assert.notEqual(generate("procedure", { ...g, procedures: [p] }, seeded(s))?.prompt, ask.after(fix));
+  };
+  split("KTUS", "TUS9", "TUS");
+  split("KSDL", "SCOT7", "JONHH");
+  const rng = seeded(29);
+  for (let i = 0; i < 400; i++) {
+    const q = generate("procedure", g, rng)!;
+    const r = q.scene!.procedures![0], p = procedures.find((x) => x.airport === r.airport && x.name === r.name)!;
+    for (const [fix, next] of successors(p)) if (q.prompt === ask.after(fix)) assert.equal(next.size, 1, `${p.name} after ${fix}`);
+  }
+});
+test("the missed approach question leaves the MAP out of the wrong choices", () => {
+  const ps = procedures.filter((p) => p.fixes.some((f) => f.role === "MAP") && p.fixes.some((f) => f.seg === "missed"));
+  let asked = 0;
+  for (const p of ps) {
+    const map = p.fixes.find((f) => f.role === "MAP")!.name;
+    for (let s = 0; s < 20; s++) {
+      const q = generate("procedure", { ...g, procedures: [p] }, seeded(s)) as Extract<Question, { choices: string[] }> | null;
+      if (q?.prompt !== ask.missed) continue;
+      asked++;
+      if (q.choices[q.answer] !== map) assert.ok(!q.choices.includes(map), `${p.name}: ${q.choices}`);
+    }
+  }
+  assert.ok(asked > 0);
+});
