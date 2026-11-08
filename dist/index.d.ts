@@ -4,3 +4,4 @@ export type { Airport, Fix, Path, Point, ProcType, Procedure, Segment } from "./
 export type { Scene, Target } from "./scene.js";
 export type { Question } from "./question.js";
 export type { Step, Walkthrough } from "./walkthrough.js";
+export { validateWalkthrough } from "./validate.js";

@@ -66,6 +66,20 @@ mount(element, { base: "/skycake/phoenix/", mode: { walkthrough, next: { label: 
 
 A step's `scene` takes everything a first scene does, plus `highlight`, `airplane` and `draw`. A name the data no longer has leaves that part out of the step, with a warning in the console. `demo/class-b.json` is a sample (`npm run demo`, then `/demo/?walkthrough=class-b`).
 
+#### Validating walkthroughs
+
+`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check's prompt, choices (2 to 4, distinct), answer and tolerance. Unknown fields are ignored. `area` is the folder name the site loaded.
+
+```ts
+import { readFileSync } from "node:fs";
+import { validateWalkthrough } from "skycake";
+
+const data = JSON.parse(readFileSync("data/phoenix/area.json", "utf8"));
+const files = async (airport) => JSON.parse(readFileSync(`data/phoenix/procedures/${airport}.json`, "utf8"));
+const problems = await validateWalkthrough(walkthrough, data, files, "phoenix");
+if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
+```
+
 ## Data
 
 `npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
