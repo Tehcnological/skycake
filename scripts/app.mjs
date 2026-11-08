@@ -17,23 +17,26 @@ await cp("style.css", `${out}/style.css`);
 for (const size of [180, 192, 512]) await sharp("app/icon.svg").resize(size).png().toFile(`${out}/icon-${size}.png`);
 await cp("data", `${out}/data`, { recursive: true });
 
-// The data manifest: per area, its edition, the date it is current through, and its files for an offline copy.
+// The data manifest: per area, its edition, the date it is current through, a revision that changes with any file,
+// and its files for an offline copy.
 // shortcut: through is the chart edition plus one 28-day procedure cycle, the earliest the data can be out of date;
 // phase 2's data pipeline should write the real cycle into each area instead.
 const areas = {};
 for (const id of (await readdir("data")).sort()) {
   const files = [];
   let bytes = 0;
+  const rev = createHash("sha256");
   for (const f of (await readdir(`data/${id}`, { recursive: true })).map((p) => p.replaceAll("\\", "/")).sort()) {
     const s = await stat(`data/${id}/${f}`);
     if (!s.isFile()) continue;
     files.push(f);
     bytes += s.size;
+    rev.update(f).update(await readFile(`data/${id}/${f}`));
   }
   const { edition } = JSON.parse(await readFile(`data/${id}/area.json`, "utf8"));
   assert.match(edition, /^\d{4}-\d{2}-\d{2}$/, `${id}: edition`);
   const through = new Date(Date.parse(edition) + 27 * DAY).toISOString().slice(0, 10);
-  areas[id] = { edition, through, bytes, files };
+  areas[id] = { edition, through, rev: rev.digest("hex").slice(0, 12), bytes, files };
 }
 assert.deepEqual(Object.keys(areas), ["miami", "phoenix"]);
 for (const a of Object.values(areas)) assert.ok(a.files.includes("area.json") && a.files.includes("sectional.webp"));

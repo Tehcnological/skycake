@@ -16,7 +16,8 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  if (e.request.method !== "GET") return;
+  // A save asks for fresh copies with cache: "reload"; those go to the network.
+  if (e.request.method !== "GET" || e.request.cache === "reload") return;
   // ?area= and ?scene= are the same page.
   e.respondWith(caches.match(e.request, { ignoreSearch: e.request.mode === "navigate" }).then((hit) => hit ?? fetch(e.request)));
 });

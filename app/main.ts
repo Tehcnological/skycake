@@ -4,7 +4,8 @@
 import { mount } from "../src/index.js";
 
 /** www/data/manifest.json, written by scripts/app.mjs. */
-type AreaInfo = { edition: string; through: string; bytes: number; files: string[] };
+/** rev: a hash of every file, so any rebuild (charts every 56 days, procedures every 28) is a new revision. */
+type AreaInfo = { edition: string; through: string; rev: string; bytes: number; files: string[] };
 type Manifest = { areas: Record<string, AreaInfo> };
 
 const TEXT = {
@@ -27,16 +28,22 @@ const manifest: Manifest = await fetch("data/manifest.json").then((r) => r.json(
 const params = new URLSearchParams(location.search);
 const area = params.get("area");
 
-// One Cache Storage cache per area and edition; the service worker answers from any of them.
-const cacheOf = (id: string, a: AreaInfo) => `data:${id}:${a.edition}`;
+// One Cache Storage cache per area and revision; the service worker answers from any of them. A cache counts as saved
+// only once it holds the marker, written after every file arrived (another tab, or a closed page, can see it half done).
+const cacheOf = (id: string, a: AreaInfo) => `data:${id}:${a.rev}`;
 const isArea = (key: string, id: string) => key.startsWith(`data:${id}:`);
+const MARK = "saved";
+const complete = async (keys: string[], name: string) => keys.includes(name) && !!(await (await caches.open(name)).match(MARK));
 
 async function save(id: string, a: AreaInfo) {
   const name = cacheOf(id, a);
   try {
-    await (await caches.open(name)).addAll(a.files.map((f) => `data/${id}/${f}`));
+    const cache = await caches.open(name);
+    // cache: "reload" tells the service worker to fetch, not to answer from the copy being replaced.
+    await cache.addAll(a.files.map((f) => new Request(`data/${id}/${f}`, { cache: "reload" })));
+    await cache.put(MARK, new Response(a.rev));
   } catch (e) {
-    await caches.delete(name); // a half-saved area must not read as saved
+    await caches.delete(name);
     throw e;
   }
   for (const k of await caches.keys()) if (isArea(k, id) && k !== name) await caches.delete(k);
@@ -66,7 +73,7 @@ async function startScreen() {
         button.textContent = { download: TEXT.download(mb), update: TEXT.update(mb), saving: TEXT.saving, saved: TEXT.saved, failed: TEXT.failed }[state];
         button.disabled = state === "saving" || state === "saved";
       };
-      show(keys.includes(cacheOf(id, a)) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
+      show((await complete(keys, cacheOf(id, a))) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
       button.addEventListener("click", () => {
         show("saving");
         save(id, a).then(() => show("saved"), (e) => {
