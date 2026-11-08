@@ -20,9 +20,15 @@ export function picker(
 ): { el: HTMLElement; list(): Candidate[]; refill(): void; stop(clearView?: boolean): void } {
   const el = h("div", { class: "sc-pick" });
   let list: Candidate[] = [];
-  const refill = () => {
+  // What decides the list: the things on screen, in order, and which areas are raised (a raised area's badge sits at its
+  // ceiling). Badge positions follow the camera on their own. A camera move, a map tap, a VFR/IFR switch and a new
+  // procedure all show up here.
+  const state = (l: Candidate[]) => `${l.map(key).join()}|${view.raisedAreas().join()}`;
+  let last = "";
+  const refill = (now = view.onScreen()) => {
     const had = el.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.key : undefined;
-    list = view.onScreen();
+    list = now;
+    last = state(list);
     view.numbers(list);
     const pressed = o.pressed?.();
     el.replaceChildren(...list.map((c, i) => {
@@ -37,17 +43,11 @@ export function picker(
     if (had) el.querySelector<HTMLElement>(`[data-key="${CSS.escape(had)}"]`)?.focus();
     o.onRefill?.();
   };
-  // What decides the list: the things on screen, in order, and which areas are raised (a raised area's badge sits at its
-  // ceiling). Badge positions follow the camera on their own. A camera move, a map tap, a VFR/IFR switch and a new
-  // procedure all show up here.
-  // shortcut: checked twice a second; upgrade to a viewer event if a list this long ever shows up in a profile.
-  const state = () => `${view.onScreen().map(key).join()}|${view.raisedAreas().join()}`;
-  let last = state();
+  // shortcut: checked twice a second (each check finds what is on screen); upgrade to a viewer event if it shows up in a
+  // profile. A refill made directly (In view's raise) counts as the check, so the next tick does not rebuild again.
   const timer = setInterval(() => {
-    const now = state();
-    if (now === last) return;
-    last = now;
-    refill();
+    const now = view.onScreen();
+    if (state(now) !== last) refill(now);
   }, 500);
   refill();
   return {
