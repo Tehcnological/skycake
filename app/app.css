@@ -16,3 +16,5 @@ html, body { margin: 0; background: #17191c; color: #d9dadc; font-family: system
 .areas button[data-state="saved"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 38%, #1f2226); }
 .areas button:disabled { cursor: default; opacity: 0.7; }
 .areas p { margin: 20px 0 0; font: 500 11px ui-monospace, monospace; color: #b3b6ba; }
+.areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: inherit; text-decoration: underline; }
+.areas p.notice { font: 400 15px/1.5 system-ui, sans-serif; color: #d9dadc; }

@@ -159,11 +159,16 @@ On instrumentready.com: `<Airspace3D />`, `<Airspace3D walkthrough="class-b" />`
 
 ## Later (not in this round)
 
-- **IFR Low Enroute chart as the base map** for IFR lessons, with **3D airways**: Victor airways and T routes drawn as ribbons at their MEA, from FAA NASR, with MEA and MOCA tags. The area format gains a list of base charts and the scene a `chart` field; nothing in this design blocks it.
-- More areas than Phoenix.
-- Diagrams for KDVT, KGYR, KIWA and KLUF (their PDFs draw tick labels as shapes).
+- A diagram for KLUF (Luke AFB). Its PDF draws its tick labels as shapes, and it is the one of the four below still without a diagram.
 - Recording quiz results on the progress page.
 - Audio narration.
+
+Done since this spec was approved:
+
+- **IFR charts and airways** (0.5.0, 0.6.0): the IFR area chart and low as base maps behind a VFR/IFR button, and the scene's `chart` field. Low altitude airways stand at their MEA, from the CIFP rather than NASR.
+- **More areas** (0.4.0): Key West to Palm Beach (Miami), beside Phoenix to Tucson.
+- **Diagrams for KDVT, KGYR and KIWA** (0.4.1), read from tick labels drawn as outlines.
+- **The data pipeline** (Data cycle workflow): new FAA data every 28 days, each area recording its procedure `cycle`.
 
 ## Accessibility
 

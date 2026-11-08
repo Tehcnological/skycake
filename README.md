@@ -70,13 +70,15 @@ Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design
 
 The current-through date is the last day of the area's procedure cycle. Data built before `cycle` was recorded falls back to the chart edition, the earliest cycle it can be from.
 
+The start screen links to `privacy.html`. The app sets no cookies, stores nothing about anyone and loads nothing from other sites. Saved areas stay on the device, in Cache Storage. Two Cloudflare settings would make the notice untrue, so leave them off: Web Analytics on the Pages project, and Bot Fight Mode on the skycake.app zone, which sets a `__cf_bm` cookie.
+
 ### Hosting on Cloudflare Pages
 
 Free, no payment method needed. In the Cloudflare dashboard: Workers & Pages, Create, Pages, Connect to Git, pick `Tehcnological/skycake`, then:
 
 | Setting | Value |
 | --- | --- |
-| Project name | `skycake` (gives skycake.pages.dev if free) |
+| Project name | `skycake` (skycake.pages.dev is taken by an unrelated site, so Pages adds a suffix) |
 | Production branch | `main` |
 | Framework preset | None |
 | Build command | `npm run app` |
