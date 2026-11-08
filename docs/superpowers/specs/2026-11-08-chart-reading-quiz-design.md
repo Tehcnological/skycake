@@ -106,7 +106,7 @@ Shows the sectional top-down, framed on one symbol, with that point highlighted 
 1. Pick a symbol kind the area has (respecting the `symbols` filter).
 2. Start the camera on a random window the size of a normal top-down map view (Chris: same size as normal; pan and zoom work as on the normal map) that holds at least one printed instance at least 1 NM inside the edges and at least 6 symbols of at least 4 kinds, from `chart.json`. Up to 200 tries, then give up (null, as the other generators do).
 3. Ask "Tap the private airport" (`ask.hunt(kindLabel)`), top-down, sectional, nothing raised, tags off.
-4. Any printed instance of that kind is right, including one the student pans to, within `nm` (about 0.4 NM, a symbol's radius at that zoom). A tap elsewhere is wrong.
+4. Any instance of that kind in `chart.json` is right, unmatched ones included (the student can only tap what is drawn), and one the student pans to as well. A tap counts within `nm` (about 0.4 NM, a symbol's radius at the starting zoom) or 24 px on screen, whichever is larger, as fix taps do, so it still works zoomed out. A tap elsewhere is wrong.
 5. A countdown of `seconds` (default 30), shown as a number with a draining line or circle, something obvious (Chris). At 0 the question scores wrong and the reveal rings every instance.
 6. In accessibility mode (see below): a number on every symbol in view, chosen by typing or picking the number, and no countdown.
 
@@ -133,8 +133,8 @@ Chris, 2026-11-08: skycake gets an accessibility mode, as instrumentready.com ha
 ```ts
 type SymbolKind = "towered" | "nontowered" | "private" | "military" | "heliport" | "seaplane" | "ultralight" | "glider"
   | "abandoned" | "vor" | "vortac" | "vordme" | "ndb" | "obstacle" | "obstacleTall" | "obstacleGroup" | "vfrWaypoint" | "parachute";
-/** printed: how we know it is on the chart: charting rules (tier A), an image match at the data point (B), Chris's confirmation (C). */
-type Sym = { kind: SymbolKind; lat: number; lon: number; id?: string; name?: string; printed: "rule" | "matched" | "confirmed";
+/** printed: how we know it is on the chart: charting rules (tier A), an image match at the data point (B), Chris's confirmation (C); unmatched: a tier B data point with no match, never asked about, but a hunt tap on it counts. */
+type Sym = { kind: SymbolKind; lat: number; lon: number; id?: string; name?: string; printed: "rule" | "matched" | "confirmed" | "unmatched";
   elev?: number; rwy?: number; freq?: string; agl?: number; msl?: number;
   /** Airports: what the data block prints. */
   block?: { ident: string; towered: boolean; tower?: string; towerHrs?: string; ctaf?: string; unicom?: string; atis?: string; awos?: string; rp?: string[]; beacon: boolean; fuel: boolean } };
@@ -155,7 +155,7 @@ Cropped from the native GeoTIFF by a pixel box per chart in `AREAS` (as the IFR 
 
 - Glyphs cut once from the sectional legend (FAA, public domain), committed as small PNGs under `scripts/glyphs/`.
 - On the area texture: a colour mask (magenta, blue, black) and normalized cross-correlation at the texture's known scale, in plain TypeScript over `sharp` pixels. No new dependency.
-- Tier B: a match within a few pixels of the data point marks the symbol `matched`; no match, the symbol is left out.
+- Tier B: a match within a few pixels of the data point marks the symbol `matched`; no match, it is kept as `unmatched`: never asked about or hunted for, but a hunt tap on it is right, since a matcher miss must not mark a correct tap wrong.
 - Tier C (later): scan the texture for the abandoned airport glyph. Positions Chris has confirmed live in `data/<area>/marks.json` (committed). New candidates, and confirmed ones no longer found, go into the Data cycle PR as a contact sheet; nothing new is asked until Chris confirms it.
 
 ### Edition alignment
