@@ -6,6 +6,8 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # The Data cycle workflow starts this on its PR's branch: PRs opened with a workflow's token start no workflows.
+  workflow_dispatch:
 
 # A new push to a PR cancels that PR's older run. Main keeps a result for every commit.
 concurrency:

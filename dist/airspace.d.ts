@@ -49,8 +49,11 @@ export type Mode = "vfr" | "ifr";
 export declare const modeOf: (c: ChartName) => Mode;
 export declare const chartsIn: (c: Charts, m: Mode) => ChartName[];
 export declare const shownIn: (m: Mode, k: Kind) => boolean;
+/** edition: the charts' 56-day edition. cycle: the 28-day procedure cycle (CIFP, d-TPP) the area was built from; areas
+ * built before it was recorded lack it. Both are effective dates, YYYY-MM-DD. */
 export type AirspaceFile = {
     edition: string;
+    cycle?: string;
     bounds: Bounds;
     ground: number;
     charts: Charts;

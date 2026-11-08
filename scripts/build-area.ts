@@ -13,6 +13,7 @@
  *   npm run data -- miami            # one area
  *   npm run data -- 2026-10-29       # a given edition (effective date)
  *   npm run data -- --terrain-only
+ *   npm run data -- --cycle          # print the 28-day cycle in effect, build nothing
  *
  * Downloads go to .cache/ (git-ignored) and are reused. Airspace comes from the FAA's ADDS open data service
  * (same NASR data, already in lat/lon). Charts change every 56 days and procedures every 28; rerun this then.
@@ -299,6 +300,11 @@ async function terrain() {
 // ---- Procedures from the current CIFP cycle (every 28 days, on the same dates as the charts): approaches, departures
 // and arrivals for every airport on the chart, one file per airport so the page loads only the one picked.
 const cycleDate = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (28 * DAY)) * 28 * DAY);
+// --cycle: print the cycle in effect and stop. The data workflow uses it to see whether a rebuild is due.
+if (process.argv.includes("--cycle")) {
+  console.log(cycleDate.toISOString().slice(0, 10));
+  process.exit(0);
+}
 async function procedures() {
   const c = cycleDate.toISOString().slice(0, 10).split("-");
   const zip = unzipSync(await download(`https://aeronav.faa.gov/Upload_313-d/cifp/CIFP_${c[0].slice(2)}${c[1]}${c[2]}.zip`), { filter: (f) => f.name === "FAACIFP18" });
@@ -421,7 +427,7 @@ for (const name of named.length ? named : Object.keys(AREAS)) {
   const areas = await airspace(ground);
   const { airports, airways, waypoints } = await procedures();
   await diagrams(airports);
-  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints };
+  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, cycle: cycleDate.toISOString().slice(0, 10), bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints };
   await writeFile(join(OUT, "area.json"), JSON.stringify(file));
   console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
   console.log(`airways ${airways.length}, legs ${airways.reduce((n, a) => n + a.legs.length, 0)}, no MEA ${airways.flatMap((a) => a.legs).filter((l) => l.ft === null).length}, waypoints ${waypoints.length}`);
