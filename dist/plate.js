@@ -84,6 +84,8 @@ export function plateView(c, on) {
             img = null;
             return body.replaceChildren();
         }
+        // Unfitted until it loads, so a chart that loads while the panel is closed is fitted as it reopens.
+        t = fit = { x: 0, y: 0, s: 1 };
         const i = (img = h("img", { class: "sc-plate-img", draggable: "false", alt: p.entry.name }));
         i.addEventListener("load", () => i === img && fitNow());
         i.addEventListener("error", () => {
@@ -103,10 +105,13 @@ export function plateView(c, on) {
         await Promise.all([...new Set([...refs.map((r) => r.airport), ...(airport === null ? [] : [airport])])].map(index));
         if (mine !== ticket || now === null)
             return;
+        // The options stay put while the student browses them; they are rebuilt as focus leaves.
+        if (focused)
+            return void (stale = true);
         picks = pickOrder(indexes, refs, airport);
         pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === airport ? p.entry.name : `${p.airport} ${p.entry.name}`)));
         title.replaceChildren(picks.length ? pick : L.plate);
-        const w = want;
+        const w = want && refs.some((r) => r.airport === want?.airport && r.name === want.name) ? want : null;
         want = null;
         const e = w && chartFor(indexes.get(w.airport) ?? [], w.name, shown?.airport === w.airport ? shown.entry : null);
         const p = w && e ? { airport: w.airport, entry: e } : null;
@@ -117,11 +122,43 @@ export function plateView(c, on) {
         else
             pick.value = String(listed(shown));
     };
+    // Arrow keys on a closed picker change it at every step (Windows): each step shows its chart, and the procedures draw
+    // in 3D once the student commits with Enter or Space or leaves the picker. A mouse or touch pick draws at once.
+    let focused = false;
+    let stale = false;
+    let browsing = false;
+    let browsed = null;
+    const commit = () => {
+        browsing = false;
+        const p = browsed;
+        browsed = null;
+        for (const r of p ? pickRefs(p) : [])
+            on.show(r);
+    };
+    pick.addEventListener("keydown", (e) => {
+        if (/^(Arrow|Page|Home|End)/.test(e.key))
+            browsing = true;
+        else if (e.key === "Enter" || e.key === " ")
+            commit();
+    });
+    pick.addEventListener("pointerdown", commit);
+    pick.addEventListener("focus", () => (focused = true));
+    pick.addEventListener("blur", () => {
+        focused = false;
+        commit();
+        if (stale)
+            void sync();
+        stale = false;
+    });
     pick.addEventListener("change", () => {
         const p = picks[Number(pick.value)];
+        want = null;
         show(p);
-        for (const r of pickRefs(p))
-            on.show(r);
+        if (browsing)
+            browsed = p;
+        else
+            for (const r of pickRefs(p))
+                on.show(r);
     });
     back.addEventListener("click", () => shown && show(shown, page - 1));
     next.addEventListener("click", () => shown && show(shown, page + 1));

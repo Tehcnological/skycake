@@ -161,7 +161,11 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* The head is one row while the panel has room for the title beside the rest (about 100px), else the Map / Plate /
    Split switch takes a second row under it. */
 .skycake .sc-plate { container-type: inline-size; }
-.skycake .sc-plate-switch { flex: none; }
+/* The switch at its neighbours' height: no padding, its frame drawn inside. */
+.skycake .sc-plate-switch { flex: none; padding: 0; border: 0; box-shadow: inset 0 0 0 1px var(--sc-frame); }
+/* Full screen covers the view, so "Not for navigation" rises over the chart, and the zoom buttons clear it. */
+.skycake.sc-plate-full .sc-caption { z-index: 7; }
+.skycake.sc-plate-full .sc-plate-zoom { bottom: 52px; }
 @container (max-width: 459px) {
   .skycake .sc-plate-head { padding-top: 4px; }
   .skycake .sc-plate-switch { order: 1; flex: 1 1 100%; margin: 0 12px 8px 0; }
