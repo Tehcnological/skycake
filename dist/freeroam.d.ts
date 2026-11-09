@@ -10,6 +10,8 @@ export type Context = {
     first: Scene;
     airport: string | null;
     labels: Labels;
+    /** A path in the area's data folder as an absolute URL. */
+    url: (path: string) => string;
     /** A procedure file by airport, cached by the caller. */
     procedures: (airport: string) => Promise<Procedure[]>;
     startScale: number;

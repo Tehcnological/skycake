@@ -165,6 +165,8 @@ export function freeRoam(c) {
         room: () => ({ top: head.getBoundingClientRect().bottom, bottom: tabBar.getBoundingClientRect().top }),
     });
     plateButton.hidden = tabs.plate.hidden = !plates.has;
+    if (plates.el)
+        plateButton.setAttribute("aria-controls", plates.el.id);
     // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
     // and again as the view takes focus, so it is current.
     const viewEl = fig.querySelector(".view");
