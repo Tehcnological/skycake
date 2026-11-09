@@ -17,10 +17,8 @@ function sceneProblems(scene: Scene | undefined, data: AirspaceFile, hasFix: (na
   return out;
 }
 
-type Charts = (airport: string) => Promise<ChartEntry[]>;
-
 /** Problems with a scene's plate against the airport's chart index. Skipped with no loader, or when sceneProblems already reports the plate. */
-async function plateProblems(scene: Scene | undefined, data: AirspaceFile, charts?: Charts): Promise<string[]> {
+async function plateProblems(scene: Scene | undefined, data: AirspaceFile, charts?: (airport: string) => Promise<ChartEntry[]>): Promise<string[]> {
   const plate = scene?.plate;
   if (!plate || !charts) return [];
   try {
@@ -96,7 +94,7 @@ async function load(data: AirspaceFile, procedures: (airport: string) => Promise
  * area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>".
  * charts: an airport's charts/<airport>.json; without it plates are not checked.
  */
-export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: Charts): Promise<string[]> {
+export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: (airport: string) => Promise<ChartEntry[]>): Promise<string[]> {
   const out: string[] = [];
   if (w.area !== area) out.push(`${w.id}: area ${w.area}, data is ${area}`);
   const { loaded, hasFix } = await load(data, procedures);
@@ -114,7 +112,7 @@ export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, pr
 }
 
 /** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. charts: as validateWalkthrough. */
-export async function validateQuiz(q: Quiz, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: Charts): Promise<string[]> {
+export async function validateQuiz(q: Quiz, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: (airport: string) => Promise<ChartEntry[]>): Promise<string[]> {
   const out: string[] = [];
   if (q.area !== area) out.push(`${q.id}: area ${q.area}, data is ${area}`);
   const { loaded, hasFix } = await load(data, procedures);
