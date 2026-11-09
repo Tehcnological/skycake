@@ -6,7 +6,8 @@ import { maker, type Quiz } from "./quiz.js";
 import { seeded } from "./generate.js";
 import { LABELS } from "./ui.js";
 import { locator, questionScene, type Question } from "./question.js";
-import { sceneRefs, usable, type Scene } from "./scene.js";
+import { resolve, sceneRefs, usable, type Scene } from "./scene.js";
+import type { ChartEntry } from "./tpp.js";
 import type { Walkthrough } from "./walkthrough.js";
 
 /** Problems with a scene, one per field that names something the data lacks. */
@@ -14,6 +15,29 @@ function sceneProblems(scene: Scene | undefined, data: AirspaceFile, hasFix: (na
   const out: string[] = [];
   usable(scene ?? {}, data, hasFix, (m) => out.push(m.replace(/; leaving out .*$/, "")));
   return out;
+}
+
+type Charts = (airport: string) => Promise<ChartEntry[]>;
+
+/** Problems with a scene's plate against the airport's chart index. Skipped with no loader, or when sceneProblems already reports the plate. */
+async function plateProblems(scene: Scene | undefined, data: AirspaceFile, charts?: Charts): Promise<string[]> {
+  const plate = scene?.plate;
+  if (!plate || !charts) return [];
+  try {
+    resolve({ plate }, data);
+  } catch {
+    return [];
+  }
+  let index: ChartEntry[];
+  try {
+    index = await charts(plate.airport);
+  } catch {
+    return [`no charts for ${plate.airport}`];
+  }
+  const chart = index.find((c) => c.name === plate.chart);
+  if (!chart) return [`no chart ${plate.chart} at ${plate.airport}; charts there: ${index.map((c) => c.name).join(", ")}`];
+  const n = chart.pages.length;
+  return plate.page !== undefined && plate.page > n ? [`chart ${chart.name} has ${n} page${n === 1 ? "" : "s"}, not ${plate.page}`] : [];
 }
 
 /** Whether a fix name is known where the browser looks for a scene's fixes: the procedures it loads, then the area's waypoints. */
@@ -68,43 +92,47 @@ async function load(data: AirspaceFile, procedures: (airport: string) => Promise
   return { loaded, hasFix: (name: string) => names.has(name) };
 }
 
-/** area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>". */
-export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string): Promise<string[]> {
+/**
+ * area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>".
+ * charts: an airport's charts/<airport>.json; without it plates are not checked.
+ */
+export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: Charts): Promise<string[]> {
   const out: string[] = [];
   if (w.area !== area) out.push(`${w.id}: area ${w.area}, data is ${area}`);
   const { loaded, hasFix } = await load(data, procedures);
   if (!Array.isArray(w.steps) || !w.steps.length) out.push(`${w.id}: no steps`);
-  else w.steps.forEach((s, i) => {
+  else for (const [i, s] of w.steps.entries()) {
     const at = `${w.id} step ${i + 1}: `;
     const problems: string[] = [];
     if (typeof s.caption !== "string") problems.push("caption is not text");
     if (s.seconds !== undefined && !(s.seconds > 0)) problems.push("seconds must be above 0");
     problems.push(...sceneProblems(s.scene, data, fixesIn(data, loaded, s.scene ?? {})), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+    problems.push(...(await plateProblems(s.scene, data, charts)), ...(await plateProblems(s.check?.scene, data, charts)));
     out.push(...problems.map((p) => at + p));
-  });
+  }
   return out;
 }
 
-/** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. */
-export async function validateQuiz(q: Quiz, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string): Promise<string[]> {
+/** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. charts: as validateWalkthrough. */
+export async function validateQuiz(q: Quiz, data: AirspaceFile, procedures: (airport: string) => Promise<Procedure[]>, area: string, charts?: Charts): Promise<string[]> {
   const out: string[] = [];
   if (q.area !== area) out.push(`${q.id}: area ${q.area}, data is ${area}`);
   const { loaded, hasFix } = await load(data, procedures);
   const make = maker({ data, grid: null, procedures: loaded, ask: LABELS.ask }, seeded(0));
   const ids = new Set<string>();
-  q.items.forEach((it, i) => {
+  for (const [i, it] of q.items.entries()) {
     const problems: string[] = [];
     if ("id" in it && it.id !== undefined) {
       if (ids.has(it.id)) problems.push(`id ${it.id} repeats`);
       ids.add(it.id);
     }
-    if (!("generate" in it)) problems.push(...questionProblems(it, data, hasFix, loaded));
+    if (!("generate" in it)) problems.push(...questionProblems(it, data, hasFix, loaded), ...(await plateProblems(it.scene, data, charts)));
     else {
       if (!(it.count >= 1)) problems.push("count must be at least 1");
       problems.push(...sceneProblems({ highlight: (it.airports ?? []).map((airport) => ({ airport })) }, data, hasFix));
       if (!problems.length && !make(it)) problems.push("nothing to ask with these filters");
     }
     out.push(...problems.map((p) => `${q.id} item ${i + 1}: ${p}`));
-  });
+  }
   return out;
 }

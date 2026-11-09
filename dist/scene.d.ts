@@ -18,6 +18,12 @@ export type Target = AreaRef | {
 } | {
     airport: string;
 };
+/** A procedure chart page. chart: the FAA's chart name as in charts/<airport>.json; page: 1-based. */
+export type PlateRef = {
+    airport: string;
+    chart: string;
+    page?: number;
+};
 export type Camera = "fit" | "top" | {
     frame: Target[];
     tilt?: number;
@@ -51,6 +57,8 @@ export type Scene = {
     tags?: boolean;
     /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere; "area": the IFR area chart over its own map and the low outside it; "low": the IFR low everywhere. */
     chart?: ChartName;
+    /** Opens the plate panel to this chart in split; null closes it; left out, the panel stays as it is. */
+    plate?: PlateRef | null;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
 export type Resolved = {

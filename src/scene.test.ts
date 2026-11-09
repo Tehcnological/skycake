@@ -114,3 +114,11 @@ test("usable leaves out each field naming something missing, and keeps the rest"
   assert.deepEqual(said, ["no area nope; leaving out the scene's raise", "no fix GONE; leaving out the scene's highlight", "no diagram for KLUF; leaving out the scene's diagram"]);
   assert.doesNotThrow(() => resolve(out, data));
 });
+
+test("plate: an airport the area has, a whole page from 1, or null", () => {
+  assert.doesNotThrow(() => resolve({ plate: { airport: "KPHX", chart: "ILS OR LOC RWY 07R" } }, data));
+  assert.doesNotThrow(() => resolve({ plate: null }, data));
+  assert.throws(() => resolve({ plate: { airport: "KZZZ", chart: "X" } }, data), /no airport KZZZ/);
+  assert.throws(() => resolve({ plate: { airport: "KPHX", chart: "X", page: 0 } }, data), /plate page 0 is not a page number/);
+  assert.throws(() => resolve({ plate: { airport: "KPHX", chart: "X", page: 1.5 } }, data), /plate page 1.5/);
+});

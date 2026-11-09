@@ -2,12 +2,36 @@ import { maker } from "./quiz.js";
 import { seeded } from "./generate.js";
 import { LABELS } from "./ui.js";
 import { locator, questionScene } from "./question.js";
-import { sceneRefs, usable } from "./scene.js";
+import { resolve, sceneRefs, usable } from "./scene.js";
 /** Problems with a scene, one per field that names something the data lacks. */
 function sceneProblems(scene, data, hasFix) {
     const out = [];
     usable(scene ?? {}, data, hasFix, (m) => out.push(m.replace(/; leaving out .*$/, "")));
     return out;
+}
+/** Problems with a scene's plate against the airport's chart index. Skipped with no loader, or when sceneProblems already reports the plate. */
+async function plateProblems(scene, data, charts) {
+    const plate = scene?.plate;
+    if (!plate || !charts)
+        return [];
+    try {
+        resolve({ plate }, data);
+    }
+    catch {
+        return [];
+    }
+    let index;
+    try {
+        index = await charts(plate.airport);
+    }
+    catch {
+        return [`no charts for ${plate.airport}`];
+    }
+    const chart = index.find((c) => c.name === plate.chart);
+    if (!chart)
+        return [`no chart ${plate.chart} at ${plate.airport}; charts there: ${index.map((c) => c.name).join(", ")}`];
+    const n = chart.pages.length;
+    return plate.page !== undefined && plate.page > n ? [`chart ${chart.name} has ${n} page${n === 1 ? "" : "s"}, not ${plate.page}`] : [];
 }
 /** Whether a fix name is known where the browser looks for a scene's fixes: the procedures it loads, then the area's waypoints. */
 function fixesIn(data, loaded, scene) {
@@ -70,8 +94,11 @@ async function load(data, procedures) {
     const names = new Set([...data.waypoints.map((w) => w.name), ...loaded.flatMap((p) => p.fixes.map((f) => f.name))]);
     return { loaded, hasFix: (name) => names.has(name) };
 }
-/** area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>". */
-export async function validateWalkthrough(w, data, procedures, area) {
+/**
+ * area: the folder name the site loaded (the data carries no area name). Problems read "<id> step <n>: <problem>".
+ * charts: an airport's charts/<airport>.json; without it plates are not checked.
+ */
+export async function validateWalkthrough(w, data, procedures, area, charts) {
     const out = [];
     if (w.area !== area)
         out.push(`${w.id}: area ${w.area}, data is ${area}`);
@@ -79,7 +106,7 @@ export async function validateWalkthrough(w, data, procedures, area) {
     if (!Array.isArray(w.steps) || !w.steps.length)
         out.push(`${w.id}: no steps`);
     else
-        w.steps.forEach((s, i) => {
+        for (const [i, s] of w.steps.entries()) {
             const at = `${w.id} step ${i + 1}: `;
             const problems = [];
             if (typeof s.caption !== "string")
@@ -87,19 +114,20 @@ export async function validateWalkthrough(w, data, procedures, area) {
             if (s.seconds !== undefined && !(s.seconds > 0))
                 problems.push("seconds must be above 0");
             problems.push(...sceneProblems(s.scene, data, fixesIn(data, loaded, s.scene ?? {})), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+            problems.push(...(await plateProblems(s.scene, data, charts)), ...(await plateProblems(s.check?.scene, data, charts)));
             out.push(...problems.map((p) => at + p));
-        });
+        }
     return out;
 }
-/** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. */
-export async function validateQuiz(q, data, procedures, area) {
+/** Problems read "<quiz id> item <n>: <problem>". A generate item is tried once with seeded(0) and no elevation grid. charts: as validateWalkthrough. */
+export async function validateQuiz(q, data, procedures, area, charts) {
     const out = [];
     if (q.area !== area)
         out.push(`${q.id}: area ${q.area}, data is ${area}`);
     const { loaded, hasFix } = await load(data, procedures);
     const make = maker({ data, grid: null, procedures: loaded, ask: LABELS.ask }, seeded(0));
     const ids = new Set();
-    q.items.forEach((it, i) => {
+    for (const [i, it] of q.items.entries()) {
         const problems = [];
         if ("id" in it && it.id !== undefined) {
             if (ids.has(it.id))
@@ -107,7 +135,7 @@ export async function validateQuiz(q, data, procedures, area) {
             ids.add(it.id);
         }
         if (!("generate" in it))
-            problems.push(...questionProblems(it, data, hasFix, loaded));
+            problems.push(...questionProblems(it, data, hasFix, loaded), ...(await plateProblems(it.scene, data, charts)));
         else {
             if (!(it.count >= 1))
                 problems.push("count must be at least 1");
@@ -116,6 +144,6 @@ export async function validateQuiz(q, data, procedures, area) {
                 problems.push("nothing to ask with these filters");
         }
         out.push(...problems.map((p) => `${q.id} item ${i + 1}: ${p}`));
-    });
+    }
     return out;
 }
