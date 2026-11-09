@@ -5,7 +5,7 @@ import { card } from "./card.js";
 import { ICONS, h, icon, wakeOnTap, type Context } from "./freeroam.js";
 import { plateView } from "./plate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
-import { stripPlayback, type Scene } from "./scene.js";
+import { inheritedPlate, stripPlayback, type Scene } from "./scene.js";
 import { scenes } from "./scenes.js";
 import { answered, back, begin, moved, next, pause, play, stepSeconds, tick, type Play, type Walkthrough } from "./walkthrough.js";
 
@@ -62,6 +62,8 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   // Every scene goes through here; the step's timeline fraction is what the view shows then.
   const stage = scenes(c, () => (drawn = frac()), plates.open);
   const show = stage.show;
+  // A step's scene with its chart, its own or the nearest earlier step's; plates.open leaves a chart already shown as it is.
+  const stepScene = (i: number): Scene => ({ ...w.steps[i].scene, plate: inheritedPlate(w.steps.map((s) => s.scene), i) });
 
   // A quick check: the shared question card in the caption's place. Not scored; Continue plays on.
   let open: ReturnType<typeof card> | null = null;
@@ -118,7 +120,7 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
     p = n;
     if (was.checking && !p.checking) closeCard();
     // A new step, a restart from the end, or play after a drag: the step's scene again.
-    if (p.step !== was.step || (was.done && !p.done) || (was.moved && !p.moved)) void show(w.steps[p.step].scene);
+    if (p.step !== was.step || (was.done && !p.done) || (was.moved && !p.moved)) void show(stepScene(p.step));
     if (p.checking && !was.checking) ask();
     draw();
   };
@@ -179,5 +181,5 @@ export function player(c: Context, w: Walkthrough, nextLink: { label: string; hr
   exploreEnd.addEventListener("click", leave);
 
   draw();
-  return show(w.steps[0].scene, true);
+  return show(stepScene(0), true);
 }

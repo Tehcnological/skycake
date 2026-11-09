@@ -21,7 +21,7 @@ concurrency:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # a full rebuild took 5 minutes on a hosted runner (2026-11-08)
+    timeout-minutes: 90 # a clean charts build (529 d-TPP PDFs) has not been timed; this bounds a hung job
     steps:
       - uses: actions/checkout@v7
 

@@ -64,7 +64,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .view canvas { display: block; width: 100%; height: 100%; }
 /* One focus ring, a 3px ring with a dark gap. The figure clips its children, so the view's ring is drawn inside. */
 .skycake :focus-visible { outline: 3px solid var(--sc-focus); outline-offset: 2px; }
-.skycake .view:focus-visible { outline-offset: -4px; }
+.skycake .view:focus-visible, .skycake .sc-plate-body:focus-visible { outline-offset: -4px; }
 .skycake [hidden] { display: none !important; }
 .skycake svg { flex: none; }
 .skycake button { -webkit-appearance: none; appearance: none; }

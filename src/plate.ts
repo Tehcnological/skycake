@@ -67,11 +67,16 @@ export function plateView(c: Context, on: {
   const divider = h("div", { class: "sc-divider", role: "separator", tabindex: "0", "aria-label": L.resize, "aria-controls": id, "aria-valuemin": "25", "aria-valuemax": "75" });
   const el = h("aside", { class: "sc-plate", id, "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, title, back, next, switcher, full, close), body);
 
-  // The charts: indexes by airport, fetched only while the panel is open and kept for its life (a failed fetch is none).
+  // The charts: indexes by airport, fetched only while the panel is open and kept for its life. An airport without
+  // one has none; a fetch that fails (offline) is none for now and tried again next time.
   const fetched = new Map<string, Promise<unknown>>();
   const indexes = new Map<string, ChartEntry[]>();
   const index = (a: string) => {
-    if (!fetched.has(a)) fetched.set(a, fetch(c.url(`charts/${a}.json`)).then((r) => (r.ok ? r.json() : [])).catch(() => []).then((x: ChartEntry[]) => indexes.set(a, x)));
+    const retry = () => {
+      fetched.delete(a);
+      return [];
+    };
+    if (!fetched.has(a)) fetched.set(a, fetch(c.url(`charts/${a}.json`)).then((r) => (r.ok ? r.json() : [])).catch(retry).then((x: ChartEntry[]) => indexes.set(a, x)));
     return fetched.get(a)!;
   };
   let refs: ProcedureRef[] = [];
@@ -144,6 +149,8 @@ export function plateView(c: Context, on: {
     // The options stay put while the student browses them; they are rebuilt as focus leaves.
     if (focused) return void (stale = true);
     picks = pickOrder(indexes, refs, at);
+    // A scene's chart at another airport than the current one stays, first in the list.
+    if (shown && shown.airport === sceneAt && listed(shown) < 0) picks.unshift(shown);
     pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === at ? p.entry.name : `${p.airport} ${p.entry.name}`)));
     title.replaceChildren(picks.length ? pick : L.plate);
     const w = want && refs.some((r) => r.airport === want?.airport && r.name === want.name) ? want : null;

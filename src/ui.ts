@@ -328,8 +328,8 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
       "=": () => v.zoom(ZOOM),
       "-": () => v.zoom(1 / ZOOM),
     };
-    // Not an arrow pressed on the camera pad (its own buttons move the camera) or in a text field.
-    if ((e.target as Element).closest(".sc-pad, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
+    // Not an arrow pressed on the camera pad (its own buttons move the camera), on Play (it sits in the view) or in a text field.
+    if ((e.target as Element).closest(".sc-pad, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
     e.preventDefault();
     act[e.key]();
   });

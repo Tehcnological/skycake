@@ -7,7 +7,7 @@ import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice, progress, skip } from "./quiz.js";
-import { stripPlayback } from "./scene.js";
+import { inheritedPlate, stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
 import { pad } from "./pad.js";
 import { plateView } from "./plate.js";
@@ -110,7 +110,8 @@ export async function quiz(c, mode, onResult, explore) {
         }
         const it = a.items[a.i];
         let shownAt = 0;
-        const scene = questionScene(it.q);
+        // Its chart, its own or the nearest earlier item's; plates.open leaves a chart already shown as it is.
+        const scene = { ...questionScene(it.q), plate: inheritedPlate(a.items.map((x) => x.q.scene), a.i) };
         const files = stage.filesOf(scene);
         // Skip (accessibility mode, find questions): moves on without scoring; a fixed quiz's total drops by one.
         const onSkip = () => {

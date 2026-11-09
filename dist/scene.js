@@ -67,6 +67,18 @@ export function stripPlayback(scene) {
     const { highlight, airplane, plate, ...rest } = scene;
     return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
 }
+/**
+ * The chart for step or item `i`, whatever way the student came to it: its own plate, else the nearest earlier one's
+ * (null closes the panel); none earlier closes it too.
+ */
+export function inheritedPlate(scenes, i) {
+    for (let j = i; j >= 0; j--) {
+        const p = scenes[j]?.plate;
+        if (p !== undefined)
+            return p;
+    }
+    return null;
+}
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export function framedOnly(scene) {
     const cam = scene.camera;

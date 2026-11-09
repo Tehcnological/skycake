@@ -79,6 +79,11 @@ export declare class SceneError extends Error {
 export declare function resolve(scene: Scene, data: AirspaceFile): Resolved;
 /** The scene without playback (highlight, airplane, draw) or its chart: free roam gets a still scene, panel closed. */
 export declare function stripPlayback(scene: Scene): Scene;
+/**
+ * The chart for step or item `i`, whatever way the student came to it: its own plate, else the nearest earlier one's
+ * (null closes the panel); none earlier closes it too.
+ */
+export declare function inheritedPlate(scenes: (Scene | undefined)[], i: number): PlateRef | null;
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export declare function framedOnly(scene: Scene): ProcedureRef[];
 /** Every procedure a scene loads: drawn, framed only, and the one the airplane flies. */
