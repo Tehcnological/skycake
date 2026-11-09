@@ -64,7 +64,7 @@ jobs:
           test -f www/index.html
           test -f www/sw.js
           test -f www/demo.html
-          test -f www/shots/phx-3d.webp
+          test -f www/shots/card.jpg
           test -f www/data/phoenix/area.json
 
       - name: Installs from git the way a site does

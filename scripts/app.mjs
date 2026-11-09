@@ -12,10 +12,15 @@ const DAY = 864e5;
 
 await rm(out, { recursive: true, force: true });
 await build({ entryPoints: ["app/main.ts"], bundle: true, splitting: true, format: "esm", target: "es2022", minify: true, outdir: out, logLevel: "warning" });
-for (const f of ["index.html", "demo.html", "privacy.html", "accessibility.html", "app.css", "icon.svg", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
+for (const f of ["index.html", "demo.html", "privacy.html", "accessibility.html", "app.css", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
 await cp("style.css", `${out}/style.css`);
 await cp("app/shots", `${out}/shots`, { recursive: true });
-for (const size of [180, 192, 512]) await sharp("app/icon.svg").resize(size).png().toFile(`${out}/icon-${size}.png`);
+// The icons, from app/icon.svg (the source only; it embeds a large raster, so it is not shipped). Palette PNGs keep
+// the shell small. The 180 is the apple-touch-icon: full bleed, since iOS rounds it itself and paints transparency black.
+const icon = await readFile("app/icon.svg", "utf8");
+const fullBleed = icon.replace(' rx="112"', "");
+assert.notEqual(fullBleed, icon);
+for (const [size, svg] of [[180, fullBleed], [192, icon], [512, icon]]) await sharp(Buffer.from(svg)).resize(size).png({ palette: true, effort: 10 }).toFile(`${out}/icon-${size}.png`);
 await cp("data", `${out}/data`, { recursive: true });
 
 // The data manifest: per area, its edition, the date it is current through, a revision that changes with any file,

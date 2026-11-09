@@ -62,7 +62,7 @@ async function startScreen() {
   setA11y(stored(storage));
   const today = new Date().toISOString().slice(0, 10);
   const keys = "caches" in window ? await caches.keys() : null;
-  const icon = Object.assign(document.createElement("img"), { src: "icon.svg", alt: "" });
+  const icon = Object.assign(document.createElement("img"), { src: "icon-192.png", alt: "" });
   const h1 = document.createElement("h1");
   h1.append(icon, TEXT.title);
   const list = document.createElement("ul");
