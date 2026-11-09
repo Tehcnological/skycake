@@ -7,6 +7,7 @@ Everything in `data/` is built by `scripts/build-area.ts` from public domain US 
 - FAA airspace (Class_Airspace and Special_Use_Airspace) from the FAA's ADDS open data service.
 - FAA CIFP (Coded Instrument Flight Procedures), aeronav.faa.gov.
 - FAA d-TPP airport diagrams, aeronav.faa.gov. Placed on the map from their own latitude and longitude ticks.
+- FAA d-TPP approach, departure and arrival charts, aeronav.faa.gov. Rendered from the PDFs to greyscale images at build time and shown unchanged apart from turning sideways pages upright.
 - USGS 3DEP 1 arc-second elevation tiles.
 
 None of it is for navigation. Procedures are drawn from the coded legs with simple assumptions (300 ft per NM climbs, corners for turns, radar vectors as straight lines); they are not flown profiles.
