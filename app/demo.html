@@ -11,16 +11,16 @@
 <meta property="og:url" content="https://skycake.app/demo.html">
 <meta name="twitter:card" content="summary_large_image">
 <title>SkyCake</title>
-<!-- The altitude tag mark: SKY over CAKE, ceiling over floor, as the chart labels a Class B shelf. -->
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23fbfaf7'/%3E%3Ctext x='32' y='27' text-anchor='middle' font-family='monospace' font-weight='700' font-size='17' fill='%233d7bc2'%3ESKY%3C/text%3E%3Crect x='10' y='31' width='44' height='3' fill='%233d7bc2'/%3E%3Ctext x='32' y='51' text-anchor='middle' font-family='monospace' font-weight='700' font-size='14' fill='%233d7bc2'%3ECAKE%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="app.css">
 <style>
 /* The demo page: dark like the app, one column of shots, each with one line of copy. All words are drafts for Chris. */
-:root { --paper: #fbfaf7; --muted: #8d939a; --line: #2c3137; }
+:root { --muted: #8d939a; --line: #2c3137; }
 body { font: 17px/1.55 system-ui, sans-serif; }
 .demo { box-sizing: border-box; max-width: 1040px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 56px; }
-.tag { display: inline-grid; justify-items: center; padding: 10px 20px; border-radius: 10px; background: var(--paper); color: var(--accent); font: 700 clamp(34px, 9vw, 56px)/1 ui-monospace, "Cascadia Mono", Menlo, monospace; letter-spacing: 0.02em; }
-.tag i { display: block; width: 100%; height: 5px; margin: 9px 0; background: currentColor; border-radius: 1px; }
+.brand { display: flex; align-items: center; gap: 16px; font: 700 clamp(32px, 8vw, 48px)/1 system-ui, sans-serif; letter-spacing: -0.01em; }
+.brand img { width: clamp(64px, 16vw, 88px); height: auto; border: 0; border-radius: 0; }
 .hero { display: grid; gap: 20px; justify-items: start; }
 .hero h1 { margin: 0; max-width: 18ch; font: 700 clamp(28px, 6vw, 46px)/1.1 system-ui, sans-serif; text-wrap: balance; }
 .hero p { margin: 0; max-width: 52ch; color: #b3b6ba; }
@@ -44,7 +44,7 @@ footer a { display: inline-block; min-height: 44px; line-height: 44px; color: in
 <body>
 <main class="demo">
 <header class="hero">
-  <div class="tag" role="img" aria-label="SkyCake">SKY<i></i>CAKE</div>
+  <div class="brand"><img src="icon.svg" width="88" height="88" alt="">SkyCake</div>
   <h1>Real FAA airspace in 3D, on the real chart.</h1>
   <p>Raise the Class B over the sectional and fly the approaches inside it. Phoenix and Miami, free in your browser, and offline once saved.</p>
   <a class="open" href="./">Open the viewer</a>
