@@ -36,6 +36,12 @@ export function resolve(scene, data) {
     const diagram = scene.diagram ?? null;
     if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram)
         throw new SceneError(`no diagram for ${diagram}`);
+    const plate = scene.plate;
+    if (plate) {
+        target({ airport: plate.airport }, data);
+        if (plate.page !== undefined && !(Number.isInteger(plate.page) && plate.page >= 1))
+            throw new SceneError(`plate page ${plate.page} is not a page number`);
+    }
     const camera = scene.camera;
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
