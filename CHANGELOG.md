@@ -9,6 +9,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 - Quizzes: `mount({ mode: { quiz } })` asks written questions (find, read, airplane, procedure) and questions generated from the FAA data, with a running count, the answer revealed in 3D, and Again or Explore at the end. `quiz: "practice"` asks generated questions without end, filtered by `types`, `kinds` and `airports`. `onResult` reports each answer and the end; skycake stores nothing.
 - SkyCake Viewer (`app/`): a standalone web app for skycake.app. Start screen with the areas, offline saves with a current-through date, full screen maps.
 - SkyCake Viewer's demo page, `demo.html`: Phoenix and Miami in 3D, free roam, walkthroughs, quizzes and accessibility mode in screenshots, each opening its scene in the app.
+- SkyCake Viewer's icon is the upside-down cake: Chris's art on the dark tile.
 - Blue (`#3d7bc2`) is the default accent. Sites that set `--red` and `--redbg` keep their own, so instrumentready.com stays red.
 - `mount()` takes `close`: the view fills the window from the start and its close button calls the site's function.
 - `area.json` records its 28-day procedure `cycle`. `npm run data -- --cycle` prints the cycle in effect.
