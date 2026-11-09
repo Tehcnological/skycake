@@ -356,7 +356,6 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-bar { height: var(--sc-tabs); box-sizing: border-box; gap: 4px; padding: 0 8px env(safe-area-inset-bottom, 0px); border-width: 1px 0 0; border-radius: 0; box-shadow: none; }
   /* Above the bar and the caption line. */
   .skycake .sc-step, .skycake .sc-player .sc-card { position: absolute; left: var(--sc-gap); right: var(--sc-gap); bottom: calc(100% + 36px); max-height: 55svh; overflow: auto; border-width: 1px; border-radius: var(--sc-r-panel); }
-  .skycake .sc-big-play { top: calc(50% - 28px); }
 }
 
 /* The quiz. Desktop: the count top left (as the walkthrough's title), Explore top right, the card along the bottom
@@ -373,7 +372,32 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 @media (max-width: 860px) {
   .skycake .sc-quiz { position: static; transform: none; width: auto; flex: none; display: flex; flex-direction: column; min-height: var(--sc-tabs); }
   .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
-  .skycake.sc-quizzing .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
+  /* In the flow, yet relative, so it can rise over a full screen chart. */
+  .skycake.sc-quizzing .sc-caption { position: relative; inset: auto; align-self: flex-start; margin: 6px var(--sc-gap); }
+}
+
+/* The plate panel in walkthroughs and quizzes. Beside the map, the title row, the player and the quiz card stay in the
+   map's room (Play is in the view). A phone held sideways has no header or tab bar here, so the panel takes the
+   figure's height and the player and card sit beside it. On an upright phone the title row moves into the flow over
+   the panel, and the panel and the map share the view's height. Full screen covers it all but the caption. */
+.skycake.sc-plate .sc-wtop { right: calc(var(--sc-share) * 100% + var(--sc-gap)); }
+@media (min-width: 861px) {
+  .skycake.sc-plate .sc-player, .skycake.sc-plate .sc-quiz { left: calc((100% - var(--sc-share) * 100%) / 2); }
+  .skycake.sc-plate .sc-player { width: min(640px, calc(100% - var(--sc-share) * 100% - 2 * var(--sc-gap))); }
+  .skycake.sc-plate .sc-quiz { width: min(560px, calc(100% - var(--sc-share) * 100% - 2 * var(--sc-gap))); }
+}
+@media (max-width: 860px) {
+  .skycake:has(.sc-wtop) .sc-plate { top: 0; bottom: 0; }
+  .skycake.sc-plate:not(.sc-plate-full) .sc-player, .skycake.sc-plate:not(.sc-plate-full) .sc-quiz { margin-right: calc(var(--sc-share) * 100%); }
+}
+@media (max-width: 860px) and (orientation: portrait) {
+  .skycake.sc-plate:not(.sc-plate-full) .sc-player, .skycake.sc-plate:not(.sc-plate-full) .sc-quiz { margin-right: 0; }
+  .skycake.sc-plate:not(.sc-plate-full) .sc-wtop { position: static; order: -2; flex: none; padding: var(--sc-gap); }
+  .skycake:has(.sc-wtop) .sc-plate { flex: 0 0 calc(var(--sc-share) * 72svh); }
+  .skycake.sc-plate:not(.sc-plate-full):has(.sc-wtop) .view { height: calc((1 - var(--sc-share)) * 72svh); }
+  .skycake.full:has(.sc-wtop) .sc-plate { flex: var(--sc-share) 1 0; }
+  .skycake.full.sc-plate:not(.sc-plate-full):has(.sc-wtop) .view { flex: calc(1 - var(--sc-share)) 1 0; height: auto; }
+  .skycake.sc-plate-full:has(.sc-wtop) .sc-plate { top: 0; bottom: 0; }
 }
 
 /* Accessibility mode (data-a11y on the figure), and anyone whose system asks for more contrast: text at least 4.5:1 and

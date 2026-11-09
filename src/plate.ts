@@ -4,7 +4,7 @@
 import { h, icon, ICONS, type Context } from "./freeroam.js";
 import { isTap, twoFingers, type Pt } from "./gesture.js";
 import { ARROWS, MINUS, PLUS } from "./pad.js";
-import type { ProcedureRef } from "./scene.js";
+import type { PlateRef, ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
 
 export type PlateMode = "split" | "full" | null;
@@ -17,6 +17,11 @@ export type Plates = {
   set: (mode: PlateMode) => void;
   /** The procedures shown and the current airport, whenever either changes. */
   procedures: (refs: ProcedureRef[], airport: string | null) => void;
+  /**
+   * A scene's chart: shows it at its page (past the last, page 1) in split; null closes the panel. A chart the
+   * airport's index lacks is warned about and the panel left as it was. The newest of these and the panel's own loads wins.
+   */
+  open: (p: PlateRef | null) => Promise<void>;
   destroy: () => void;
 };
 
@@ -34,7 +39,15 @@ export function plateView(c: Context, on: {
   /** The map's room on an upright phone, for the divider. Default: the figure's box. */
   room?: () => { top: number; bottom: number };
 }): Plates {
-  if (!c.data.plates) return { has: false, el: null, mode: () => null, set: () => {}, procedures: () => {}, destroy: () => {} };
+  if (!c.data.plates) {
+    let told = false;
+    const open = async (p: PlateRef | null) => {
+      if (!p || told) return;
+      told = true;
+      console.warn("skycake: this area has no procedure charts; the plate panel stays closed");
+    };
+    return { has: false, el: null, mode: () => null, set: () => {}, procedures: () => {}, open, destroy: () => {} };
+  }
   const { fig, labels: L } = c;
   const id = `sc-plate-${Math.random().toString(36).slice(2)}`;
   const title = h("span", { class: "sc-plate-title" }, L.plate);
@@ -63,6 +76,8 @@ export function plateView(c: Context, on: {
   };
   let refs: ProcedureRef[] = [];
   let airport: string | null = null;
+  // The airport of the chart a scene opened: the picker lists its charts while there is no current airport.
+  let sceneAt: string | null = null;
   let picks: PlatePick[] = [];
   let shown: PlatePick | null = null;
   let page = 1;
@@ -123,12 +138,13 @@ export function plateView(c: Context, on: {
   let ticket = 0;
   const sync = async () => {
     const mine = ++ticket;
-    await Promise.all([...new Set([...refs.map((r) => r.airport), ...(airport === null ? [] : [airport])])].map(index));
+    const at = airport ?? sceneAt;
+    await Promise.all([...new Set([...refs.map((r) => r.airport), ...(at === null ? [] : [at])])].map(index));
     if (mine !== ticket || now === null) return;
     // The options stay put while the student browses them; they are rebuilt as focus leaves.
     if (focused) return void (stale = true);
-    picks = pickOrder(indexes, refs, airport);
-    pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === airport ? p.entry.name : `${p.airport} ${p.entry.name}`)));
+    picks = pickOrder(indexes, refs, at);
+    pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === at ? p.entry.name : `${p.airport} ${p.entry.name}`)));
     title.replaceChildren(picks.length ? pick : L.plate);
     const w = want && refs.some((r) => r.airport === want?.airport && r.name === want.name) ? want : null;
     want = null;
@@ -264,9 +280,10 @@ export function plateView(c: Context, on: {
     // Opening shows the newest procedure's chart, else the one shown before, else the first listed.
     if (opening) void sync();
   };
+  const away = () => (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
   const shut = () => {
     set(null);
-    (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
+    away();
   };
   full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
   close.addEventListener("click", shut);
@@ -318,6 +335,32 @@ export function plateView(c: Context, on: {
       refs = next;
       airport = at;
       if (now !== null) void sync();
+    },
+    open: async (p) => {
+      const mine = ++ticket;
+      if (!p) {
+        const inside = el.contains(document.activeElement);
+        set(null);
+        if (inside) away();
+        return;
+      }
+      await index(p.airport);
+      if (mine !== ticket) return;
+      const entry = indexes.get(p.airport)?.find((x) => x.name === p.chart);
+      if (!entry) return console.warn(`skycake: no chart ${p.chart} at ${p.airport}; leaving the plate panel as it was`);
+      let n = p.page ?? 1;
+      if (n > entry.pages.length) {
+        console.warn(`skycake: ${p.chart} at ${p.airport} has no page ${n}; showing page 1`);
+        n = 1;
+      }
+      // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
+      if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) return;
+      want = null;
+      sceneAt = p.airport;
+      show({ airport: p.airport, entry }, n);
+      // Opening redraws the picker; an open panel needs it redrawn too.
+      if (now !== null) void sync();
+      set("split");
     },
     destroy: () => {
       ticket++;

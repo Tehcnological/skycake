@@ -10,8 +10,16 @@ import { ARROWS, MINUS, PLUS } from "./pad.js";
  * picking it in the search box does.
  */
 export function plateView(c, on) {
-    if (!c.data.plates)
-        return { has: false, el: null, mode: () => null, set: () => { }, procedures: () => { }, destroy: () => { } };
+    if (!c.data.plates) {
+        let told = false;
+        const open = async (p) => {
+            if (!p || told)
+                return;
+            told = true;
+            console.warn("skycake: this area has no procedure charts; the plate panel stays closed");
+        };
+        return { has: false, el: null, mode: () => null, set: () => { }, procedures: () => { }, open, destroy: () => { } };
+    }
     const { fig, labels: L } = c;
     const id = `sc-plate-${Math.random().toString(36).slice(2)}`;
     const title = h("span", { class: "sc-plate-title" }, L.plate);
@@ -40,6 +48,8 @@ export function plateView(c, on) {
     };
     let refs = [];
     let airport = null;
+    // The airport of the chart a scene opened: the picker lists its charts while there is no current airport.
+    let sceneAt = null;
     let picks = [];
     let shown = null;
     let page = 1;
@@ -102,14 +112,15 @@ export function plateView(c, on) {
     let ticket = 0;
     const sync = async () => {
         const mine = ++ticket;
-        await Promise.all([...new Set([...refs.map((r) => r.airport), ...(airport === null ? [] : [airport])])].map(index));
+        const at = airport ?? sceneAt;
+        await Promise.all([...new Set([...refs.map((r) => r.airport), ...(at === null ? [] : [at])])].map(index));
         if (mine !== ticket || now === null)
             return;
         // The options stay put while the student browses them; they are rebuilt as focus leaves.
         if (focused)
             return void (stale = true);
-        picks = pickOrder(indexes, refs, airport);
-        pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === airport ? p.entry.name : `${p.airport} ${p.entry.name}`)));
+        picks = pickOrder(indexes, refs, at);
+        pick.replaceChildren(...picks.map((p, i) => h("option", { value: String(i) }, p.airport === at ? p.entry.name : `${p.airport} ${p.entry.name}`)));
         title.replaceChildren(picks.length ? pick : L.plate);
         const w = want && refs.some((r) => r.airport === want?.airport && r.name === want.name) ? want : null;
         want = null;
@@ -270,9 +281,10 @@ export function plateView(c, on) {
         if (opening)
             void sync();
     };
+    const away = () => (on.back?.() ?? fig.querySelector(".view")).focus();
     const shut = () => {
         set(null);
-        (on.back?.() ?? fig.querySelector(".view")).focus();
+        away();
     };
     full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
     close.addEventListener("click", shut);
@@ -326,6 +338,37 @@ export function plateView(c, on) {
             airport = at;
             if (now !== null)
                 void sync();
+        },
+        open: async (p) => {
+            const mine = ++ticket;
+            if (!p) {
+                const inside = el.contains(document.activeElement);
+                set(null);
+                if (inside)
+                    away();
+                return;
+            }
+            await index(p.airport);
+            if (mine !== ticket)
+                return;
+            const entry = indexes.get(p.airport)?.find((x) => x.name === p.chart);
+            if (!entry)
+                return console.warn(`skycake: no chart ${p.chart} at ${p.airport}; leaving the plate panel as it was`);
+            let n = p.page ?? 1;
+            if (n > entry.pages.length) {
+                console.warn(`skycake: ${p.chart} at ${p.airport} has no page ${n}; showing page 1`);
+                n = 1;
+            }
+            // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
+            if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n)
+                return;
+            want = null;
+            sceneAt = p.airport;
+            show({ airport: p.airport, entry }, n);
+            // Opening redraws the picker; an open panel needs it redrawn too.
+            if (now !== null)
+                void sync();
+            set("split");
         },
         destroy: () => {
             ticket++;

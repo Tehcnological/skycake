@@ -77,7 +77,7 @@ export type Resolved = {
 export declare class SceneError extends Error {
 }
 export declare function resolve(scene: Scene, data: AirspaceFile): Resolved;
-/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+/** The scene without playback (highlight, airplane, draw) or its chart: free roam gets a still scene, panel closed. */
 export declare function stripPlayback(scene: Scene): Scene;
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export declare function framedOnly(scene: Scene): ProcedureRef[];

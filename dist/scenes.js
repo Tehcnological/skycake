@@ -1,7 +1,10 @@
 import { locator } from "./question.js";
 import { resolve, sceneRefs, usable } from "./scene.js";
-/** timeline: called once the scene resolves, just before the view applies it; its value is the step timeline (0 to 1). */
-export function scenes(c, timeline) {
+/**
+ * timeline: called once the scene resolves, just before the view applies it; its value is the step timeline (0 to 1).
+ * plate: called then too with the scene's plate when it has one (null closes the panel); left out, not called.
+ */
+export function scenes(c, timeline, plate) {
     const { view: v, data, labels: L } = c;
     const caption = c.fig.querySelector(".sc-caption");
     const warned = new Set();
@@ -36,6 +39,8 @@ export function scenes(c, timeline) {
         onScreen = ok;
         if (caption)
             caption.textContent = L.caption(data.edition, r.chart);
+        if (ok.plate !== undefined)
+            plate?.(ok.plate);
         await v.apply(r, r.procedures.flatMap((x) => found.find((f) => f.airport === x.airport && f.name === x.name) ?? []), now, found, timeline?.());
     };
     return {

@@ -3,7 +3,7 @@
   "title": "Placeholder: the Phoenix Class B",
   "area": "phoenix",
   "items": [
-    { "id": "find-fix", "type": "find", "prompt": "Placeholder: tap ZINGA, the final approach fix.", "answer": { "fix": "ZINGA" }, "scene": { "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }] } },
+    { "id": "find-fix", "type": "find", "prompt": "Placeholder: tap ZINGA, the final approach fix.", "answer": { "fix": "ZINGA" }, "scene": { "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }], "plate": { "airport": "KPHX", "chart": "ILS OR LOC/DME RWY 07L" } } },
     { "id": "find-area", "type": "find", "prompt": "Placeholder: tap the Chandler Municipal Class D.", "answer": { "area": "d-chandler-municipal-airport-class-d" } },
     { "id": "read-floor", "type": "read", "prompt": "Placeholder: what is the floor of the highlighted shelf?", "choices": ["40", "50", "60", "70"], "answer": 1, "scene": { "highlight": [{ "area": "b-phoenix-class-b-50-90-4" }] }, "explanation": "Placeholder: the bottom number of the shelf's fraction, in hundreds of feet MSL." },
     { "id": "read-number", "type": "read", "prompt": "Placeholder: what is the ceiling of the highlighted Class D, in feet MSL?", "number": { "answer": 3000, "tolerance": 0, "unit": "ft MSL" }, "scene": { "highlight": [{ "area": "d-chandler-municipal-airport-class-d" }] } },

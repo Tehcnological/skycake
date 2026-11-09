@@ -80,9 +80,9 @@ function target(t: Target, data: AirspaceFile) {
   if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram) throw new SceneError(`no diagram for ${t.diagram}`);
 }
 
-/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+/** The scene without playback (highlight, airplane, draw) or its chart: free roam gets a still scene, panel closed. */
 export function stripPlayback(scene: Scene): Scene {
-  const { highlight, airplane, ...rest } = scene;
+  const { highlight, airplane, plate, ...rest } = scene;
   return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
 }
 

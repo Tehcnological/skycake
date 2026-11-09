@@ -97,6 +97,7 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
   assert.equal(resolve(scene, data).procedures[0].draw, true);
   assert.deepEqual(stripPlayback(scene), { procedures: [{ airport: "KPHX", name }] });
   assert.equal(resolve({}, data).airplane, null);
+  assert.equal("plate" in stripPlayback({ plate: { airport: "KPHX", chart: "X" } }), false);
 });
 
 test("usable leaves out each field naming something missing, and keeps the rest", () => {
