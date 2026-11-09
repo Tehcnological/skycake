@@ -28,7 +28,7 @@ const SPECIAL_USE: readonly Kind[] = ["R", "P", "W", "MOA", "A"];
 export const shownIn = (m: Mode, k: Kind) => m === "vfr" || SPECIAL_USE.includes(k);
 /** edition: the charts' 56-day edition. cycle: the 28-day procedure cycle (CIFP, d-TPP) the area was built from; areas
  * built before it was recorded lack it. Both are effective dates, YYYY-MM-DD. */
-export type AirspaceFile = { edition: string; cycle?: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[]; airways: Airway[]; waypoints: Waypoint[] };
+export type AirspaceFile = { edition: string; cycle?: string; bounds: Bounds; ground: number; charts: Charts; dem: Dem; areas: Area[]; airports: Airport[]; airways: Airway[]; waypoints: Waypoint[]; plates?: true };
 
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;
