@@ -135,12 +135,16 @@ export function freeRoam(c: Context): Promise<void> {
     const opts = h("div", { class: "sc-seg", role: "group", "aria-label": label });
     return { row: h("div", { class: "sc-segrow" }, h("span", {}, label), opts), opts };
   };
-  const fillSeg = (s: ReturnType<typeof seg>, items: { text: string; on: boolean; pick: () => void }[]) =>
+  const fillSeg = (s: ReturnType<typeof seg>, items: { text: string; on: boolean; pick: () => void }[]) => {
+    // Redrawn on every pick, so focus moves to the new button in the same place.
+    const at = [...s.opts.children].indexOf(document.activeElement!);
     s.opts.replaceChildren(...items.map((x) => {
       const b = h("button", { type: "button", "aria-pressed": String(x.on) }, x.text);
       b.addEventListener("click", x.pick);
       return b;
     }));
+    if (at >= 0) (s.opts.children[at] as HTMLElement | undefined)?.focus();
+  };
   const heightSeg = seg(L.height), modeSeg = seg(L.mode), chartSeg = seg(L.chart);
   modeSeg.row.hidden = !hasIfr;
   const tagsBox = h("input", { type: "checkbox", role: "switch" });
@@ -208,6 +212,12 @@ export function freeRoam(c: Context): Promise<void> {
     fig.classList.toggle("sc-open-kinds", name === "kinds");
     fig.classList.toggle("sc-open-view", name === "view");
     fig.classList.toggle("sc-open-inview", name === "inview");
+    // One thing open at a time on a phone: a sheet closes the search.
+    if (name && fig.classList.contains("sc-open-find")) {
+      fig.classList.remove("sc-open-find");
+      findButton.setAttribute("aria-expanded", "false");
+      results.hidden = true;
+    }
     kindButton.setAttribute("aria-expanded", String(name === "kinds"));
     inViewButton.setAttribute("aria-expanded", String(name === "inview"));
     tabs.airspace.setAttribute("aria-pressed", String(name === "kinds"));
@@ -245,7 +255,11 @@ export function freeRoam(c: Context): Promise<void> {
     if (fig.classList.contains("sc-open-kinds")) opener(kindButton, tabs.airspace).focus();
     else if (fig.classList.contains("sc-open-inview")) opener(inViewButton, tabs.inView).focus();
     else if (fig.classList.contains("sc-open-view")) tabs.view.focus();
-    else if (fig.classList.contains("sc-plate") && e.target !== input) {
+    else if (fig.classList.contains("sc-open-find") && e.target !== input) {
+      setFind(false);
+      findButton.focus();
+      return;
+    } else if (fig.classList.contains("sc-plate") && e.target !== input) {
       setPlate(null);
       opener(plateButton, tabs.plate).focus();
       return;
@@ -264,7 +278,10 @@ export function freeRoam(c: Context): Promise<void> {
     if (on) input.focus();
     else results.hidden = true;
   };
-  findButton.addEventListener("click", () => setFind(!fig.classList.contains("sc-open-find")));
+  findButton.addEventListener("click", () => {
+    sheet(null);
+    setFind(!fig.classList.contains("sc-open-find"));
+  });
   tabs.procedure.addEventListener("click", () => {
     sheet(null);
     setFind(true);
@@ -318,7 +335,8 @@ export function freeRoam(c: Context): Promise<void> {
     const bottom = upright.matches ? tabBar.getBoundingClientRect().top : box.bottom;
     const move = (m: PointerEvent) => setShare(upright.matches ? (m.clientY - top) / (bottom - top) : (box.right - m.clientX) / box.width);
     divider.addEventListener("pointermove", move);
-    divider.addEventListener("pointerup", () => divider.removeEventListener("pointermove", move), { once: true });
+    // Fires after pointerup and after a cancelled drag alike.
+    divider.addEventListener("lostpointercapture", () => divider.removeEventListener("pointermove", move), { once: true });
   });
   divider.addEventListener("keydown", (e) => {
     const step = { ArrowLeft: 0.05, ArrowRight: -0.05, ArrowUp: -0.05, ArrowDown: 0.05 }[e.key];

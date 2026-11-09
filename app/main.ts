@@ -54,11 +54,16 @@ async function save(id: string, a: AreaInfo, progress: (share: number) => void) 
     // Six at a time, each counted as it lands. cache: "reload" tells the service worker to fetch, not to answer from
     // the copy being replaced.
     const queue = [...a.files];
-    let done = 0;
+    let done = 0, failed = false;
     await Promise.all(Array.from({ length: 6 }, async () => {
-      for (let f = queue.shift(); f !== undefined; f = queue.shift()) {
-        await cache.add(new Request(`data/${id}/${f}`, { cache: "reload" }));
-        progress(++done / a.files.length);
+      for (let f = queue.shift(); f !== undefined && !failed; f = queue.shift()) {
+        try {
+          await cache.add(new Request(`data/${id}/${f}`, { cache: "reload" }));
+        } catch (e) {
+          failed = true; // the other workers stop, and stop reporting, so the button stays on Retry
+          throw e;
+        }
+        if (!failed) progress(++done / a.files.length);
       }
     }));
     await cache.put(MARK, new Response(a.rev));
