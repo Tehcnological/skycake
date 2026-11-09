@@ -74,6 +74,17 @@ export type Labels = {
     plateOpen: string;
     split: string;
     resize: string;
+    /** The panel's chart picker, the page arrows' names (the page each goes to), its Map / Plate / Split switch, the
+     * chart's zoom buttons (accessibility mode), and what shows when a chart image fails to load. */
+    plateChart: string;
+    platePage: (n: number, of: number) => string;
+    plateMap: string;
+    platePlate: string;
+    plateSplit: string;
+    zoomIn: string;
+    zoomOut: string;
+    zoomFit: string;
+    plateMissing: string;
     /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
     inView: string;
     /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */

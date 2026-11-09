@@ -59,6 +59,15 @@ export const LABELS = {
     plateOpen: "Plate",
     split: "Split view",
     resize: "Resize",
+    plateChart: "Chart",
+    platePage: (n, of) => `Page ${n} of ${of}`,
+    plateMap: "Map",
+    platePlate: "Plate",
+    plateSplit: "Split",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomFit: "Fit",
+    plateMissing: "This chart did not load.",
     inView: "Placeholder: In view",
     number: "Placeholder: Number",
     skip: "Placeholder: Skip",
@@ -194,7 +203,7 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
     // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
     if (a11y.row)
         context.setA11y = (on) => {

@@ -20,6 +20,8 @@ export type Context = {
   first: Scene;
   airport: string | null;
   labels: Labels;
+  /** A path in the area's data folder as an absolute URL. */
+  url: (path: string) => string;
   /** A procedure file by airport, cached by the caller. */
   procedures: (airport: string) => Promise<Procedure[]>;
   startScale: number;
@@ -190,6 +192,7 @@ export function freeRoam(c: Context): Promise<void> {
     room: () => ({ top: head.getBoundingClientRect().bottom, bottom: tabBar.getBoundingClientRect().top }),
   });
   plateButton.hidden = tabs.plate.hidden = !plates.has;
+  if (plates.el) plateButton.setAttribute("aria-controls", plates.el.id);
 
   // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
   // and again as the view takes focus, so it is current.
