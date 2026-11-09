@@ -157,7 +157,19 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake.sc-plate .sc-tr, .skycake.sc-plate .sc-br { right: calc(var(--sc-share) * 100% + var(--sc-gap)); }
 .skycake.sc-plate .sc-tr { width: min(400px, calc(100% - var(--sc-share) * 100% - 320px)); }
 .skycake.sc-plate-full .sc-plate { width: 100%; border-left: 0; }
-.skycake .sc-plate-head { display: flex; align-items: center; gap: 4px; flex: none; min-height: 52px; padding: 0 4px 0 16px; border-bottom: 1px solid var(--sc-frame); }
+.skycake .sc-plate-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; flex: none; min-height: 52px; padding: 0 4px 0 16px; border-bottom: 1px solid var(--sc-frame); }
+/* The head is one row while the panel has room for the title beside the rest (about 100px), else the Map / Plate /
+   Split switch takes a second row under it. */
+.skycake .sc-plate { container-type: inline-size; }
+.skycake .sc-plate-switch { flex: none; }
+@container (max-width: 459px) {
+  .skycake .sc-plate-head { padding-top: 4px; }
+  .skycake .sc-plate-switch { order: 1; flex: 1 1 100%; margin: 0 12px 8px 0; }
+}
+@container (max-width: 489px) {
+  .skycake[data-a11y] .sc-plate-head { padding-top: 4px; }
+  .skycake[data-a11y] .sc-plate-switch { order: 1; flex: 1 1 100%; margin: 0 12px 8px 0; }
+}
 .skycake .sc-plate-title { flex: 1; min-width: 0; overflow: hidden; font: 600 16px var(--sc-head); text-overflow: ellipsis; white-space: nowrap; }
 .skycake .sc-plate-pick { box-sizing: border-box; width: 100%; height: 44px; padding: 0 8px; border: 1px solid var(--sc-line); border-radius: var(--sc-r-ctl); background: var(--sc-panel); color: var(--sc-ink); font: 600 14px var(--sc-head); text-overflow: ellipsis; cursor: pointer; }
 /* The chart: plate.ts pans and zooms it by a transform from the body's top left; every gesture is its own. */

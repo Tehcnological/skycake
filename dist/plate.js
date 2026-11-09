@@ -18,6 +18,9 @@ export function plateView(c, on) {
     const pick = h("select", { class: "sc-plate-pick", "aria-label": L.plateChart });
     const arrow = (paths) => h("button", { type: "button", class: "sc-x", hidden: true }, icon(paths));
     const [back, next] = [arrow(ARROWS.left), arrow(ARROWS.right)];
+    // Map / Plate / Split: map only (the panel closed), chart only (full screen), both.
+    const modes = [[L.plateMap, null], [L.platePlate, "full"], [L.plateSplit, "split"]].map(([label, m]) => ({ m, b: h("button", { type: "button", "aria-pressed": "false" }, label) }));
+    const switcher = h("div", { class: "sc-seg sc-plate-switch", role: "group", "aria-label": L.plate }, ...modes.map((x) => x.b));
     const full = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
     const close = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
     const body = h("div", { class: "sc-plate-body", tabindex: "0", role: "group", "aria-label": L.plateChart, "aria-keyshortcuts": "ArrowLeft ArrowRight ArrowUp ArrowDown + -" });
@@ -26,7 +29,7 @@ export function plateView(c, on) {
     // Accessibility mode's zoom buttons (style.css shows them only then), in the body's corner.
     const zoom = h("div", { class: "sc-plate-zoom", role: "group" }, zoomIn, zoomOut, zoomFit);
     const divider = h("div", { class: "sc-divider", role: "separator", tabindex: "0", "aria-label": L.resize, "aria-controls": id, "aria-valuemin": "25", "aria-valuemax": "75" });
-    const el = h("aside", { class: "sc-plate", id, "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, title, back, next, full, close), body);
+    const el = h("aside", { class: "sc-plate", id, "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, title, back, next, switcher, full, close), body);
     // The charts: indexes by airport, fetched only while the panel is open and kept for its life (a failed fetch is none).
     const fetched = new Map();
     const indexes = new Map();
@@ -221,6 +224,8 @@ export function plateView(c, on) {
         fig.classList.toggle("sc-plate", mode !== null);
         fig.classList.toggle("sc-plate-full", mode === "full");
         full.setAttribute("aria-pressed", String(mode === "full"));
+        for (const x of modes)
+            x.b.setAttribute("aria-pressed", String(x.m === mode));
         full.setAttribute("aria-label", mode === "full" ? L.split : L.fullScreen);
         on.mode?.(mode);
         // Opening shows the newest procedure's chart, else the one shown before, else the first listed.
@@ -233,6 +238,8 @@ export function plateView(c, on) {
     };
     full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
     close.addEventListener("click", shut);
+    for (const x of modes)
+        x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
     el.addEventListener("keydown", (e) => {
         if (e.key !== "Escape")
             return;
