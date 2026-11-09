@@ -1,11 +1,11 @@
 # Accessibility mode
 
-Every change skycake makes in accessibility mode, for sites that embed it. The mode targets WCAG 2.2 AA. Students read the short version in SkyCake Viewer's `accessibility.html`.
+Every change skycake makes in accessibility mode, for sites that embed it. The mode targets WCAG 2.2 AA. Students read the short version in SkyCake Viewer's `accessibility.html`, and how to use the map in `help.html`.
 
 ## Turning it on
 
 - **A site with its own toggle** passes `mount(host, { a11y: true | false })` from that toggle. skycake then shows no switch of its own. To follow a change, reload the page: `mount` has no teardown, so mounting again leaves the old 3D view running.
-- **A site that passes nothing** (and SkyCake Viewer) gets a labeled row in free roam's View controls. Flipping it switches the map in place and keeps the choice per browser in `localStorage` under `skycake-a11y` (`"1"` is on). Blocked storage means off, and the choice lasts for the page only.
+- **A site that passes nothing** (and SkyCake Viewer) gets a labeled switch in free roam: under the tool rail on desktop, at the foot of the View sheet on a phone. Flipping it switches the map in place and keeps the choice per browser in `localStorage` under `skycake-a11y` (`"1"` is on). Blocked storage means off, and the choice lasts for the page only.
 - The mode sets `data-a11y` on the `.skycake` figure; all its styles hang off that attribute. The helpers `A11Y_KEY`, `stored`, `store` and `browserStorage` are exported for a site that wants to read or write the same key.
 - With the mode off, `@media (prefers-contrast: more)` still raises the colors, and `prefers-reduced-motion` still stops motion.
 

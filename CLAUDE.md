@@ -4,7 +4,7 @@ Standing instructions for Claude Code in this repo.
 
 ## Project
 
-3D airspace and instrument procedures over FAA charts, embedded by Chris DeFoe's sites (first instrumentready.com, repo `Tehcnological/instrumentready.com`). Modes: free roam (built), walkthroughs and quizzes (next). The engine lives here, public; Chris's walkthroughs and quiz questions stay private on the sites. Source of truth: Projects HQ in Notion, project row "skycake".
+3D airspace and instrument procedures over FAA charts, embedded by Chris DeFoe's sites (first instrumentready.com, repo `Tehcnological/instrumentready.com`). Modes, all built: free roam, walkthroughs, and quizzes (written, generated from the FAA data, and endless practice), plus accessibility mode across all three (`docs/accessibility.md`). The engine lives here, public; Chris's walkthroughs, question banks and their wording stay private on the sites. Source of truth: Projects HQ in Notion, project row "skycake".
 
 Also its own app, SkyCake Viewer (`app/`, `npm run app`, hosted at skycake.app on Cloudflare Pages), and new FAA data every 28 days from `.github/workflows/data.yml`. Design, decisions and the F-Droid and iOS plan: `docs/superpowers/specs/2026-11-07-skycake-viewer-design.md`.
 
@@ -22,7 +22,7 @@ Also its own app, SkyCake Viewer (`app/`, `npm run app`, hosted at skycake.app o
 ## How Chris works
 
 - Concise and direct. Never use em dashes, in chat or in files.
-- Chris writes on-screen copy; labels here are placeholders and every one can be overridden through `labels`.
+- Chris writes on-screen copy. Free roam's labels are real defaults; walkthrough and quiz labels default to "Placeholder: ..." because the sites supply them. Every one can be overridden through `labels`. SkyCake Viewer's words (`app/main.ts`, the `app/*.html` pages) are placeholders or drafts until Chris writes them.
 - Keep on-screen text to the minimum. Neighbouring controls match in height and style. No Garmin or G1000 names.
 - Get a visual direction from Chris before building new design.
 
@@ -35,8 +35,9 @@ npm run typecheck
 npm run build          # commit dist/ with the change
 npm run data           # the Data cycle workflow does this every 28 days and opens a PR
 npm run app            # SkyCake Viewer into www/ (not committed)
+npm run demo           # http://localhost:5179/demo/ (and /www/ after npm run app)
 ```
 
-GitHub Actions runs on every PR and every push to main, on standard hosted runners, free because this repo is public. Use it. It fails if `dist/` is stale. See "CI" in README.md.
+GitHub Actions runs on every PR to main and every push to main, on standard hosted runners, free because this repo is public. Use it. It fails if `dist/` is stale, and main requires its `build-and-test` check. See "CI" in README.md.
 
 Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`. Headless Chromium will not lay out narrower than 500 px; check phones with real device emulation.

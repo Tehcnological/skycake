@@ -30,7 +30,7 @@ npm run demo    # http://localhost:5179/demo/, and /www/ after npm run app
 - Commit `dist/` with every change to `src/`. Sites install skycake straight from GitHub without building, and CI fails if `dist/` is stale. Do not add a `prepare` script.
 - Data: public domain FAA and USGS sources only, built by `scripts/build-area.ts`. Never copy code, shaders, assets, data or text from other airspace products, never scrape, never spoof a User-Agent. Each data file stays well under 25 MiB.
 - `data/` is rebuilt every 28 days by the Data cycle workflow; don't hand-edit it.
-- On-screen words are placeholders that sites replace through `labels`; keep them short.
+- On-screen words are short, and sites can replace any of them through `labels`. Free roam's are real defaults; walkthrough and quiz words default to "Placeholder: ...", since the sites write them.
 - Add or update a test in `src/*.test.ts` for logic that can run outside a browser (scenes, search, procedures, gestures).
 - If you change the public API (`mount`, `Options`, `Labels`, `Scene` or exports), update the README.
 - Never use Garmin or G1000 names.
