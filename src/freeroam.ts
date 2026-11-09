@@ -192,6 +192,9 @@ export function freeRoam(c: Context): Promise<void> {
     room: () => ({ top: head.getBoundingClientRect().bottom, bottom: tabBar.getBoundingClientRect().top }),
   });
   plateButton.hidden = tabs.plate.hidden = !plates.has;
+  // A site's first scene can open a chart; its procedures go in first, so they are not news that would show theirs.
+  plates.procedures(r.procedures, r.airport);
+  if (c.first.plate) void plates.open(c.first.plate);
   if (plates.el) plateButton.setAttribute("aria-controls", plates.el.id);
 
   // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)

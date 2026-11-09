@@ -1,5 +1,5 @@
 import { type Context } from "./freeroam.js";
-import type { ProcedureRef } from "./scene.js";
+import type { PlateRef, ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
 export type PlateMode = "split" | "full" | null;
 export type Plates = {
@@ -11,6 +11,11 @@ export type Plates = {
     set: (mode: PlateMode) => void;
     /** The procedures shown and the current airport, whenever either changes. */
     procedures: (refs: ProcedureRef[], airport: string | null) => void;
+    /**
+     * A scene's chart: shows it at its page (past the last, page 1) in split; null closes the panel. A chart the
+     * airport's index lacks is warned about and the panel left as it was. The newest of these and the panel's own loads wins.
+     */
+    open: (p: PlateRef | null) => Promise<void>;
     destroy: () => void;
 };
 /**
