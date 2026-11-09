@@ -22,7 +22,7 @@ const TEXT = {
   failed: "Retry",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
-  help: "How to use",
+  help: "Placeholder: How to use",
   a11y: "Placeholder: Accessibility mode",
   a11yNote: "Placeholder: Larger text and controls",
   a11yHelp: "Placeholder: Accessibility",
