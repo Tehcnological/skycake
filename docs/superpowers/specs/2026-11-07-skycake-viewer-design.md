@@ -8,7 +8,7 @@ skycake stays the library sites embed, and is also its own app: a free web app o
 
 ## Decisions (Chris, 2026-11-07)
 
-- **Name:** SkyCake Viewer (short name SkyCake). Icon: an upside-down cake, `app/icon.svg`: round chocolate tiers, widest on top, icing drips running up, a cherry stuck to the bottom with its stem hanging. Chris picked it on 2026-11-08.
+- **Name:** SkyCake Viewer (short name SkyCake). Icon: an upside-down cake. `app/icon.svg` is a placeholder until Chris supplies one.
 - **Accent:** blue `#3d7bc2`, the default everywhere. instrumentready.com stays red: `style.css` reads `var(--red, #3d7bc2)`, and that site sets `--red` and `--redbg`. Keep that fallback, or instrumentready.com turns blue.
 - **Area picker:** a start screen listing the areas, not a control on the map.
 - **Host:** Cloudflare Pages, skycake.pages.dev, then skycake.app (registered 2026-11-07).
