@@ -70,6 +70,15 @@ export type Labels = {
   nothing: string;
   /** Accessibility mode's own switch, when the site does not drive it. */
   a11y: string;
+  /** A switch's value in words (the Tags button's). */
+  on: string;
+  off: string;
+  /** The procedure plate panel: its title until a chart shows, its open button, the button that puts it beside the map
+   * again from full screen, and its divider's name. */
+  plate: string;
+  plateOpen: string;
+  split: string;
+  resize: string;
   /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
   inView: string;
   /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */
@@ -114,7 +123,7 @@ export const LABELS: Labels = {
   diagram: "Diagram",
   tags: "Tags",
   heightScale: (n) => `Height scale ${n}×`,
-  height: "Height scale",
+  height: "Height",
   fullScreen: "Full screen",
   open: "Open 3D view",
   wake: "Placeholder: Tap to move the map",
@@ -125,7 +134,7 @@ export const LABELS: Labels = {
   floor700: "Floor 700 AGL",
   view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
   caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
-  mode: "VFR or IFR",
+  mode: "Rules",
   modes: { vfr: "VFR", ifr: "IFR" },
   chart: "Chart",
   charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
@@ -150,6 +159,12 @@ export const LABELS: Labels = {
   result: (right, total) => `Placeholder: ${right} of ${total}`,
   nothing: "Placeholder: Nothing to ask here",
   a11y: "Placeholder: Accessibility mode",
+  on: "On",
+  off: "Off",
+  plate: "Procedure plate",
+  plateOpen: "Plate",
+  split: "Split view",
+  resize: "Resize",
   inView: "Placeholder: In view",
   number: "Placeholder: Number",
   skip: "Placeholder: Skip",
@@ -191,6 +206,8 @@ export const LABELS: Labels = {
 export type Options = {
   /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
   base: string;
+  /** What the view shows, in its header: the area's name and a note under it (SkyCake Viewer: the current-through date). */
+  title?: { name: string; note?: string };
   /** Free roam's first scene. Default: every type raised, the whole chart in view. */
   scene?: Scene;
   /** Shorthand for a first scene: types raised at first. */
@@ -314,7 +331,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   };
   const { freeRoam } = await import("./freeroam.js");
   const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-  const context: Context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on };
+  const context: Context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
   // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
   if (a11y.row)
     context.setA11y = (on) => {

@@ -36,7 +36,7 @@ mount(document.querySelector("#airspace")!, {
 });
 ```
 
-`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
+`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. `title: { name, note }` puts a header over the view: the area's name and a line under it, such as its current-through date. A procedure plate panel sits beside the map (beside or over it on a phone), with a divider to share the space; its buttons stay hidden until plates are built. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
 Accessibility mode (higher contrast, a camera pad, numbered picks, no motion, no single-key shortcuts): pass `a11y` from the site's own toggle, or pass nothing and skycake shows its own switch. Every change and what a site must do: [docs/accessibility.md](docs/accessibility.md).
 

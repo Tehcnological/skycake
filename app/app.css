@@ -1,34 +1,62 @@
-/* SkyCake Viewer only. The map takes its blue from style.css; --accent is the same blue for the start screen. */
-:root { color-scheme: dark; --accent: #3d7bc2; }
-html, body { margin: 0; background: #17191c; color: #d9dadc; font-family: system-ui, sans-serif; }
+/* SkyCake Viewer only. The same tokens as the map's (style.css); --accent is the brand blue, --fill the primary
+   button (dark enough for white text at 4.5:1), --sel and --mark a selected control and its marker. */
+:root {
+  color-scheme: dark;
+  --canvas: #11161c; --surface: #1b232d; --raised: #24303d; --divider: #354353; --edge: #7d8fa5;
+  --ink: #f2f5f8; --ink2: #aab9c9; --ink3: #8d9db0; --link: #7eb4f4;
+  --accent: #3d7bc2; --fill: #28598f; --fill-hover: #3068a6; --fill-down: #214b7a; --hover: #2c3a4a;
+  --sel: #244568; --mark: #7eb4f4; --focus: #91c5ff; --warn: #f2d28b;
+}
+html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/24px system-ui, -apple-system, "Segoe UI", sans-serif; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-/* The start screen: one row per area, in the library's pill style. */
-.areas { box-sizing: border-box; max-width: 480px; margin: 0 auto; padding: 24px 16px; }
-.areas h1 { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; font: 600 20px system-ui, sans-serif; }
-.areas h1 img { width: 36px; height: 36px; }
+/* The start screen: a card per area, the accessibility switch, the footer. */
+.areas { box-sizing: border-box; max-width: 480px; margin: 0 auto; padding: 24px 16px 16px; }
+.areas h1 { display: flex; align-items: center; gap: 12px; margin: 0; font: 700 24px/32px system-ui, sans-serif; }
+.areas h1 img { width: 44px; height: 44px; }
+.areas h2 { margin: 24px 0 12px; padding-top: 20px; border-top: 1px solid var(--divider); font: 600 20px/28px system-ui, sans-serif; }
 .areas ul { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.areas li { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; border: 1px solid #3a3f45; border-radius: 20px; background: #1f2226; }
-.areas a { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 44px; color: inherit; text-decoration: none; }
-.areas a b { font-size: 17px; }
-.areas a span { font: 500 12px ui-monospace, monospace; color: #858a90; }
-.areas .old a span { color: #e0a43a; }
-.areas button { flex: none; height: 44px; padding: 0 18px; border: 1.5px solid #b3b6ba; border-radius: 999px; background: #1f2226; color: #d9dadc; font: 600 13px system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
-.areas button[data-state="saved"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 38%, #1f2226); }
-.areas button:disabled { cursor: default; opacity: 0.7; }
-.areas p { margin: 20px 0 0; font: 500 11px ui-monospace, monospace; color: #b3b6ba; }
-.areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: inherit; text-decoration: underline; }
-.areas p.notice { font: 400 15px/1.5 system-ui, sans-serif; color: #d9dadc; }
+.areas li { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--divider); border-radius: 12px; background: var(--surface); }
+.areas .info { display: flex; flex-direction: column; gap: 2px; }
+.areas .info b { font: 600 16px/22px system-ui, sans-serif; }
+.areas .info span { font-size: 14px; line-height: 20px; color: var(--ink2); }
+.areas .old .info span { color: var(--warn); }
+.areas .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.areas .actions > * { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 8px; font: 600 14px/20px system-ui, sans-serif; text-decoration: none; cursor: pointer; transition: background-color 0.12s; }
+/* Open area: the primary action. */
+.areas .go { flex: 1 1 auto; border: 1px solid transparent; background: var(--fill); color: #fff; }
+.areas .go:hover { background: var(--fill-hover); }
+.areas .go:active { background: var(--fill-down); }
+/* The offline copy: Save, Saving n% (its width steady as it counts), Saved, Update, Retry. */
+.areas button { min-width: 128px; border: 1px solid var(--edge); background: none; color: var(--ink); font-variant-numeric: tabular-nums; }
+.areas button:hover:not(:disabled) { background: var(--hover); }
+.areas button[data-state="saved"] { border-color: var(--mark); background: var(--sel); color: #d7e9ff; }
+.areas button:disabled { cursor: default; }
+.areas button[data-state="saving"] { color: var(--ink2); }
 
-/* Accessibility mode's switch row, under the areas. */
-.areas .a11y { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 12px; padding: 0 14px 0 18px; border: 1px solid #3a3f45; border-radius: 20px; background: #1f2226; font: 600 13px system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
-.areas .a11y input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
-/* Accessibility mode (and more contrast asked by the system): the same raised values as the map; one focus ring. */
-:root[data-a11y] { --accent: #6aa6e8; }
-:root[data-a11y] .areas li, :root[data-a11y] .areas .a11y { border-color: #767c83; }
-:root[data-a11y] .areas a span { color: #b0b4b9; }
-:root[data-a11y] :focus-visible { outline: 3px solid #d9dadc; outline-offset: 2px; box-shadow: 0 0 0 7px #141619; }
+/* Accessibility mode's switch: a row with its name and what it does. */
+.areas .a11y { display: flex; align-items: center; gap: 16px; min-height: 44px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--divider); border-radius: 12px; background: var(--surface); cursor: pointer; }
+.areas .a11y span { flex: 1; display: flex; flex-direction: column; }
+.areas .a11y b { font: 600 16px/22px system-ui, sans-serif; }
+.areas .a11y small { font-size: 14px; line-height: 20px; color: var(--ink2); }
+.areas .a11y input { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border: 1px solid var(--edge); border-radius: 13px; background: var(--canvas); cursor: pointer; transition: background-color 0.12s; }
+.areas .a11y input::before { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink2); transition: transform 0.12s; }
+.areas .a11y input:checked { border-color: var(--mark); background: var(--fill); }
+.areas .a11y input:checked::before { transform: translateX(18px); background: #fff; }
+
+.areas p { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 14px; line-height: 20px; color: var(--ink2); }
+.areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--link); text-decoration: underline; }
+.areas p.notice { border: 0; font-size: 16px; line-height: 24px; color: var(--ink); }
+
+/* Accessibility mode (and more contrast asked by the system): raised contrast, 48px targets, larger text, no motion. */
+:root[data-a11y] { --divider: #7d8fa5; --ink2: #c5d0dc; --edge: #aab9c9; }
+:root[data-a11y] .areas .actions > *, :root[data-a11y] .areas .a11y { min-height: 48px; font-size: 16px; }
+:root[data-a11y] .areas .info span, :root[data-a11y] .areas .a11y small, :root[data-a11y] .areas p { font-size: 16px; line-height: 24px; }
+:root[data-a11y] :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--canvas); }
+:root[data-a11y] *, :root[data-a11y] *::before { transition: none !important; }
 @media (prefers-contrast: more) {
-  :root { --accent: #6aa6e8; }
-  .areas li, .areas .a11y { border-color: #767c83; }
-  .areas a span { color: #b0b4b9; }
+  :root { --divider: #7d8fa5; --ink2: #c5d0dc; --edge: #aab9c9; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { transition: none !important; }
 }
