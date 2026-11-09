@@ -122,8 +122,9 @@ export function plateView(c, on) {
         else
             pick.value = String(listed(shown));
     };
-    // Arrow keys on a closed picker change it at every step (Windows): each step shows its chart, and the procedures draw
-    // in 3D once the student commits with Enter or Space or leaves the picker. A mouse or touch pick draws at once.
+    // Arrow keys and typed letters on a closed picker change it at every step (Windows): each step shows its chart, and
+    // the procedures draw in 3D once the student commits with Enter or Space or leaves the picker. A mouse or touch pick
+    // draws at once.
     let focused = false;
     let stale = false;
     let browsing = false;
@@ -136,10 +137,10 @@ export function plateView(c, on) {
             on.show(r);
     };
     pick.addEventListener("keydown", (e) => {
-        if (/^(Arrow|Page|Home|End)/.test(e.key))
-            browsing = true;
-        else if (e.key === "Enter" || e.key === " ")
+        if (e.key === "Enter" || e.key === " ")
             commit();
+        else if (e.key.length === 1 || /^(Arrow|Page|Home|End|Backspace)/.test(e.key))
+            browsing = true;
     });
     pick.addEventListener("pointerdown", commit);
     pick.addEventListener("focus", () => (focused = true));
