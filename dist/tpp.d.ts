@@ -20,7 +20,7 @@ export type ChartRecord = {
 export declare const airportBlock: (meta: string, id: string) => string | undefined;
 /** Every record of an airport's block, in metafile order. */
 export declare const chartRecords: (block: string) => ChartRecord[];
-/** Approaches, departures and arrivals (deleted records left out), each with its continuation pages after the first. */
+/** Approaches, departures (obstacle departures included) and arrivals (deleted records left out), each with its continuation pages after the first. */
 export declare function chartGroups(recs: ChartRecord[]): {
     kind: ChartEntry["kind"];
     name: string;
@@ -41,3 +41,11 @@ export declare function proceduresOn(kind: ChartEntry["kind"], name: string, fir
 export declare const noChart: (entries: ChartEntry[], procedures: {
     name: string;
 }[]) => string[];
+/**
+ * Degrees to turn a page clockwise so it reads left to right: 90 when most of its text runs bottom to top (the FAA prints
+ * wide charts sideways on upright pages), 270 when most runs top to bottom, else 0. Items are pdf.js text items.
+ */
+export declare function pageTurn(items: {
+    str: string;
+    transform: number[];
+}[]): 0 | 90 | 270;

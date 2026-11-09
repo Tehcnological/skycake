@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { airportBlock, approachMatches, chartGroups, chartRecords, codesIn, noChart, pageFile, proceduresOn } from "./tpp.js";
+import { airportBlock, approachMatches, chartGroups, chartRecords, codesIn, noChart, pageFile, pageTurn, proceduresOn } from "./tpp.js";
 
 const rec = (code: string, name: string, pdf: string, action = "") => `<record><chart_code>${code}</chart_code><chart_name>${name}</chart_name><useraction>${action}</useraction><pdf_name>${pdf}</pdf_name></record>`;
 const META = `<airport_name ID="PHOENIX SKY HARBOR INTL" apt_ident="PHX" icao_ident="KPHX">` +
@@ -9,7 +9,8 @@ const META = `<airport_name ID="PHOENIX SKY HARBOR INTL" apt_ident="PHX" icao_id
   rec("DP", "BUCKEYE FOUR, CONT.1", "00322BUCKEYE_C.PDF") + rec("DP", "BUCKEYE FOUR", "00322BUCKEYE.PDF") +
   rec("STR", "EAGUL SIX", "00322EAGUL.PDF") + rec("IAP", "VOR RWY 26", "DELETED_JOB.PDF", "D") +
   `<airport_name ID="SCOTTSDALE" apt_ident="SDL" icao_ident="KSDL">` + rec("IAP", "VOR/DME-A", "00860VDA.PDF");
-const KPHX = JSON.parse(readFileSync("data/phoenix/area.json", "utf8")).airports.find((a: { id: string }) => a.id === "KPHX").procedures;
+const AIRPORTS: { id: string; procedures: { type: "IAP" | "SID" | "STAR"; name: string }[] }[] = JSON.parse(readFileSync("data/phoenix/area.json", "utf8")).airports;
+const KPHX = AIRPORTS.find((a) => a.id === "KPHX")!.procedures;
 
 test("records by airport; continuation pages fold in, first page first; deleted and other charts left out", () => {
   assert.equal(chartRecords(airportBlock(META, "KPHX")!).length, 6);
@@ -44,4 +45,20 @@ test("a chart with no procedure (a charted visual, synthetic: 2611 has none here
   assert.deepEqual(proceduresOn("IAP", "RIVER VISUAL RWY 19", "", KPHX), []);
   const entries = [{ name: "BUCKEYE FOUR", kind: "DP" as const, pages: [], procedures: ["BXK4"] }];
   assert.deepEqual(noChart(entries, [{ name: "BXK4" }, { name: "TFD4" }]), ["TFD4"]);
+});
+test("a graphic obstacle departure is a departure, matched by its code", () => {
+  const block = `<airport_name ID="PHOENIX DEER VALLEY" apt_ident="DVT" icao_ident="KDVT">` +
+    rec("ODP", "DEER VALLEY THREE (OBSTACLE)", "06646DEERVALLEY.PDF") + rec("ODP", "DEER VALLEY THREE (OBSTACLE), CONT.1", "06646DEERVALLEY_C.PDF");
+  assert.deepEqual(chartGroups(chartRecords(block)), [{ kind: "DP", name: "DEER VALLEY THREE (OBSTACLE)", pdfs: ["06646DEERVALLEY.PDF", "06646DEERVALLEY_C.PDF"] }]);
+  // 2611's 06646DEERVALLEY.PDF, page 1 text.
+  assert.deepEqual(proceduresOn("DP", "DEER VALLEY THREE (OBSTACLE)", "(DVT3.PXR) DEER VALLEY THREE DEPARTURE", AIRPORTS.find((a) => a.id === "KDVT")!.procedures), ["DVT3"]);
+});
+test("a page whose text mostly runs sideways is turned to read left to right", () => {
+  const item = (str: string, a: number, b: number) => ({ str, transform: [a, b, -b, a, 0, 0] });
+  const side = "EAGUL SIX ARRIVAL NOTE: RADAR required. GALLUP TRANSITION (GUP.EAGUL6)";
+  assert.equal(pageTurn([item("ILS or LOC RWY 7R PHOENIX SKY HARBOR INTL", 9, 0), item("SW-4, 29 OCT 2026", 0, 9)]), 0);
+  assert.equal(pageTurn([item("(EAGUL.EAGUL6)", 9, 0), item(side, 0, 9), item("SW-4", 0, -9)]), 90); // bottom to top, as EAGUL SIX page 1
+  assert.equal(pageTurn([item("(EAGUL.EAGUL6)", 9, 0), item(side, 0, -9)]), 270); // top to bottom
+  // A page drawn as outlines (2611's Luke AFB charts) has only the date strips down both margins, one each way.
+  assert.equal(pageTurn([item("SW-4, 29 OCT 2026 to 26 NOV 2026", 0, 9), item("SW-4, 29 OCT 2026 to 26 NOV 2026", 0, -9)]), 0);
 });

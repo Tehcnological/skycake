@@ -7,17 +7,18 @@ export const airportBlock = (meta, id) => meta.split("<airport_name").find((b) =
 const tag = (r, t) => r.match(new RegExp(`<${t}>([^<]*)</${t}>`))?.[1] ?? "";
 /** Every record of an airport's block, in metafile order. */
 export const chartRecords = (block) => block.split("<record>").slice(1).map((r) => ({ code: tag(r, "chart_code"), name: tag(r, "chart_name"), pdf: tag(r, "pdf_name"), action: tag(r, "useraction") }));
-const KINDS = ["IAP", "DP", "STR"];
+// Graphic obstacle departures (ODP) are departures too.
+const KINDS = { IAP: "IAP", DP: "DP", ODP: "DP", STR: "STR" };
 const CONT = /, CONT\.(\d+)$/;
-/** Approaches, departures and arrivals (deleted records left out), each with its continuation pages after the first. */
+/** Approaches, departures (obstacle departures included) and arrivals (deleted records left out), each with its continuation pages after the first. */
 export function chartGroups(recs) {
     const groups = new Map();
-    const pages = recs.map((r, i) => ({ r, i, n: Number(r.name.match(CONT)?.[1] ?? 0) })).filter(({ r }) => KINDS.includes(r.code) && r.action !== "D");
+    const pages = recs.map((r, i) => ({ r, i, n: Number(r.name.match(CONT)?.[1] ?? 0) })).filter(({ r }) => r.code in KINDS && r.action !== "D");
     // First pages first, in metafile order, so groups come in the order of their first page; then CONT.1, CONT.2.
     for (const { r } of pages.sort((a, b) => a.n - b.n || a.i - b.i)) {
-        const name = r.name.replace(CONT, ""), key = `${r.code} ${name}`;
+        const name = r.name.replace(CONT, ""), kind = KINDS[r.code], key = `${kind} ${name}`;
         if (!groups.has(key))
-            groups.set(key, { kind: r.code, name, pdfs: [] });
+            groups.set(key, { kind, name, pdfs: [] });
         groups.get(key).pdfs.push(r.pdf);
     }
     return [...groups.values()];
@@ -48,3 +49,18 @@ export function proceduresOn(kind, name, firstPageText, procedures) {
 }
 /** Procedures no chart draws. */
 export const noChart = (entries, procedures) => procedures.map((p) => p.name).filter((n) => !entries.some((e) => e.procedures.includes(n)));
+/**
+ * Degrees to turn a page clockwise so it reads left to right: 90 when most of its text runs bottom to top (the FAA prints
+ * wide charts sideways on upright pages), 270 when most runs top to bottom, else 0. Items are pdf.js text items.
+ */
+export function pageTurn(items) {
+    const n = { 0: 0, 90: 0, 270: 0 };
+    for (const { str, transform: [a, b] } of items) {
+        if (Math.abs(b) > Math.abs(a))
+            n[b > 0 ? 90 : 270] += str.length;
+        else if (a > 0)
+            n[0] += str.length;
+    }
+    // Strictly more: the date strips down both margins run opposite ways and cancel out.
+    return n[90] > n[0] && n[90] > n[270] ? 90 : n[270] > n[0] && n[270] > n[90] ? 270 : 0;
+}

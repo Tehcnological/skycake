@@ -8,7 +8,7 @@
  *   area.json          class airspace, Mode C veil, special use airspace inside BOUNDS, and the airports
  *   procedures/*.json  approaches, departures and arrivals of each airport inside BOUNDS, from the CIFP
  *   diagrams/*.webp    FAA airport diagrams (d-TPP), north up, placed by their own ticks
- *   charts/*.png       FAA approach, departure and arrival charts (d-TPP), one greyscale page per PDF
+ *   charts/*.png       FAA approach, departure and arrival charts (d-TPP), one greyscale page per PDF, turned to read left to right
  *   charts/*.json      each airport's charts and the procedures they draw (src/tpp.ts)
  *
  *   npm run data                     # every area, current chart edition
@@ -33,7 +33,7 @@ import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, ty
 import { parseAirways } from "../src/airway.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
-import { airportBlock, chartGroups, chartRecords, noChart, pageFile, proceduresOn, type ChartEntry } from "../src/tpp.js";
+import { airportBlock, chartGroups, chartRecords, noChart, pageFile, pageTurn, proceduresOn, type ChartEntry } from "../src/tpp.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
@@ -420,7 +420,7 @@ async function diagrams(airports: Airport[], { base, dir, meta }: Dtpp) {
 }
 
 // ---- Approach, departure and arrival charts from the same d-TPP, each page rendered once (an arrival several airports
-// share is one file) at 200 dpi in 8 shades of grey, and matched to the airport's procedures (src/tpp.ts). Returns whether
+// share is one file) at 200 dpi in 8 shades of grey, turned to read left to right, and matched to the airport's procedures (src/tpp.ts). Returns whether
 // any chart was written.
 async function plates(airports: Airport[], { base, dir, meta }: Dtpp): Promise<boolean> {
   const out = join(OUT, "charts");
@@ -434,13 +434,14 @@ async function plates(airports: Airport[], { base, dir, meta }: Dtpp): Promise<b
     if (texts.has(pdf)) return texts.get(pdf)!;
     const task = getDocument({ data: await download(`${base}/${pdf}`, dir), standardFontDataUrl: join(ROOT, "node_modules", "pdfjs-dist", "standard_fonts") + "/", verbosity: 0 });
     const p = await (await task.promise).getPage(1);
-    const text = ((await p.getTextContent()).items as { str?: string }[]).map((it) => it.str ?? "").join(" ");
+    const items = ((await p.getTextContent()).items as { str?: string; transform?: number[] }[]).flatMap((it) => (it.transform ? [{ str: it.str ?? "", transform: it.transform }] : []));
+    const text = items.map((it) => it.str).join(" ");
     const vp = p.getViewport({ scale: 200 / 72 });
     const canvas = createCanvas(Math.ceil(vp.width), Math.ceil(vp.height));
     const ctx = canvas.getContext("2d");
     await p.render({ canvas: canvas as unknown as HTMLCanvasElement, canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport: vp }).promise;
     const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const info = await sharp(rgba, { raw: { width: canvas.width, height: canvas.height, channels: 4 } }).removeAlpha().greyscale().png({ palette: true, colours: 8, effort: 10 }).toFile(join(out, pageFile(pdf)));
+    const info = await sharp(rgba, { raw: { width: canvas.width, height: canvas.height, channels: 4 } }).removeAlpha().rotate(pageTurn(items)).greyscale().png({ palette: true, colours: 8, effort: 10 }).toFile(join(out, pageFile(pdf)));
     await task.destroy();
     bytes += info.size;
     texts.set(pdf, text);
