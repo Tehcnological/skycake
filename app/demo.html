@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17191c">
+<meta name="description" content="Real FAA airspace in 3D, on the real chart. Phoenix and Miami, free in your browser.">
+<title>SkyCake</title>
+<!-- The altitude tag mark: SKY over CAKE, ceiling over floor, as the chart labels a Class B shelf. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23fbfaf7'/%3E%3Ctext x='32' y='27' text-anchor='middle' font-family='monospace' font-weight='700' font-size='17' fill='%233d7bc2'%3ESKY%3C/text%3E%3Crect x='10' y='31' width='44' height='3' fill='%233d7bc2'/%3E%3Ctext x='32' y='51' text-anchor='middle' font-family='monospace' font-weight='700' font-size='14' fill='%233d7bc2'%3ECAKE%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<style>
+/* The demo page: dark like the app, one column of shots, each with one line of copy. All words are drafts for Chris. */
+:root { --paper: #fbfaf7; --muted: #8d939a; --line: #2c3137; }
+body { font: 17px/1.55 system-ui, sans-serif; }
+.demo { box-sizing: border-box; max-width: 1040px; margin: 0 auto; padding: 32px max(16px, env(safe-area-inset-right, 0px)) 48px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 56px; }
+.tag { display: inline-grid; justify-items: center; padding: 10px 20px; border-radius: 10px; background: var(--paper); color: var(--accent); font: 700 clamp(34px, 9vw, 56px)/1 ui-monospace, "Cascadia Mono", Menlo, monospace; letter-spacing: 0.02em; }
+.tag i { display: block; width: 100%; height: 5px; margin: 9px 0; background: currentColor; border-radius: 1px; }
+.hero { display: grid; gap: 20px; justify-items: start; }
+.hero h1 { margin: 0; max-width: 18ch; font: 700 clamp(28px, 6vw, 46px)/1.1 system-ui, sans-serif; text-wrap: balance; }
+.hero p { margin: 0; max-width: 52ch; color: #b3b6ba; }
+.open { display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border-radius: 999px; background: var(--accent); color: #fff; font: 600 15px system-ui, sans-serif; letter-spacing: 0.05em; text-transform: uppercase; text-decoration: none; }
+.open:focus-visible, .demo a:focus-visible { outline: 3px solid #d9dadc; outline-offset: 3px; }
+.nfn { font: 500 12px ui-monospace, monospace; color: #e0a43a; }
+section { display: grid; gap: 14px; }
+section h2 { margin: 0; font: 700 22px/1.25 system-ui, sans-serif; }
+section p { margin: 0; max-width: 60ch; color: #b3b6ba; }
+section a { color: #6aa6e8; font-weight: 600; }
+figure { margin: 0; }
+img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 14px; }
+/* A desktop shot beside a phone shot; stacked on a phone. */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.3fr); gap: 16px; align-items: start; }
+img.solo { max-width: 340px; }
+@media (max-width: 640px) { .pair { grid-template-columns: minmax(0, 1fr); } .pair img.phone, img.solo { max-width: 260px; } }
+footer { display: grid; gap: 6px; padding-top: 20px; border-top: 1px solid var(--line); font: 500 12px/1.6 ui-monospace, monospace; color: var(--muted); }
+footer a { display: inline-block; min-height: 44px; line-height: 44px; color: inherit; }
+</style>
+</head>
+<body>
+<main class="demo">
+<header class="hero">
+  <div class="tag" role="img" aria-label="SkyCake">SKY<i></i>CAKE</div>
+  <h1>Real FAA airspace in 3D, on the real chart.</h1>
+  <p>Raise the Class B over the sectional and fly the approaches inside it. Phoenix and Miami, free in your browser, and offline once saved.</p>
+  <a class="open" href="./">Open the viewer</a>
+  <span class="nfn">Not for navigation</span>
+</header>
+
+<section>
+  <h2>The upside-down wedding cake, for real</h2>
+  <p>Every shelf of the Phoenix Class B at its charted floor and ceiling, over the FAA sectional and real terrain. <a href="./?area=phoenix&amp;scene=%7B%22raise%22%3A%5B%22B%22%5D%2C%22camera%22%3A%7B%22azimuth%22%3A20%2C%22tilt%22%3A24%2C%22distance%22%3A42%2C%22target%22%3A%5B33.43%2C-112%5D%7D%2C%22height%22%3A4%7D">Open Phoenix</a></p>
+  <figure><img src="demo/phx-3d.webp" width="1280" height="560" alt="The Phoenix Class B raised in 3D: blue shelves stepping up away from Sky Harbor over the sectional chart and mountains"></figure>
+</section>
+
+<section>
+  <h2>Miami too</h2>
+  <p>Class B, C and D stacked up around Miami, Fort Lauderdale and the Keys. Same on a phone. <a href="./?area=miami&amp;scene=%7B%22raise%22%3A%5B%22B%22%2C%22C%22%2C%22D%22%5D%2C%22camera%22%3A%7B%22azimuth%22%3A330%2C%22tilt%22%3A26%2C%22distance%22%3A70%2C%22target%22%3A%5B25.8%2C-80.28%5D%7D%2C%22height%22%3A4%7D">Open Miami</a></p>
+  <div class="pair">
+    <img src="demo/mia-3d.webp" width="1280" height="560" alt="The Miami Class B in blue and nearby Class C and D in magenta, raised over the chart">
+    <img class="phone" src="demo/mia-phone.webp" width="780" height="1688" loading="lazy" alt="The same Miami airspace on a phone">
+  </div>
+</section>
+
+<section>
+  <h2>Free roam</h2>
+  <p>Search any airport or procedure. Approaches draw in 3D with their fixes and altitudes, inside the airspace they fly through. <a href="./?area=phoenix&amp;scene=%7B%22raise%22%3A%5B%22B%22%5D%2C%22procedures%22%3A%5B%7B%22airport%22%3A%22KPHX%22%2C%22name%22%3A%22ILS%20RWY%2007L%22%7D%5D%2C%22camera%22%3A%7B%22azimuth%22%3A70%2C%22tilt%22%3A22%2C%22distance%22%3A30%2C%22target%22%3A%5B33.42%2C-112.1%5D%7D%7D">Open the ILS 07L</a></p>
+  <figure><img src="demo/phx-ils.webp" width="1280" height="560" loading="lazy" alt="The Phoenix ILS runway 7L drawn in 3D with its fixes and altitudes inside the Class B"></figure>
+</section>
+
+<section>
+  <h2>Guided walkthroughs</h2>
+  <p>Lessons that move the camera for you, draw a procedure leg by leg and fly an airplane down it. Part of the SkyCake engine that teaching sites embed.</p>
+  <figure><img src="demo/walk.webp" width="1280" height="560" loading="lazy" alt="A walkthrough step: an arrival into Phoenix drawn in 3D with its altitudes, with playback controls"></figure>
+</section>
+
+<section>
+  <h2>Generated quizzes</h2>
+  <p>Questions built from the chart data itself, like find the fix or read the floor, so there is always a fresh one. Part of the engine too.</p>
+  <figure><img class="solo" src="demo/quiz-phone.webp" width="780" height="1550" loading="lazy" alt="A quiz on a phone asking the floor of a highlighted airspace shelf, with four answers"></figure>
+</section>
+
+<section>
+  <h2>Accessibility mode</h2>
+  <p>Higher contrast, 44 px targets, no motion, a camera pad for keyboard and switch users, and a list of everything in view. It targets WCAG 2.2 AA.</p>
+  <figure><img src="demo/a11y.webp" width="1280" height="560" loading="lazy" alt="Accessibility mode: thicker airspace lines, a camera pad at the bottom left and an In view list button"></figure>
+</section>
+
+<footer>
+  <span>FAA charts and data, public domain. Not for navigation.</span>
+  <span><a href="https://github.com/Tehcnological/skycake">Open source on GitHub</a> · <a href="privacy.html">Privacy</a> · <a href="accessibility.html">Accessibility</a></span>
+</footer>
+</main>
+</body>
+</html>

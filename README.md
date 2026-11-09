@@ -151,7 +151,7 @@ Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design
 
 ## SkyCake Viewer (the app)
 
-`app/` is a standalone web app around `mount()`: a start screen lists the areas, each with a button that saves it for offline use and the date its data is current through, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are placeholders.
+`app/` is a standalone web app around `mount()`: a start screen lists the areas, each with a button that saves it for offline use and the date its data is current through, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are placeholders. `demo.html` is a short showcase page (skycake.app/demo.html) of screenshots from `app/demo/`, each linking to its scene in the app; its words are drafts. The screenshots stay out of the offline shell, so they load only online.
 
 `npm run app` bundles it with three.js (esbuild) into `www/`, with the library's `style.css`, a copy of `data/`, `data/manifest.json` (per area: edition, current-through date, a revision hash of its files, files and size) and a service worker. The service worker caches the app itself on first load; saved areas go in their own caches, one per area and revision, and count as saved only once every file arrived. Update fetches past the service worker. To try it: `npm run app && npm run demo`, then http://localhost:5179/www/.
 

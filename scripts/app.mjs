@@ -12,8 +12,9 @@ const DAY = 864e5;
 
 await rm(out, { recursive: true, force: true });
 await build({ entryPoints: ["app/main.ts"], bundle: true, splitting: true, format: "esm", target: "es2022", minify: true, outdir: out, logLevel: "warning" });
-for (const f of ["index.html", "privacy.html", "accessibility.html", "app.css", "icon.svg", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
+for (const f of ["index.html", "demo.html", "privacy.html", "accessibility.html", "app.css", "icon.svg", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
 await cp("style.css", `${out}/style.css`);
+await cp("app/demo", `${out}/demo`, { recursive: true });
 for (const size of [180, 192, 512]) await sharp("app/icon.svg").resize(size).png().toFile(`${out}/icon-${size}.png`);
 await cp("data", `${out}/data`, { recursive: true });
 
@@ -43,12 +44,12 @@ assert.deepEqual(Object.keys(areas), ["miami", "phoenix"]);
 for (const a of Object.values(areas)) assert.ok(a.files.includes("area.json") && a.files.includes("sectional.webp"));
 await writeFile(`${out}/data/manifest.json`, JSON.stringify({ areas }));
 
-// The service worker. The shell is every file outside data/ plus the data manifest; VERSION changes with any of them,
-// which makes browsers install the new shell.
-const shell = ["./", "data/manifest.json", ...(await readdir(out)).filter((f) => f !== "data").sort()];
+// The service worker. The shell is every file outside data/ and demo/ (the demo page's screenshots, online only) plus
+// the data manifest; VERSION changes with any of them, which makes browsers install the new shell.
+const shell = ["./", "data/manifest.json", ...(await readdir(out)).filter((f) => f !== "data" && f !== "demo").sort()];
 const hash = createHash("sha256");
 for (const f of shell.slice(1)) hash.update(f).update(await readFile(`${out}/${f}`));
 const sw = `const VERSION = ${JSON.stringify(hash.digest("hex").slice(0, 12))};\nconst SHELL = ${JSON.stringify(shell)};\n${await readFile("app/sw.js", "utf8")}`;
 await writeFile(`${out}/sw.js`, sw);
-assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("privacy.html") && shell.includes("accessibility.html"));
+assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("privacy.html") && shell.includes("accessibility.html") && shell.includes("demo.html"));
 console.log(`www/: ${shell.length} shell files, areas ${Object.entries(areas).map(([id, a]) => `${id} ${a.edition} through ${a.through}`).join(", ")}`);
