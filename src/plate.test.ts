@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chartFor, fitChart, pageArrows, pickOrder, pickRefs, zoomAbout } from "./plate.js";
+import { readFileSync } from "node:fs";
+import type { AirspaceFile } from "./airspace.js";
+import type { Context } from "./freeroam.js";
+import { chartFor, fitChart, pageArrows, pickOrder, pickRefs, plateView, zoomAbout } from "./plate.js";
 import type { ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
 
@@ -36,4 +39,12 @@ test("fit and zoom", () => {
   assert.deepEqual(zoomAbout({ x: 0, y: 0, s: 1 }, 2, [100, 50], 0.5, 3), { x: -100, y: -50, s: 2 });
   assert.deepEqual(zoomAbout({ x: 0, y: 0, s: 2 }, 4, [0, 0], 0.5, 3), { x: 0, y: 0, s: 3 });
   assert.equal(zoomAbout({ x: 0, y: 0, s: 1 }, 0.1, [0, 0], 0.5, 3).s, 0.5);
+});
+
+const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
+test("an area without charts has no panel", () => {
+  const p = plateView({ data: { ...data, plates: undefined } } as unknown as Context, { show: () => {} });
+  assert.equal(p.has, false);
+  assert.equal(p.el, null);
+  assert.equal(p.mode(), null);
 });

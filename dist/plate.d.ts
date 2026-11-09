@@ -1,19 +1,34 @@
-import type { Context } from "./freeroam.js";
+import { type Context } from "./freeroam.js";
 import type { ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
+export type PlateMode = "split" | "full" | null;
 export type Plates = {
     /** The area has charts to show; until then free roam hides the panel's open buttons. */
     has: boolean;
+    /** The panel (aside.sc-plate) for the caller to place; null when the area has no charts. */
+    el: HTMLElement | null;
+    mode: () => PlateMode;
+    set: (mode: PlateMode) => void;
     /** The procedures shown and the current airport, whenever either changes. */
     procedures: (refs: ProcedureRef[], airport: string | null) => void;
     destroy: () => void;
 };
-/** `show` adds a procedure in 3D, as picking it in the search box does. */
-export declare function plateView(_c: Context, _el: {
-    title: HTMLElement;
-    body: HTMLElement;
-}, _on: {
+/**
+ * The panel beside the map on desktop and on a phone held sideways, over it on an upright phone; full screen covers
+ * the map. The fig's sc-plate class opens it, sc-plate-full makes it full screen. `show` adds a procedure in 3D, as
+ * picking it in the search box does.
+ */
+export declare function plateView(c: Context, on: {
     show: (ref: ProcedureRef) => void;
+    /** Every mode change, from inside the panel or set(). */
+    mode?: (m: PlateMode) => void;
+    /** Where focus goes when the panel closes with focus inside it. Default: the view. */
+    back?: () => HTMLElement;
+    /** The map's room on an upright phone, for the divider. Default: the figure's box. */
+    room?: () => {
+        top: number;
+        bottom: number;
+    };
 }): Plates;
 /** A chart in the picker, with the airport whose index listed it (a shared arrival is one chart per airport). */
 export type PlatePick = {

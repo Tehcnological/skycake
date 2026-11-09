@@ -1,6 +1,85 @@
-/** `show` adds a procedure in 3D, as picking it in the search box does. */
-export function plateView(_c, _el, _on) {
-    return { has: false, procedures: () => { }, destroy: () => { } };
+// The procedure chart viewer: the plate panel (its head, full screen, close and the divider) and, filling its body,
+// the charts. Free roam, walkthroughs and quizzes build it once, place its panel, tell it what is shown as that
+// changes, and ask whether the area has charts at all (their open buttons show only then).
+import { h, icon, ICONS } from "./freeroam.js";
+/**
+ * The panel beside the map on desktop and on a phone held sideways, over it on an upright phone; full screen covers
+ * the map. The fig's sc-plate class opens it, sc-plate-full makes it full screen. `show` adds a procedure in 3D, as
+ * picking it in the search box does.
+ */
+export function plateView(c, on) {
+    if (!c.data.plates)
+        return { has: false, el: null, mode: () => null, set: () => { }, procedures: () => { }, destroy: () => { } };
+    const { fig, labels: L } = c;
+    const title = h("span", { class: "sc-plate-title" }, L.plate);
+    const full = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
+    const close = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
+    const body = h("div", { class: "sc-plate-body" });
+    const divider = h("div", { class: "sc-divider", role: "separator", tabindex: "0", "aria-label": L.resize, "aria-controls": "sc-plate", "aria-valuemin": "25", "aria-valuemax": "75" });
+    const el = h("aside", { class: "sc-plate", id: "sc-plate", "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, title, full, close), body);
+    let now = null;
+    const set = (mode) => {
+        now = mode;
+        fig.classList.toggle("sc-plate", mode !== null);
+        fig.classList.toggle("sc-plate-full", mode === "full");
+        full.setAttribute("aria-pressed", String(mode === "full"));
+        full.setAttribute("aria-label", mode === "full" ? L.split : L.fullScreen);
+        on.mode?.(mode);
+    };
+    const shut = () => {
+        set(null);
+        (on.back?.() ?? fig.querySelector(".view")).focus();
+    };
+    full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
+    close.addEventListener("click", shut);
+    el.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape")
+            return;
+        e.stopPropagation();
+        shut();
+    });
+    set(null);
+    // The divider (drag it, or arrow keys) sets the panel's share of the map's room: its width beside the map, its
+    // height over it on an upright phone.
+    const upright = matchMedia("(max-width: 860px) and (orientation: portrait)");
+    const setShare = (x) => {
+        const share = Math.min(0.75, Math.max(0.25, x));
+        fig.style.setProperty("--sc-share", share.toFixed(3));
+        divider.setAttribute("aria-valuenow", String(Math.round(share * 100)));
+    };
+    const drawUpright = () => divider.setAttribute("aria-orientation", upright.matches ? "horizontal" : "vertical");
+    upright.addEventListener("change", drawUpright);
+    drawUpright();
+    setShare(0.38);
+    const shareNow = () => Number(fig.style.getPropertyValue("--sc-share"));
+    divider.addEventListener("pointerdown", (e) => {
+        divider.setPointerCapture(e.pointerId);
+        const box = fig.getBoundingClientRect();
+        const { top, bottom } = upright.matches && on.room ? on.room() : box;
+        const move = (m) => setShare(upright.matches ? (m.clientY - top) / (bottom - top) : (box.right - m.clientX) / box.width);
+        divider.addEventListener("pointermove", move);
+        // Fires after pointerup and after a cancelled drag alike.
+        divider.addEventListener("lostpointercapture", () => divider.removeEventListener("pointermove", move), { once: true });
+    });
+    divider.addEventListener("keydown", (e) => {
+        const step = { ArrowLeft: 0.05, ArrowRight: -0.05, ArrowUp: -0.05, ArrowDown: 0.05 }[e.key];
+        if (step === undefined)
+            return;
+        e.preventDefault();
+        setShare(shareNow() + step);
+    });
+    return {
+        has: true,
+        el,
+        mode: () => now,
+        set,
+        procedures: () => { },
+        destroy: () => {
+            upright.removeEventListener("change", drawUpright);
+            el.remove();
+            fig.classList.remove("sc-plate", "sc-plate-full");
+        },
+    };
 }
 /**
  * The picker's order: for each shown procedure in turn, the first chart of its airport that draws it, then every other
