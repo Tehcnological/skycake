@@ -10,6 +10,6 @@ Not accepted: harassment, insults, discriminatory jokes or language, personal at
 
 ## Enforcement
 
-Report a problem to Chris DeFoe at chris@defoe.me. Reports are kept private. The maintainer may edit or delete comments, lock threads, and block anyone who breaks this code, temporarily or permanently.
+Report a problem to Chris DeFoe at c@tehcnological.com. Reports are kept private. The maintainer may edit or delete comments, lock threads, and block anyone who breaks this code, temporarily or permanently.
 
 This code applies in all project spaces and when someone represents the project elsewhere.
