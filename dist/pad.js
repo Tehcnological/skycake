@@ -36,5 +36,9 @@ export function pad(c) {
     panButton.setAttribute("aria-pressed", "false");
     const ring = h("div", { class: "sc-pad-ring" }, arrows.up, arrows.left, h("i", { class: "sc-pad-mid", "aria-hidden": "true" }), arrows.right, arrows.down);
     const side = h("div", { class: "sc-pad-side" }, round(L.camera.zoomIn, PLUS, "", () => v.zoom(zoom)), round(L.camera.zoomOut, MINUS, "", () => v.zoom(1 / zoom)), panButton);
-    return h("div", { class: "sc-pad", role: "group", "aria-label": L.camera.group }, ring, side);
+    // On a phone the pad folds away behind one button, so it leaves the map clear until wanted.
+    const fold = h("button", { type: "button", class: "sc-pill sc-pad-fold", "aria-expanded": "false" }, icon(PAN), L.camera.group);
+    const el = h("div", { class: "sc-pad", role: "group", "aria-label": L.camera.group }, fold, ring, side);
+    fold.addEventListener("click", () => fold.setAttribute("aria-expanded", String(el.classList.toggle("sc-pad-open"))));
+    return el;
 }

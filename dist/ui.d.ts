@@ -65,6 +65,15 @@ export type Labels = {
     nothing: string;
     /** Accessibility mode's own switch, when the site does not drive it. */
     a11y: string;
+    /** A switch's value in words (the Tags button's). */
+    on: string;
+    off: string;
+    /** The procedure plate panel: its title until a chart shows, its open button, the button that puts it beside the map
+     * again from full screen, and its divider's name. */
+    plate: string;
+    plateOpen: string;
+    split: string;
+    resize: string;
     /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
     inView: string;
     /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */
@@ -111,6 +120,11 @@ export declare const LABELS: Labels;
 export type Options = {
     /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
     base: string;
+    /** What the view shows, in its header: the area's name and a note under it (SkyCake Viewer: the current-through date). */
+    title?: {
+        name: string;
+        note?: string;
+    };
     /** Free roam's first scene. Default: every type raised, the whole chart in view. */
     scene?: Scene;
     /** Shorthand for a first scene: types raised at first. */

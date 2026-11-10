@@ -17,7 +17,7 @@ export const LABELS = {
     diagram: "Diagram",
     tags: "Tags",
     heightScale: (n) => `Height scale ${n}×`,
-    height: "Height scale",
+    height: "Height",
     fullScreen: "Full screen",
     open: "Open 3D view",
     wake: "Placeholder: Tap to move the map",
@@ -28,7 +28,7 @@ export const LABELS = {
     floor700: "Floor 700 AGL",
     view: "3D airspace. Arrow keys turn the view, plus and minus zoom.",
     caption: (edition, chart) => `FAA ${{ tac: "TAC and sectional", sectional: "sectional", area: "IFR area and low", low: "IFR low" }[chart]} ${edition} · Not for navigation`,
-    mode: "VFR or IFR",
+    mode: "Rules",
     modes: { vfr: "VFR", ifr: "IFR" },
     chart: "Chart",
     charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
@@ -53,6 +53,12 @@ export const LABELS = {
     result: (right, total) => `Placeholder: ${right} of ${total}`,
     nothing: "Placeholder: Nothing to ask here",
     a11y: "Placeholder: Accessibility mode",
+    on: "On",
+    off: "Off",
+    plate: "Procedure plate",
+    plateOpen: "Plate",
+    split: "Split view",
+    resize: "Resize",
     inView: "Placeholder: In view",
     number: "Placeholder: Number",
     skip: "Placeholder: Skip",
@@ -188,7 +194,7 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on };
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
     // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
     if (a11y.row)
         context.setA11y = (on) => {

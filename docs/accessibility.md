@@ -13,11 +13,13 @@ Every change skycake makes in accessibility mode, for sites that embed it. The m
 
 | Change | WCAG 2.2 |
 |---|---|
-| Text and line colors raised: `--sc-soft` `#c5c8cc`, `--sc-muted` `#b0b4b9`, `--sc-dim` `#969ba1`, `--sc-frame` `#767c83`, accent `#6aa6e8` (each falls back to the site's own token) | 1.4.3, 1.4.11 |
+| Text and line colors raised: `--sc-soft` `#c5d0dc`, `--sc-muted` `#b4c1cf`, `--sc-dim` `#96a5b6`, `--sc-frame` `#7d8fa5`, accent `#6aa6e8` (each falls back to the site's own token) | 1.4.3, 1.4.11 |
 | Focus ring: 3px in the text color with a dark halo, inside the map's frame | 2.4.7 |
 | Map tags 13px on opaque backgrounds, fixes with solid borders; airspace rims and ribs 1.5 times wider | 1.4.3, 1.4.11 |
 | No motion: camera moves jump, tooltips appear at once (the mode implies reduced motion) | 2.2.2, 2.3.3 |
-| Every control at least 44px | 2.5.8 |
+| Every control at least 48px (44px with the mode off); text at least 16px in controls; a taller header (56px) and tab bar (64px) | 2.5.8, 1.4.4 |
+| Phone tabs show their whole names; when they don't fit, the tab bar scrolls sideways | 1.4.10 |
+| On and off settings are switches (`role="switch"`, `aria-checked`), picks of one are segmented buttons with `aria-pressed` | 4.1.2 |
 | Taps allow a looser touch (16px of travel, no time limit), so a shaky tap still counts | 2.5.1 |
 | Airport tags leave the tab order; In view reaches them instead | 2.4.3 |
 | Keyboard: arrows turn and tilt, Shift with arrows moves the map, plus and minus zoom; only while the map has focus, never as single-key shortcuts elsewhere (`aria-keyshortcuts` names them) | 2.1.1, 2.1.4 |
@@ -27,8 +29,9 @@ Every change skycake makes in accessibility mode, for sites that embed it. The m
 
 | Change | WCAG 2.2 |
 |---|---|
-| Camera pad over the map, bottom left: arrows turn and tilt, plus and minus zoom, Pan makes the arrows move the map | 2.5.1, 2.5.7 |
+| Camera pad over the map, bottom left: arrows turn and tilt, plus and minus zoom, Pan makes the arrows move the map. On a phone it folds behind a Camera button (`aria-expanded`) so it covers less of the map | 2.5.1, 2.5.7 |
 | In view (a pill under Airspace on desktop, a tab on a phone) lists what is on the map now, numbered, with the same number on a white badge on the map. Focusing an entry outlines its thing; picking an area raises or lowers it, picking an airport opens it. Escape closes it and returns focus | 2.1.1, 2.5.7, 2.4.3 |
+| The procedure plate panel's divider is a `separator` with `aria-valuenow` (25 to 75, the plate's share): arrows move it by 5, and dragging is never the only way, since Full screen and Close are buttons | 2.1.1, 2.5.7 |
 | A text summary of the scene (chart, raised areas, procedures) is the map's description for screen readers | 1.1.1 |
 
 ## Walkthroughs

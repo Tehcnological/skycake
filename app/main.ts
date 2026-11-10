@@ -10,17 +10,20 @@ type Manifest = { areas: Record<string, AreaInfo> };
 
 const TEXT = {
   title: "SkyCake Viewer",
+  choose: "Choose an area",
+  open: "Open area",
   names: { phoenix: "Phoenix", miami: "Miami" } as Record<string, string>,
   through: (d: string) => `Current through ${d}`,
   expired: (d: string) => `Out of date since ${d}`,
   download: (mb: number) => `Save ${mb} MB`,
   update: (mb: number) => `Update ${mb} MB`,
-  saving: "Saving",
+  saving: (pct: number) => `Saving ${pct}%`,
   saved: "Saved",
   failed: "Retry",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
   a11y: "Placeholder: Accessibility mode",
+  a11yNote: "Placeholder: Larger text and controls",
   a11yHelp: "Placeholder: Accessibility",
 };
 
@@ -43,12 +46,26 @@ const isArea = (key: string, id: string) => key.startsWith(`data:${id}:`);
 const MARK = "saved";
 const complete = async (keys: string[], name: string) => keys.includes(name) && !!(await (await caches.open(name)).match(MARK));
 
-async function save(id: string, a: AreaInfo) {
+/** progress: the share of the area's files saved so far, 0 to 1. */
+async function save(id: string, a: AreaInfo, progress: (share: number) => void) {
   const name = cacheOf(id, a);
   try {
     const cache = await caches.open(name);
-    // cache: "reload" tells the service worker to fetch, not to answer from the copy being replaced.
-    await cache.addAll(a.files.map((f) => new Request(`data/${id}/${f}`, { cache: "reload" })));
+    // Six at a time, each counted as it lands. cache: "reload" tells the service worker to fetch, not to answer from
+    // the copy being replaced.
+    const queue = [...a.files];
+    let done = 0, failed = false;
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      for (let f = queue.shift(); f !== undefined && !failed; f = queue.shift()) {
+        try {
+          await cache.add(new Request(`data/${id}/${f}`, { cache: "reload" }));
+        } catch (e) {
+          failed = true; // the other workers stop, and stop reporting, so the button stays on Retry
+          throw e;
+        }
+        if (!failed) progress(++done / a.files.length);
+      }
+    }));
     await cache.put(MARK, new Response(a.rev));
   } catch (e) {
     await caches.delete(name);
@@ -58,57 +75,56 @@ async function save(id: string, a: AreaInfo) {
   await navigator.storage?.persist?.();
 }
 
+const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string, unknown> = {}, ...kids: (Node | string)[]): HTMLElementTagNameMap[K] => {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  e.append(...kids);
+  return e;
+};
+const note = (a: AreaInfo, today: string) => (a.through < today ? TEXT.expired(a.through) : TEXT.through(a.through));
+
 async function startScreen() {
   setA11y(stored(storage));
   const today = new Date().toISOString().slice(0, 10);
   const keys = "caches" in window ? await caches.keys() : null;
-  const icon = Object.assign(document.createElement("img"), { src: "icon-192.png", alt: "" });
-  const h1 = document.createElement("h1");
-  h1.append(icon, TEXT.title);
-  const list = document.createElement("ul");
+  const h1 = el("h1", {}, el("img", { src: "icon-192.png", alt: "" }), TEXT.title);
+  const list = el("ul");
+  // One card per area: its name and date, Open area, and its offline copy's button.
   for (const [id, a] of Object.entries(manifest.areas)) {
-    const li = document.createElement("li");
     const old = a.through < today;
-    li.classList.toggle("old", old);
-    const link = Object.assign(document.createElement("a"), { href: `?area=${encodeURIComponent(id)}` });
-    link.append(Object.assign(document.createElement("b"), { textContent: TEXT.names[id] ?? id }), Object.assign(document.createElement("span"), { textContent: old ? TEXT.expired(a.through) : TEXT.through(a.through) }));
-    li.append(link);
+    const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { textContent: TEXT.names[id] ?? id }), el("span", { textContent: note(a, today) })));
+    const actions = el("div", { className: "actions" }, el("a", { className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open }));
     // Without Cache Storage (an http page other than localhost) there is no offline copy to offer.
     if (keys) {
       const mb = Math.ceil(a.bytes / 1e6);
-      const button = Object.assign(document.createElement("button"), { type: "button" });
-      const show = (state: "download" | "update" | "saving" | "saved" | "failed") => {
+      const button = el("button", { type: "button" });
+      const show = (state: "download" | "update" | "saving" | "saved" | "failed", pct = 0) => {
         button.dataset.state = state;
-        button.textContent = { download: TEXT.download(mb), update: TEXT.update(mb), saving: TEXT.saving, saved: TEXT.saved, failed: TEXT.failed }[state];
+        button.textContent = { download: TEXT.download(mb), update: TEXT.update(mb), saving: TEXT.saving(pct), saved: TEXT.saved, failed: TEXT.failed }[state];
         button.disabled = state === "saving" || state === "saved";
       };
       show((await complete(keys, cacheOf(id, a))) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
       button.addEventListener("click", () => {
         show("saving");
-        save(id, a).then(() => show("saved"), (e) => {
+        save(id, a, (share) => show("saving", Math.floor(share * 100))).then(() => show("saved"), (e) => {
           console.warn("skycake: save failed", e);
           show("failed");
         });
       });
-      li.append(button);
+      actions.append(button);
     }
+    li.append(actions);
     list.append(li);
   }
-  const section = document.createElement("section");
-  section.className = "areas";
-  const box = Object.assign(document.createElement("input"), { type: "checkbox", checked: stored(storage) });
+  const box = el("input", { type: "checkbox", checked: stored(storage) });
   box.setAttribute("role", "switch");
   box.addEventListener("change", () => {
     store(storage, box.checked);
     setA11y(box.checked);
   });
-  const row = document.createElement("label");
-  row.className = "a11y";
-  row.append(Object.assign(document.createElement("span"), { textContent: TEXT.a11y }), box);
-  const foot = Object.assign(document.createElement("p"), { textContent: `${TEXT.notForNavigation} · ` });
-  foot.append(Object.assign(document.createElement("a"), { href: "privacy.html", textContent: TEXT.privacy }), " · ", Object.assign(document.createElement("a"), { href: "accessibility.html", textContent: TEXT.a11yHelp }));
-  section.append(h1, list, row, foot);
-  root.replaceChildren(section);
+  const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
+  const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
+  root.replaceChildren(el("section", { className: "areas" }, h1, el("h2", { textContent: TEXT.choose }), list, row, foot));
 }
 
 if (area && Object.hasOwn(manifest.areas, area)) {
@@ -119,7 +135,9 @@ if (area && Object.hasOwn(manifest.areas, area)) {
     console.warn("skycake: ignoring a scene that is not JSON");
   }
   // replace, so Back after Close doesn't reopen the map.
-  await mount(root, { base: `data/${area}/`, close: () => location.replace(location.pathname), ...(scene && { scene }) });
+  const a = manifest.areas[area];
+  const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
+  await mount(root, { base: `data/${area}/`, title, close: () => location.replace(location.pathname), ...(scene && { scene }) });
 } else {
   await startScreen();
 }

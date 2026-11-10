@@ -19,6 +19,11 @@ export type Context = {
     a11y: boolean;
     /** Only when the site does not drive the mode: switches it in place (free roam's row). */
     setA11y?: (on: boolean) => void;
+    /** See Options.title in ui.ts. */
+    title?: {
+        name: string;
+        note?: string;
+    };
 };
 export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string, string | boolean | undefined>, ...kids: (Node | string)[]): HTMLElementTagNameMap[K];
 /** An inline stroke icon built as elements, so strict CSPs allow it. */
@@ -33,6 +38,10 @@ export declare const ICONS: {
     full: string[];
     close: string[];
     list: string[];
+    plate: string[];
+    height: string[];
+    rules: string[];
+    map: string[];
 };
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;

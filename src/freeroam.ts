@@ -9,6 +9,7 @@ import { airportList, proceduresAt, search, type Group } from "./search.js";
 import type { Labels } from "./ui.js";
 import type { View } from "./viewer.js";
 import { pad } from "./pad.js";
+import { plateView } from "./plate.js";
 import { picker } from "./picker.js";
 import { describe } from "./summary.js";
 
@@ -28,6 +29,8 @@ export type Context = {
   a11y: boolean;
   /** Only when the site does not drive the mode: switches it in place (free roam's row). */
   setA11y?: (on: boolean) => void;
+  /** See Options.title in ui.ts. */
+  title?: { name: string; note?: string };
 };
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -62,6 +65,10 @@ export const ICONS = {
   full: ["M1 4V1h3M8 1h3v3M11 8v3H8M4 11H1V8"],
   close: ["M6 6l12 12M18 6 6 18"],
   list: ["M9 6h11", "M9 12h11", "M9 18h11", "M4 6h1", "M4 12h1", "M4 18h1"],
+  plate: ["M7 3h7l4 4v14H7Z", "M14 3v4h4", "M10 12h5", "M10 16h5"],
+  height: ["M8 4v16", "m5 7 3-3 3 3", "m5 17 3 3 3-3", "M14 8h6", "M14 16h6"],
+  rules: ["M4 7h10", "M18 7h2", "M4 17h4", "M12 17h8", "M16 5v4", "M10 15v4"],
+  map: ["M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z", "M9 4v14", "M15 6v14"],
 };
 
 /** Resolves once the first scene is showing. */
@@ -93,40 +100,89 @@ export function freeRoam(c: Context): Promise<void> {
   const inViewButton = h("button", { type: "button", class: "sc-pill sc-inview-pill", "aria-expanded": "false", "aria-controls": "sc-inview" }, icon(ICONS.list), L.inView);
   const topLeft = h("div", { class: "sc-tl" }, kindButton, kindList, inViewButton, inViewList);
 
-  // Search, its results and the shown procedures (top right; phone: top).
+  // The header: the area and its note (desktop: top left, over Airspace; phone: a bar over the view), and on a phone the
+  // button that opens search.
+  const findButton = h("button", { type: "button", class: "sc-find", "aria-label": L.search, "aria-expanded": "false", "aria-controls": "sc-tr" }, icon(ICONS.search));
+  const where = c.title ? [h("div", { class: "sc-where" }, h("b", {}, c.title.name), ...(c.title.note ? [h("span", {}, c.title.note)] : []))] : [];
+  const head = h("header", { class: "sc-head" }, ...where, findButton);
+
+  // Search, the plate panel's button, results and the shown procedures (top right; phone: under the header, search
+  // only once opened).
   const input = h("input", { type: "search", "aria-label": L.search, placeholder: L.search, autocomplete: "off", spellcheck: "false" });
   const results = h("div", { class: "sc-panel sc-results", role: "listbox", "aria-label": L.search, hidden: true });
   const chips = h("div", { class: "sc-chips" });
-  const topRight = h("div", { class: "sc-tr" }, h("label", { class: "sc-search" }, icon(ICONS.search), input), results, chips);
+  const plateButton = h("button", { type: "button", class: "sc-pill sc-plate-open", "aria-expanded": "false", "aria-controls": "sc-plate" }, icon(ICONS.plate), L.plateOpen);
+  const topRight = h("div", { class: "sc-tr", id: "sc-tr" }, h("div", { class: "sc-findrow" }, h("label", { class: "sc-search" }, icon(ICONS.search), input), plateButton), results, chips);
 
-  // View buttons (desktop bottom right; phone: a sheet from the View tab).
-  // data-tip: the name in words, shown on hover or focus (desktop) and under the button (phone).
-  const round = (label: string, tip: string, kids: (Node | string)[], cls = "") => h("button", { type: "button", class: `sc-round ${cls}`, "aria-label": label, "data-tip": tip }, ...kids);
-  const diagramButton = round(L.diagram, L.diagram, [icon(ICONS.diagram)]);
-  const tagsButton = round(L.tags, L.tags, [icon(ICONS.tags)]);
-  const scaleButton = round(L.heightScale(scale), L.height, [`${scale}×`], "sc-scale");
-  const modeButton = round(L.mode, L.mode, [], "sc-mode");
-  modeButton.hidden = !chartsIn(data.charts, "ifr").length;
-  const chartButton = round(L.chart, L.chart, [], "sc-chart");
-  const fullButton = c.close ? round(L.close, L.close, [icon(ICONS.close)]) : round(L.fullScreen, L.fullScreen, [icon(ICONS.full, "0 0 12 12")]);
-  const bottomRight = h("div", { class: "sc-br" }, diagramButton, tagsButton, scaleButton, modeButton, chartButton, fullButton);
-  // Accessibility mode's own switch, when the site has none: under the view buttons (phone: the foot of the View sheet).
+  // The view's tools. Desktop: a rail, bottom right, each a row with its name and value; each press steps the value.
+  // Phone: the View sheet, each a segmented choice (Diagram and Close have their own tabs).
+  const tool = (label: string, paths: string[], box?: string) => {
+    const value = h("b", { class: "sc-value" });
+    return { button: h("button", { type: "button", class: "sc-tool" }, icon(paths, box), h("span", {}, label), value), value };
+  };
+  const diagramTool = tool(L.diagram, ICONS.diagram);
+  const tagsTool = tool(L.tags, ICONS.tags);
+  const heightTool = tool(L.height, ICONS.height);
+  const modeTool = tool(L.mode, ICONS.rules);
+  const chartTool = tool(L.chart, ICONS.map);
+  const fullTool = c.close ? tool(L.close, ICONS.close) : tool(L.fullScreen, ICONS.full, "0 0 12 12");
+  const diagramButton = diagramTool.button, fullButton = fullTool.button;
+  const hasIfr = chartsIn(data.charts, "ifr").length > 0;
+  modeTool.button.hidden = !hasIfr;
+  const bottomRight = h("div", { class: "sc-br" }, h("div", { class: "sc-panel sc-rail" }, diagramButton, tagsTool.button, heightTool.button, modeTool.button, chartTool.button, fullButton));
+
+  const seg = (label: string) => {
+    const opts = h("div", { class: "sc-seg", role: "group", "aria-label": label });
+    return { row: h("div", { class: "sc-segrow" }, h("span", {}, label), opts), opts };
+  };
+  const fillSeg = (s: ReturnType<typeof seg>, items: { text: string; on: boolean; pick: () => void }[]) => {
+    // Redrawn on every pick, so focus moves to the new button in the same place.
+    const at = [...s.opts.children].indexOf(document.activeElement!);
+    s.opts.replaceChildren(...items.map((x) => {
+      const b = h("button", { type: "button", "aria-pressed": String(x.on) }, x.text);
+      b.addEventListener("click", x.pick);
+      return b;
+    }));
+    if (at >= 0) (s.opts.children[at] as HTMLElement | undefined)?.focus();
+  };
+  const heightSeg = seg(L.height), modeSeg = seg(L.mode), chartSeg = seg(L.chart);
+  modeSeg.row.hidden = !hasIfr;
+  const tagsBox = h("input", { type: "checkbox", role: "switch" });
+  const viewSheet = h("div", { class: "sc-panel sc-vs", id: "sc-vs" }, h("label", { class: "sc-row sc-switch" }, h("span", {}, L.tags), tagsBox), heightSeg.row, modeSeg.row, chartSeg.row);
+  // Accessibility mode's own switch, when the site has none: under the rail (phone: the foot of the View sheet). Two
+  // switches, kept in step.
   if (c.setA11y) {
-    const box = h("input", { type: "checkbox", role: "switch" });
-    box.checked = c.a11y;
-    box.addEventListener("change", () => {
-      if (!box.checked && fig.classList.contains("sc-open-inview")) sheet(null);
-      c.setA11y!(box.checked);
-    });
-    bottomRight.append(h("label", { class: "sc-row sc-a11y-row" }, h("span", {}, L.a11y), box));
+    const boxes: HTMLInputElement[] = [];
+    const a11yRow = () => {
+      const box = h("input", { type: "checkbox", role: "switch" });
+      box.checked = c.a11y;
+      boxes.push(box);
+      box.addEventListener("change", () => {
+        for (const b of boxes) b.checked = box.checked;
+        if (!box.checked && fig.classList.contains("sc-open-inview")) sheet(null);
+        c.setA11y!(box.checked);
+      });
+      return h("label", { class: "sc-row sc-switch sc-a11y-row" }, h("span", {}, L.a11y), box);
+    };
+    bottomRight.append(a11yRow());
+    viewSheet.append(a11yRow());
   }
   const caption = fig.querySelector<HTMLElement>(".sc-caption");
 
   // Phone tab bar.
   const tab = (label: string, paths: string[]) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
-  const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), close: tab(L.close, ICONS.close) };
+  const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: tab(L.close, ICONS.close) };
   tabs.inView.classList.add("sc-inview-tab");
   const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
+
+  // The procedure plate panel, filled by plate.ts. Beside the map on desktop and on a phone held sideways, over it on
+  // an upright phone; full screen covers the map. The fig's sc-plate class opens it, sc-plate-full makes it full screen.
+  const plateTitle = h("span", { class: "sc-plate-title" }, L.plate);
+  const plateFull = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
+  const plateClose = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
+  const plateBody = h("div", { class: "sc-plate-body" });
+  const divider = h("div", { class: "sc-divider", role: "separator", tabindex: "0", "aria-label": L.resize, "aria-controls": "sc-plate", "aria-valuemin": "25", "aria-valuemax": "75" });
+  const platePanel = h("aside", { class: "sc-plate", id: "sc-plate", "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, plateTitle, plateFull, plateClose), plateBody);
 
   // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
   // and again as the view takes focus, so it is current.
@@ -147,7 +203,7 @@ export function freeRoam(c: Context): Promise<void> {
 
   // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
   const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
-  fig.querySelector(".view")!.after(openButton, topLeft, topRight, bottomRight);
+  fig.querySelector(".view")!.after(openButton, head, topLeft, topRight, bottomRight, viewSheet, platePanel);
   fig.querySelector(".view")!.append(pad(c));
   fig.append(tabBar);
 
@@ -156,6 +212,12 @@ export function freeRoam(c: Context): Promise<void> {
     fig.classList.toggle("sc-open-kinds", name === "kinds");
     fig.classList.toggle("sc-open-view", name === "view");
     fig.classList.toggle("sc-open-inview", name === "inview");
+    // One thing open at a time on a phone: a sheet closes the search.
+    if (name && fig.classList.contains("sc-open-find")) {
+      fig.classList.remove("sc-open-find");
+      findButton.setAttribute("aria-expanded", "false");
+      results.hidden = true;
+    }
     kindButton.setAttribute("aria-expanded", String(name === "kinds"));
     inViewButton.setAttribute("aria-expanded", String(name === "inview"));
     tabs.airspace.setAttribute("aria-pressed", String(name === "kinds"));
@@ -193,7 +255,15 @@ export function freeRoam(c: Context): Promise<void> {
     if (fig.classList.contains("sc-open-kinds")) opener(kindButton, tabs.airspace).focus();
     else if (fig.classList.contains("sc-open-inview")) opener(inViewButton, tabs.inView).focus();
     else if (fig.classList.contains("sc-open-view")) tabs.view.focus();
-    else return;
+    else if (fig.classList.contains("sc-open-find") && e.target !== input) {
+      setFind(false);
+      findButton.focus();
+      return;
+    } else if (fig.classList.contains("sc-plate") && e.target !== input) {
+      setPlate(null);
+      opener(plateButton, tabs.plate).focus();
+      return;
+    } else return;
     sheet(null);
   });
   inViewButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
@@ -201,9 +271,78 @@ export function freeRoam(c: Context): Promise<void> {
   kindButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
   tabs.airspace.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
   tabs.view.addEventListener("click", () => sheet(fig.classList.contains("sc-open-view") ? null : "view"));
+  // Phone search: the header's button (or the Procedure tab) opens it under the header.
+  const setFind = (on: boolean, focus = true) => {
+    fig.classList.toggle("sc-open-find", on);
+    findButton.setAttribute("aria-expanded", String(on));
+    if (!on) results.hidden = true;
+    else if (focus) input.focus();
+  };
+  findButton.addEventListener("click", () => {
+    sheet(null);
+    setFind(!fig.classList.contains("sc-open-find"));
+  });
   tabs.procedure.addEventListener("click", () => {
     sheet(null);
-    input.focus();
+    setFind(true);
+  });
+
+  // The plate panel: its buttons, full screen, and the divider (drag it, or arrow keys) setting its share of the map's
+  // room: its width beside the map, its height over it on an upright phone.
+  const plates = plateView(c, { title: plateTitle, body: plateBody }, {
+    show: (ref) => {
+      r = add(r, ref, has);
+      refresh();
+    },
+  });
+  plateButton.hidden = tabs.plate.hidden = !plates.has;
+  const setPlate = (mode: "split" | "full" | null) => {
+    fig.classList.toggle("sc-plate", mode !== null);
+    fig.classList.toggle("sc-plate-full", mode === "full");
+    plateButton.setAttribute("aria-expanded", String(mode !== null));
+    tabs.plate.setAttribute("aria-pressed", String(mode !== null));
+    plateFull.setAttribute("aria-pressed", String(mode === "full"));
+    plateFull.setAttribute("aria-label", mode === "full" ? L.split : L.fullScreen);
+  };
+  const togglePlate = () => setPlate(fig.classList.contains("sc-plate") ? null : "split");
+  plateButton.addEventListener("click", togglePlate);
+  tabs.plate.addEventListener("click", () => {
+    sheet(null);
+    togglePlate();
+  });
+  plateFull.addEventListener("click", () => setPlate(fig.classList.contains("sc-plate-full") ? "split" : "full"));
+  plateClose.addEventListener("click", () => {
+    setPlate(null);
+    opener(plateButton, tabs.plate).focus();
+  });
+  setPlate(null);
+  const upright = matchMedia("(max-width: 860px) and (orientation: portrait)");
+  const setShare = (x: number) => {
+    const share = Math.min(0.75, Math.max(0.25, x));
+    fig.style.setProperty("--sc-share", share.toFixed(3));
+    divider.setAttribute("aria-valuenow", String(Math.round(share * 100)));
+  };
+  const drawUpright = () => divider.setAttribute("aria-orientation", upright.matches ? "horizontal" : "vertical");
+  upright.addEventListener("change", drawUpright);
+  drawUpright();
+  setShare(0.38);
+  const shareNow = () => Number(fig.style.getPropertyValue("--sc-share"));
+  divider.addEventListener("pointerdown", (e) => {
+    divider.setPointerCapture(e.pointerId);
+    // The map's room: between the header and the tab bar on a phone, the whole figure on desktop.
+    const box = fig.getBoundingClientRect();
+    const top = upright.matches ? head.getBoundingClientRect().bottom : box.top;
+    const bottom = upright.matches ? tabBar.getBoundingClientRect().top : box.bottom;
+    const move = (m: PointerEvent) => setShare(upright.matches ? (m.clientY - top) / (bottom - top) : (box.right - m.clientX) / box.width);
+    divider.addEventListener("pointermove", move);
+    // Fires after pointerup and after a cancelled drag alike.
+    divider.addEventListener("lostpointercapture", () => divider.removeEventListener("pointermove", move), { once: true });
+  });
+  divider.addEventListener("keydown", (e) => {
+    const step = { ArrowLeft: 0.05, ArrowRight: -0.05, ArrowUp: -0.05, ArrowDown: 0.05 }[e.key];
+    if (step === undefined) return;
+    e.preventDefault();
+    setShare(shareNow() + step);
   });
 
   // Every change: the roam state becomes a scene, procedure files load, the viewer shows it. The newest change wins.
@@ -231,6 +370,7 @@ export function freeRoam(c: Context): Promise<void> {
     diagramButton.hidden = tabs.diagram.hidden = !diagram;
     diagramButton.setAttribute("aria-pressed", String(r.diagram));
     tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
+    plates.procedures(r.procedures, r.airport);
     shown = true;
     await v.apply(resolved, files, now, framing.filter((p): p is Procedure => !!p));
   };
@@ -281,6 +421,8 @@ export function freeRoam(c: Context): Promise<void> {
     browse = id;
     r = pickAirport(r, id, has);
     input.value = "";
+    // A phone's search is shut until asked for: open it for the list, without the keyboard.
+    if (findButton.offsetParent) setFind(true, false);
     showResults();
     refresh();
   };
@@ -308,7 +450,13 @@ export function freeRoam(c: Context): Promise<void> {
   input.addEventListener("input", showResults);
   input.addEventListener("focus", showResults);
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") results.hidden = true;
+    if (e.key !== "Escape") return;
+    results.hidden = true;
+    // A phone's search closes too, back to its button.
+    if (fig.classList.contains("sc-open-find")) {
+      setFind(false);
+      findButton.focus();
+    }
   });
   fig.addEventListener("pointerdown", (e) => {
     if (!topRight.contains(e.target as Node)) results.hidden = true;
@@ -320,27 +468,43 @@ export function freeRoam(c: Context): Promise<void> {
   };
   diagramButton.addEventListener("click", toggleDiagramNow);
   tabs.diagram.addEventListener("click", toggleDiagramNow);
-  const setTags = () => tagsButton.setAttribute("aria-pressed", String(tagsOn));
-  tagsButton.addEventListener("click", () => {
-    tagsOn = !tagsOn;
-    setTags();
+  // Each tool's value, on the rail and in the View sheet.
+  const drawTags = () => {
+    tagsTool.value.textContent = tagsOn ? L.on : L.off;
+    tagsTool.button.setAttribute("aria-label", `${L.tags}: ${tagsOn ? L.on : L.off}`);
+    tagsBox.checked = tagsOn;
+  };
+  const setTags = (on: boolean) => {
+    tagsOn = on;
+    drawTags();
     v.tags(tagsOn);
-  });
-  setTags();
-  scaleButton.addEventListener("click", () => {
-    scale = scale === 1 ? 4 : 1;
-    scaleButton.textContent = `${scale}×`;
-    scaleButton.setAttribute("aria-label", L.heightScale(scale));
+  };
+  tagsTool.button.addEventListener("click", () => setTags(!tagsOn));
+  tagsBox.addEventListener("change", () => setTags(tagsBox.checked));
+  drawTags();
+  const drawHeight = () => {
+    heightTool.value.textContent = `${scale}×`;
+    heightTool.button.setAttribute("aria-label", L.heightScale(scale));
+    fillSeg(heightSeg, [1, 4].map((n) => ({ text: `${n}×`, on: n === scale, pick: () => setHeight(n) })));
+  };
+  const setHeight = (n: number) => {
+    scale = n;
+    drawHeight();
     v.exaggerate(scale);
-  });
+  };
+  heightTool.button.addEventListener("click", () => setHeight(scale === 1 ? 4 : 1));
+  drawHeight();
 
   const drawChart = () => {
     const mode = modeOf(chart);
-    modeButton.textContent = L.modes[mode];
-    modeButton.setAttribute("aria-label", `${L.mode}: ${L.modes[mode]}`);
-    chartButton.textContent = L.charts[chart];
-    chartButton.setAttribute("aria-label", `${L.chart}: ${L.charts[chart]}`);
-    chartButton.hidden = chartsIn(data.charts, mode).length < 2;
+    const here = chartsIn(data.charts, mode);
+    modeTool.value.textContent = L.modes[mode];
+    modeTool.button.setAttribute("aria-label", `${L.mode}: ${L.modes[mode]}`);
+    chartTool.value.textContent = L.charts[chart];
+    chartTool.button.setAttribute("aria-label", `${L.chart}: ${L.charts[chart]}`);
+    chartTool.button.hidden = chartSeg.row.hidden = here.length < 2;
+    fillSeg(modeSeg, (["vfr", "ifr"] as Mode[]).map((m) => ({ text: L.modes[m], on: m === mode, pick: () => setMode(m) })));
+    fillSeg(chartSeg, here.map((x) => ({ text: L.charts[x], on: x === chart, pick: () => setChart(x) })));
     for (const [k, { row }] of rows) row.hidden = !shownIn(mode, k);
     if (caption) caption.textContent = L.caption(data.edition, chart);
   };
@@ -352,11 +516,11 @@ export function freeRoam(c: Context): Promise<void> {
     drawChart();
     refresh();
   };
-  modeButton.addEventListener("click", () => {
-    const mode: Mode = modeOf(chart) === "vfr" ? "ifr" : "vfr";
-    setChart(lastIn[mode] ?? chartsIn(data.charts, mode)[0]);
-  });
-  chartButton.addEventListener("click", () => {
+  const setMode = (mode: Mode) => {
+    if (mode !== modeOf(chart)) setChart(lastIn[mode] ?? chartsIn(data.charts, mode)[0]);
+  };
+  modeTool.button.addEventListener("click", () => setMode(modeOf(chart) === "vfr" ? "ifr" : "vfr"));
+  chartTool.button.addEventListener("click", () => {
     const here = chartsIn(data.charts, modeOf(chart));
     setChart(here[(here.indexOf(chart) + 1) % here.length]);
   });
