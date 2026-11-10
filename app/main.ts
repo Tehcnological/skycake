@@ -22,6 +22,7 @@ const TEXT = {
   failed: "Retry",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
+  help: "Placeholder: How to use",
   a11y: "Placeholder: Accessibility mode",
   a11yNote: "Placeholder: Larger text and controls",
   a11yHelp: "Placeholder: Accessibility",
@@ -123,7 +124,7 @@ async function startScreen() {
     setA11y(box.checked);
   });
   const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
-  const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
+  const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
   root.replaceChildren(el("section", { className: "areas" }, h1, el("h2", { textContent: TEXT.choose }), list, row, foot));
 }
 
