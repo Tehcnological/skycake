@@ -62,6 +62,7 @@ export type AirspaceFile = {
     airports: Airport[];
     airways: Airway[];
     waypoints: Waypoint[];
+    plates?: true;
 };
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export declare const TOP = 18000;

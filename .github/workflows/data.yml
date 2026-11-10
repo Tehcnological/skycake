@@ -21,7 +21,7 @@ concurrency:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # a full rebuild took 5 minutes on a hosted runner (2026-11-08)
+    timeout-minutes: 90 # a clean charts build (529 d-TPP PDFs) has not been timed; this bounds a hung job
     steps:
       - uses: actions/checkout@v7
 
@@ -78,7 +78,7 @@ jobs:
             echo "FAA data for the cycle effective $CYCLE, built by the Data cycle workflow. Check the notes below, then merge."
             echo
             echo '```'
-            grep -E "left out|ticks fit|airports|IAP|SID|STAR|^[A-Z]+ [0-9]+," data.log || true
+            grep -E "left out|ticks fit|charts|with no|airports|IAP|SID|STAR|^[A-Z]+ [0-9]+," data.log || true
             echo '```'
             echo
             git diff --stat HEAD~1 | tail -1

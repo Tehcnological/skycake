@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chartsOf, type AirspaceFile } from "./airspace.js";
-import { SceneError, firstScene, framedOnly, freeRoamScene, resolve, shorthand, stripPlayback, usable } from "./scene.js";
+import { SceneError, firstScene, framedOnly, freeRoamScene, inheritedPlate, resolve, shorthand, stripPlayback, usable } from "./scene.js";
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));
 
@@ -97,6 +97,7 @@ test("draw is kept per procedure and stripPlayback removes playback", () => {
   assert.equal(resolve(scene, data).procedures[0].draw, true);
   assert.deepEqual(stripPlayback(scene), { procedures: [{ airport: "KPHX", name }] });
   assert.equal(resolve({}, data).airplane, null);
+  assert.equal("plate" in stripPlayback({ plate: { airport: "KPHX", chart: "X" } }), false);
 });
 
 test("usable leaves out each field naming something missing, and keeps the rest", () => {
@@ -113,4 +114,26 @@ test("usable leaves out each field naming something missing, and keeps the rest"
   assert.deepEqual(out, { procedures: scene.procedures, camera: scene.camera, tags: false });
   assert.deepEqual(said, ["no area nope; leaving out the scene's raise", "no fix GONE; leaving out the scene's highlight", "no diagram for KLUF; leaving out the scene's diagram"]);
   assert.doesNotThrow(() => resolve(out, data));
+});
+
+test("plate: an airport the area has, a whole page from 1, or null", () => {
+  assert.doesNotThrow(() => resolve({ plate: { airport: "KPHX", chart: "ILS OR LOC RWY 07R" } }, data));
+  assert.doesNotThrow(() => resolve({ plate: null }, data));
+  assert.throws(() => resolve({ plate: { airport: "KZZZ", chart: "X" } }, data), /no airport KZZZ/);
+  assert.throws(() => resolve({ plate: { airport: "KPHX", chart: "X", page: 0 } }, data), /plate page 0 is not a page number/);
+  assert.throws(() => resolve({ plate: { airport: "KPHX", chart: "X", page: 1.5 } }, data), /plate page 1.5/);
+});
+
+test("a step without a plate shows the nearest earlier step's chart, whatever way the student came", () => {
+  const ils = { airport: "KPHX", chart: "ILS OR LOC RWY 07R" };
+  const star = { airport: "KPHX", chart: "EAGUL SIX (RNAV)", page: 2 };
+  const steps = [{}, { plate: ils }, { raise: ["B" as const] }, { plate: star }, undefined, { plate: null }, {}];
+  assert.equal(inheritedPlate(steps, 0), null); // nothing before it: closed
+  assert.equal(inheritedPlate(steps, 1), ils); // its own
+  assert.equal(inheritedPlate(steps, 2), ils); // after a plate step
+  assert.equal(inheritedPlate(steps, 3), star);
+  assert.equal(inheritedPlate(steps, 4), star); // a question with no scene
+  assert.equal(inheritedPlate(steps, 6), null); // after a null
+  // The player and the quiz (DOM only, so read, not run) both show each step's or item's scene through it.
+  for (const f of ["player.ts", "quizui.ts"]) assert.match(readFileSync(new URL(f, import.meta.url), "utf8"), /plate: inheritedPlate\(/, f);
 });

@@ -4,6 +4,8 @@ import { test } from "node:test";
 import type { AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import type { Quiz } from "./quiz.js";
+import type { PlateRef } from "./scene.js";
+import type { ChartEntry } from "./tpp.js";
 import { validateQuiz, validateWalkthrough } from "./validate.js";
 import type { Walkthrough } from "./walkthrough.js";
 
@@ -111,4 +113,23 @@ test("a walkthrough with no steps", async () => assert.deepEqual(await validateW
 test("the demo samples have no problems", async () => {
   assert.deepEqual(await validateQuiz(JSON.parse(readFileSync("demo/class-b-quiz.json", "utf8")), data, files, "phoenix"), []);
   assert.deepEqual(await validateWalkthrough(JSON.parse(readFileSync("demo/class-b.json", "utf8")), data, files, "phoenix"), []);
+});
+
+const index: ChartEntry[] = [
+  { name: "ILS OR LOC RWY 07R", kind: "IAP", pages: ["00322il7r.png"], procedures: ["ILS RWY 07R", "LOC RWY 07R"] },
+  { name: "BUCKEYE FOUR", kind: "DP", pages: ["00322buckeye.png", "00322buckeye_c.png"], procedures: ["BXK4"] },
+];
+const charts = async (airport: string) => { if (airport !== "KPHX") throw new Error("404"); return index; };
+const at = (plate: PlateRef) => ({ ...good, steps: [{ caption: "a", scene: { plate } }] });
+test("a good plate", async () => assert.deepEqual(await validateWalkthrough(at({ airport: "KPHX", chart: "BUCKEYE FOUR", page: 2 }), data, files, "phoenix", charts), []));
+test("plate problems", async () => {
+  assert.deepEqual(await validateWalkthrough(at({ airport: "KPHX", chart: "ILS RWY 07R" }), data, files, "phoenix", charts), ["t step 1: no chart ILS RWY 07R at KPHX; charts there: ILS OR LOC RWY 07R, BUCKEYE FOUR"]);
+  assert.deepEqual(await validateWalkthrough(at({ airport: "KPHX", chart: "BUCKEYE FOUR", page: 3 }), data, files, "phoenix", charts), ["t step 1: chart BUCKEYE FOUR has 2 pages, not 3"]);
+  assert.deepEqual(await validateWalkthrough(at({ airport: "KSDL", chart: "X" }), data, files, "phoenix", charts), ["t step 1: no charts for KSDL"]);
+});
+test("with no charts loader the plate is not checked", async () =>
+  assert.deepEqual(await validateWalkthrough(at({ airport: "KPHX", chart: "NOPE" }), data, files, "phoenix"), []));
+test("a quiz item's plate is checked too", async () => {
+  const q: Quiz = { id: "q", title: "Q", area: "phoenix", items: [{ type: "read", prompt: "?", choices: ["a", "b"], answer: 0, scene: { plate: { airport: "KPHX", chart: "NOPE" } } }] };
+  assert.match((await validateQuiz(q, data, files, "phoenix", charts))[0], /^q item 1: no chart NOPE at KPHX/);
 });

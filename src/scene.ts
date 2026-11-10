@@ -6,6 +6,8 @@ export type ProcedureRef = { airport: string; name: string };
 export type AreaRef = { area: string };
 /** diagram: an airport diagram's area, by airport id. airport: an airport by id. */
 export type Target = AreaRef | { fix: string } | { procedure: ProcedureRef } | { point: [lat: number, lon: number] } | { diagram: string } | { airport: string };
+/** A procedure chart page. chart: the FAA's chart name as in charts/<airport>.json; page: 1-based. */
+export type PlateRef = { airport: string; chart: string; page?: number };
 export type Camera = "fit" | "top" | { frame: Target[]; tilt?: number } | { azimuth: number; tilt: number; distance: number; target: [lat: number, lon: number] };
 export type Scene = {
   /** null: leave the camera where it is. */
@@ -24,6 +26,8 @@ export type Scene = {
   tags?: boolean;
   /** "tac": the TAC over its own map area and the sectional outside it; "sectional": the sectional everywhere; "area": the IFR area chart over its own map and the low outside it; "low": the IFR low everywhere. */
   chart?: ChartName;
+  /** Opens the plate panel to this chart in split; null closes it; left out, the panel stays as it is. */
+  plate?: PlateRef | null;
 };
 /** What the viewer applies: every field filled in, names checked. raised holds area ids. */
 export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: (ProcedureRef & { draw: boolean })[]; highlight: Target[]; airplane: Scene["airplane"] | null; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName };
@@ -55,6 +59,11 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   }
   const diagram = scene.diagram ?? null;
   if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram) throw new SceneError(`no diagram for ${diagram}`);
+  const plate = scene.plate;
+  if (plate) {
+    target({ airport: plate.airport }, data);
+    if (plate.page !== undefined && !(Number.isInteger(plate.page) && plate.page >= 1)) throw new SceneError(`plate page ${plate.page} is not a page number`);
+  }
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
   return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
@@ -71,10 +80,22 @@ function target(t: Target, data: AirspaceFile) {
   if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram) throw new SceneError(`no diagram for ${t.diagram}`);
 }
 
-/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+/** The scene without playback (highlight, airplane, draw) or its chart: free roam gets a still scene, panel closed. */
 export function stripPlayback(scene: Scene): Scene {
-  const { highlight, airplane, ...rest } = scene;
+  const { highlight, airplane, plate, ...rest } = scene;
   return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
+}
+
+/**
+ * The chart for step or item `i`, whatever way the student came to it: its own plate, else the nearest earlier one's
+ * (null closes the panel); none earlier closes it too.
+ */
+export function inheritedPlate(scenes: (Scene | undefined)[], i: number): PlateRef | null {
+  for (let j = i; j >= 0; j--) {
+    const p = scenes[j]?.plate;
+    if (p !== undefined) return p;
+  }
+  return null;
 }
 
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */

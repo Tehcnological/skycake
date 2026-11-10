@@ -1,8 +1,11 @@
 import type { Context } from "./freeroam.js";
 import type { Procedure } from "./procedure.js";
-import { type Scene } from "./scene.js";
-/** timeline: called once the scene resolves, just before the view applies it; its value is the step timeline (0 to 1). */
-export declare function scenes(c: Context, timeline?: () => number): {
+import { type PlateRef, type Scene } from "./scene.js";
+/**
+ * timeline: called once the scene resolves, just before the view applies it; its value is the step timeline (0 to 1).
+ * plate: called then too with the scene's plate when it has one (null closes the panel); left out, not called.
+ */
+export declare function scenes(c: Context, timeline?: () => number, plate?: (p: PlateRef | null) => void): {
     show: (scene: Scene, now?: boolean) => Promise<void>;
     /** The procedure files a scene loads: a question's fix is scored by its own scene's, whatever is on screen. */
     filesOf: (scene: Scene) => Promise<Procedure[]>;

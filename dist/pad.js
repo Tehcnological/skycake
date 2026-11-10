@@ -3,14 +3,14 @@
 // quizzes; style.css shows it only under data-a11y, so the mode can switch in place.
 import { STEPS } from "./a11y.js";
 import { h, icon } from "./freeroam.js";
-const ARROWS = {
+export const ARROWS = {
     left: ["M15 5 8 12l7 7"],
     right: ["M9 5l7 7-7 7"],
     up: ["M5 15l7-7 7 7"],
     down: ["M5 9l7 7 7-7"],
 };
-const PLUS = ["M12 5v14", "M5 12h14"];
-const MINUS = ["M5 12h14"];
+export const PLUS = ["M12 5v14", "M5 12h14"];
+export const MINUS = ["M5 12h14"];
 const PAN = ["M12 3v18", "M3 12h18", "M9 6l3-3 3 3", "M9 18l3 3 3-3", "M6 9l-3 3 3 3", "M18 9l3 3-3 3"];
 export function pad(c) {
     const { view: v, labels: L } = c;

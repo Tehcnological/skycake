@@ -59,6 +59,15 @@ export const LABELS = {
     plateOpen: "Plate",
     split: "Split view",
     resize: "Resize",
+    plateChart: "Chart",
+    platePage: (n, of) => `Page ${n} of ${of}`,
+    plateMap: "Map",
+    platePlate: "Plate",
+    plateSplit: "Split",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    zoomFit: "Fit",
+    plateMissing: "This chart did not load.",
     inView: "In view",
     number: "Placeholder: Number",
     skip: "Placeholder: Skip",
@@ -169,8 +178,8 @@ export async function mount(host, o) {
             "=": () => v.zoom(ZOOM),
             "-": () => v.zoom(1 / ZOOM),
         };
-        // Not an arrow pressed on the camera pad (its own buttons move the camera) or in a text field.
-        if (e.target.closest(".sc-pad, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
+        // Not an arrow pressed on the camera pad (its own buttons move the camera), on Play (it sits in the view) or in a text field.
+        if (e.target.closest(".sc-pad, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
             return;
         e.preventDefault();
         act[e.key]();
@@ -194,7 +203,7 @@ export async function mount(host, o) {
     };
     const { freeRoam } = await import("./freeroam.js");
     const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
-    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
+    const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
     // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
     if (a11y.row)
         context.setA11y = (on) => {

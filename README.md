@@ -4,7 +4,7 @@ Interactive 3D airspace and instrument procedures over real FAA charts, with ter
 
 Named for the upside-down wedding cake every student pilot learns Class B as.
 
-Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), and FAA airport diagrams laid over the field. On desktop the controls float over the view: a header with the area's name, the Airspace list under it, search top right, and a tool rail bottom right that shows each setting with its value (Diagram, Tags, Height, Rules, Chart), then Full screen, or Close in a standalone app. A mouse drag turns the view, a right drag moves it and the wheel zooms. On phones the map in the page opens full screen with a tap: a header with a search button over the view, a tab bar under it (Airspace, Procedure, Diagram, View, Close), and the View tab opens a sheet of switches and segmented picks. There one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. It also plays walkthroughs and asks quizzes, written or generated from the FAA data, with endless practice; their content lives on the sites that use skycake, not here.
+Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by a VFR or IFR button and a map button (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box), FAA airport diagrams laid over the field, and the FAA's approach, departure and arrival charts in a panel beside the map. On desktop the controls float over the view: a header with the area's name, the Airspace list under it, search top right, and a tool rail bottom right that shows each setting with its value (Diagram, Tags, Height, Rules, Chart), then Full screen, or Close in a standalone app. A mouse drag turns the view, a right drag moves it and the wheel zooms. On phones the map in the page opens full screen with a tap: a header with a search button over the view, a tab bar under it (Airspace, Procedure, Diagram, View, Close), and the View tab opens a sheet of switches and segmented picks. There one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. It also plays walkthroughs and asks quizzes, written or generated from the FAA data, with endless practice; their content lives on the sites that use skycake, not here.
 
 It is also its own app, SkyCake Viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
 
@@ -16,7 +16,7 @@ npm install github:Tehcnological/skycake#<commit> three@0.180.0
 
 Pin a commit, so package.json names it and `npm update` can't move it. To update, run the same command with the new commit.
 
-1. Serve an area's data folder: copy `node_modules/skycake/data/phoenix/` or `data/miami/` into the site's public files (about 12 MB each), for example at `/skycake/phoenix/`.
+1. Serve an area's data folder: copy `node_modules/skycake/data/phoenix/` or `data/miami/` into the site's public files (Phoenix about 28 MB, Miami about 39 MB, more than half of it procedure charts), for example at `/skycake/phoenix/`.
 2. Load `skycake/style.css`.
 3. Mount it:
 
@@ -30,13 +30,14 @@ mount(document.querySelector("#airspace")!, {
     raise: ["B", { area: "d-chandler-municipal-airport-class-d" }],
     procedures: [{ airport: "KPHX", name: "EAGUL6" }, { airport: "KPHX", name: "ILS RWY 25L" }],
     camera: "fit",          // or "top", { frame: [...] }, or a placed camera
+    plate: { airport: "KPHX", chart: "ILS OR LOC RWY 25L" }, // opens this chart beside the map
   },
   airport: "KPHX",          // current at first, for the search box and diagram
   labels: { tags: "Tags" }, // any on-screen words to replace
 });
 ```
 
-`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. `title: { name, note }` puts a header over the view: the area's name and a line under it, such as its current-through date. A procedure plate panel sits beside the map (beside or over it on a phone), with a divider to share the space; its buttons stay hidden until plates are built. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
+`types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. `title: { name, note }` puts a header over the view: the area's name and a line under it, such as its current-through date. A plate panel shows the FAA's procedure charts beside the map (beside or over it on a phone), with a divider to share the space. A Map / Plate / Split switch, Full screen and Close sit with it; a chart picker in its title lists the airport's charts, arrows step through continuation pages, a drag pans, a pinch or scroll zooms and a double-tap or double-click fits the page. In accessibility mode it also has Zoom in, Zoom out and Fit buttons. Each chart image's alt text is the chart's name. The panel never opens on its own, only from its buttons or a scene, and it stays hidden for data built without charts (no `plates` in `area.json`). Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
 Accessibility mode (higher contrast, a camera pad, numbered picks, no motion, no single-key shortcuts): pass `a11y` from the site's own toggle, or pass nothing and skycake shows its own button. Every change and what a site must do: [docs/accessibility.md](docs/accessibility.md).
 
@@ -68,11 +69,11 @@ const walkthrough: Walkthrough = {
 mount(element, { base: "/skycake/phoenix/", mode: { walkthrough, next: { label: "Take the quiz", href: "/quiz/class-b" } } });
 ```
 
-A step's `scene` takes everything a first scene does, plus `highlight`, `airplane` and `draw`. A name the data no longer has leaves that part out of the step, with a warning in the console. `demo/class-b.json` is a sample (`npm run demo`, then `/demo/?walkthrough=class-b`).
+A scene's `plate` names a chart as `charts/<airport>.json` does: `{ airport, chart, page? }`, with `chart` the FAA's chart name and `page` counted from 1 (default 1). It opens the panel to that page in Split; `null` closes the panel; left out, the panel stays as it is. A step's `scene` takes everything a first scene does, plus `highlight`, `airplane` and `draw`. A name the data no longer has leaves that part out of the step, with a warning in the console. `demo/class-b.json` is a sample (`npm run demo`, then `/demo/?walkthrough=class-b`).
 
 #### Validating walkthroughs
 
-`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, that there are steps, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check as a quiz's written item (below). Unknown fields are ignored. `area` is the folder name the site loaded.
+`validateWalkthrough` runs in Node with no DOM and returns problems as `"<id> step <n>: <problem>"` (empty when fine). It checks the area, that there are steps, every name a scene or check uses (area, airport, procedure, fix, diagram), step captions and `seconds`, and each check as a quiz's written item (below). Unknown fields are ignored. `area` is the folder name the site loaded. `charts`, optional, loads an airport's chart index; with it each scene's `plate` is checked against the charts the airport has (`no charts for <airport>`, `no chart <name> at <airport>; charts there: ...`, `chart <name> has <n> pages, not <page>`). Without it only the airport and page number are checked.
 
 ```ts
 import { readFileSync } from "node:fs";
@@ -80,7 +81,8 @@ import { validateWalkthrough } from "skycake";
 
 const data = JSON.parse(readFileSync("data/phoenix/area.json", "utf8"));
 const files = async (airport) => JSON.parse(readFileSync(`data/phoenix/procedures/${airport}.json`, "utf8"));
-const problems = await validateWalkthrough(walkthrough, data, files, "phoenix");
+const charts = async (airport) => JSON.parse(readFileSync(`data/phoenix/charts/${airport}.json`, "utf8"));
+const problems = await validateWalkthrough(walkthrough, data, files, "phoenix", charts);
 if (problems.length) { console.error(problems.join("\n")); process.exit(1); }
 ```
 
@@ -118,20 +120,22 @@ skycake is the framework; the walkthroughs, quiz banks and their wording live on
 
 #### Validating quizzes
 
-`validateQuiz(quiz, data, files, area)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks: names, prompt, choices (2 to 4, distinct) or a number, answer, tolerance, an `answerArea` and `also` areas the data has, and ids that don't repeat. A `find` answer must be an area, fix, airport or point the view can answer: not an E700 or MODEC area (they cannot be tapped), and a fix on the question's own procedures or among the area's waypoints. A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
+`validateQuiz(quiz, data, files, area, charts?)` is the same for quizzes, also in Node with no DOM, and returns problems as `"<quiz id> item <n>: <problem>"`. Written items get the question checks: names, prompt, choices (2 to 4, distinct) or a number, answer, tolerance, an `answerArea` and `also` areas the data has, and ids that don't repeat. A `find` answer must be an area, fix, airport or point the view can answer: not an E700 or MODEC area (they cannot be tapped), and a fix on the question's own procedures or among the area's waypoints. A `generate` item needs `count` of at least 1, airports the area has, and one trial question drawn with a fixed seed (without terrain, so airplane trials use sea level); when its filters leave nothing to ask it reports "nothing to ask with these filters". Unknown fields are ignored.
 
 ```ts
 import { validateQuiz } from "skycake";
-const problems = await validateQuiz(quiz, data, files, "phoenix");
+const problems = await validateQuiz(quiz, data, files, "phoenix", charts);
 ```
 
 ## Data
 
-`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
+`npm run data` rebuilds each area under `data/` from public domain sources: the FAA TAC, sectional, IFR area chart and IFR low, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams and procedure charts, and USGS 3DEP terrain. Charts change every 56 days and procedures every 28; the Data cycle workflow below reruns it then. `npm run data -- miami` builds one area, `--cycle` prints the 28-day cycle in effect and builds nothing, `--no-chart` skips the charts, `--terrain-only` rebuilds just the terrain. An airport with an approach that leaves its area's bounds is left out and named in the log. Sources and their notes: [NOTICE.md](NOTICE.md). Each `area.json` records its chart `edition` and its procedure `cycle`.
+
+Procedure charts come from the same d-TPP cycle: every approach, departure (graphic obstacle departures included) and arrival chart of the area's airports, continuation pages too. Each page is rendered at 200 dpi to an 8-shade greyscale PNG (about 90 KB), turned upright if the FAA printed it sideways, and stored once in `charts/` by its d-TPP file name, however many airports list it. `charts/<airport>.json` lists the airport's charts in the d-TPP's order, each with its `name`, `kind` (`IAP`, `DP` or `STR`), `pages` and the skycake `procedures` it draws, and `area.json` gets `plates: true`. Approaches match by type and runway (`ILS RWY 07R` and `LOC RWY 07R` both open `ILS OR LOC RWY 07R`); departures and arrivals match by the computer code printed on the chart (`(BXK4.BXK)` opens `BXK4`). A chart with no match, such as a departure that prints no code (GLENDALE ONE at KGEU, GOODYEAR TWO at KGYR), is still listed and opens on its own. The log names `charts with no procedure` and `procedures with no chart` for each airport, and ends with the page count and size. Cycle 2611: Phoenix 196 pages (16.4 MB), Miami 333 (27.2 MB).
 
 ### Data cycle workflow
 
-[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, SkyCake Viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
+[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out, charts with no procedure and procedures with no chart. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, SkyCake Viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
 
 It needs one repo setting: Settings, Actions, General, Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests". Without it the PR step fails, and the branch is pushed with no PR.
 
@@ -153,7 +157,7 @@ Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design
 
 `app/` is a standalone web app around `mount()`: a start screen lists the areas as cards, each with the date its data is current through, Open area, and a Save button that saves it for offline use and counts its progress, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are drafts. `demo.html` is a short showcase page (skycake.app/demo) of screenshots from `app/shots/`, each linking to its scene in the app; its words are drafts. The screenshots stay out of the offline shell, so they load only online. `help.html` (skycake.app/help) is a how-to for students: free roam on desktop and phone, walkthroughs and practice, and accessibility mode; its words are drafts too, and it is in the offline shell.
 
-`npm run app` bundles it with three.js (esbuild) into `www/`, with the library's `style.css`, a copy of `data/`, `data/manifest.json` (per area: edition, current-through date, a revision hash of its files, files and size) and a service worker. The service worker caches the app itself on first load; saved areas go in their own caches, one per area and revision, and count as saved only once every file arrived. Update fetches past the service worker. To try it: `npm run app && npm run demo`, then http://localhost:5179/www/.
+`npm run app` bundles it with three.js (esbuild) into `www/`, with the library's `style.css`, a copy of `data/`, `data/manifest.json` (per area: edition, current-through date, a revision hash of its files, files and size) and a service worker. The service worker caches the app itself on first load; saved areas go in their own caches, one per area and revision, and count as saved only once every file arrived. Update fetches past the service worker. An area's procedure charts are files under `data/<area>/charts/`, so a save includes them and the size on its button counts them. To try it: `npm run app && npm run demo`, then http://localhost:5179/www/.
 
 `www/` is ignored by git and is not in `files`, so sites that install skycake never get it, and nothing here builds on install.
 

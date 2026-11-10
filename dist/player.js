@@ -3,8 +3,9 @@
 // step's scene. One DOM for desktop and phone; style.css decides the layout.
 import { card } from "./card.js";
 import { ICONS, h, icon, wakeOnTap } from "./freeroam.js";
+import { plateView } from "./plate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
-import { stripPlayback } from "./scene.js";
+import { inheritedPlate, stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
 import { answered, back, begin, moved, next, pause, play, stepSeconds, tick } from "./walkthrough.js";
 const PLAYER = {
@@ -38,7 +39,13 @@ export function player(c, w, nextLink, explore) {
     const live = h("p", { class: "sc-hidden", "aria-live": "polite" });
     const box = h("div", { class: "sc-player" }, live, stepCard, bar);
     const big = h("button", { type: "button", class: "sc-big-play", "aria-label": L.play }, icon(PLAYER.play));
-    fig.querySelector(".view").after(top, big);
+    // The plate panel: a step's scene opens its chart; picking another leaves the step's scene as it is. On an upright
+    // phone its room is between the title row and the map's foot.
+    const viewEl = fig.querySelector(".view");
+    const plates = plateView(c, { show: () => { }, room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }) });
+    // Play sits in the view, so it stays centred on the map whatever the panel takes.
+    viewEl.append(big);
+    viewEl.after(top, ...(plates.el ? [plates.el] : []));
     fig.append(box);
     const unwake = wakeOnTap(c);
     let p = begin();
@@ -46,8 +53,10 @@ export function player(c, w, nextLink, explore) {
     // The timeline fraction the view shows now.
     let drawn = -1;
     // Every scene goes through here; the step's timeline fraction is what the view shows then.
-    const stage = scenes(c, () => (drawn = frac()));
+    const stage = scenes(c, () => (drawn = frac()), plates.open);
     const show = stage.show;
+    // A step's scene with its chart, its own or the nearest earlier step's; plates.open leaves a chart already shown as it is.
+    const stepScene = (i) => ({ ...w.steps[i].scene, plate: inheritedPlate(w.steps.map((s) => s.scene), i) });
     // A quick check: the shared question card in the caption's place. Not scored; Continue plays on.
     let open = null;
     const closeCard = () => {
@@ -108,7 +117,7 @@ export function player(c, w, nextLink, explore) {
             closeCard();
         // A new step, a restart from the end, or play after a drag: the step's scene again.
         if (p.step !== was.step || (was.done && !p.done) || (was.moved && !p.moved))
-            void show(w.steps[p.step].scene);
+            void show(stepScene(p.step));
         if (p.checking && !was.checking)
             ask();
         draw();
@@ -158,6 +167,7 @@ export function player(c, w, nextLink, explore) {
         unwake();
         stage.stop();
         closeCard();
+        plates.destroy();
         top.remove();
         big.remove();
         box.remove();
@@ -167,5 +177,5 @@ export function player(c, w, nextLink, explore) {
     exploreTop.addEventListener("click", leave);
     exploreEnd.addEventListener("click", leave);
     draw();
-    return show(w.steps[0].scene, true);
+    return show(stepScene(0), true);
 }

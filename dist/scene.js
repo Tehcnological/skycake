@@ -36,6 +36,12 @@ export function resolve(scene, data) {
     const diagram = scene.diagram ?? null;
     if (diagram !== null && !data.airports.find((a) => a.id === diagram)?.diagram)
         throw new SceneError(`no diagram for ${diagram}`);
+    const plate = scene.plate;
+    if (plate) {
+        target({ airport: plate.airport }, data);
+        if (plate.page !== undefined && !(Number.isInteger(plate.page) && plate.page >= 1))
+            throw new SceneError(`plate page ${plate.page} is not a page number`);
+    }
     const camera = scene.camera;
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
@@ -56,10 +62,22 @@ function target(t, data) {
     if ("diagram" in t && !data.airports.find((a) => a.id === t.diagram)?.diagram)
         throw new SceneError(`no diagram for ${t.diagram}`);
 }
-/** The scene without playback (highlight, airplane, draw): free roam gets a still scene. */
+/** The scene without playback (highlight, airplane, draw) or its chart: free roam gets a still scene, panel closed. */
 export function stripPlayback(scene) {
-    const { highlight, airplane, ...rest } = scene;
+    const { highlight, airplane, plate, ...rest } = scene;
     return scene.procedures ? { ...rest, procedures: scene.procedures.map(({ airport, name }) => ({ airport, name })) } : rest;
+}
+/**
+ * The chart for step or item `i`, whatever way the student came to it: its own plate, else the nearest earlier one's
+ * (null closes the panel); none earlier closes it too.
+ */
+export function inheritedPlate(scenes, i) {
+    for (let j = i; j >= 0; j--) {
+        const p = scenes[j]?.plate;
+        if (p !== undefined)
+            return p;
+    }
+    return null;
 }
 /** Procedures the camera frames that the scene does not show: their files load for framing only. */
 export function framedOnly(scene) {

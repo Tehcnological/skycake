@@ -7,9 +7,10 @@ import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
 import { locator, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice, progress, skip } from "./quiz.js";
-import { stripPlayback } from "./scene.js";
+import { inheritedPlate, stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
 import { pad } from "./pad.js";
+import { plateView } from "./plate.js";
 const TYPES = ["find", "read", "airplane", "procedure"];
 /** Resolves once the first question shows. explore: leave into free roam from the scene on screen; the quiz's DOM is gone by then. */
 export async function quiz(c, mode, onResult, explore) {
@@ -23,7 +24,10 @@ export async function quiz(c, mode, onResult, explore) {
     const live = h("p", { class: "sc-hidden", "aria-live": "polite" });
     const say = (text) => live.replaceChildren(text);
     const box = h("div", { class: "sc-quiz" }, live);
-    viewEl.after(top);
+    // The plate panel: a question's scene opens its chart; picking another leaves the question's scene as it is. On an
+    // upright phone its room is between the count's row and the map's foot.
+    const plates = plateView(c, { show: () => { }, room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }) });
+    viewEl.after(top, ...(plates.el ? [plates.el] : []));
     // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
     const camera = pad(c);
     viewEl.append(camera);
@@ -39,7 +43,7 @@ export async function quiz(c, mode, onResult, explore) {
     const rng = Math.random;
     const make = maker({ data, grid: v.dem(), procedures, ask: L.ask, facts: L.facts }, rng);
     const start = () => (mode.quiz === "practice" ? practice(make, mode.types ?? TYPES, filters, rng) : attempt(mode.quiz, make, rng));
-    const stage = scenes(c);
+    const stage = scenes(c, undefined, plates.open);
     const show = stage.show;
     // The box holds one thing: the open card, the end or the nothing-to-ask note. Focus follows when it was in the box.
     let open = null;
@@ -106,7 +110,8 @@ export async function quiz(c, mode, onResult, explore) {
         }
         const it = a.items[a.i];
         let shownAt = 0;
-        const scene = questionScene(it.q);
+        // Its chart, its own or the nearest earlier item's; plates.open leaves a chart already shown as it is.
+        const scene = { ...questionScene(it.q), plate: inheritedPlate(a.items.map((x) => x.q.scene), a.i) };
         const files = stage.filesOf(scene);
         // Skip (accessibility mode, find questions): moves on without scoring; a fixed quiz's total drops by one.
         const onSkip = () => {
@@ -157,6 +162,7 @@ export async function quiz(c, mode, onResult, explore) {
         stage.stop();
         open?.remove();
         open = null;
+        plates.destroy();
         top.remove();
         box.remove();
         camera.remove();

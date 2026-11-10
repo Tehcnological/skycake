@@ -20,6 +20,8 @@ export type Context = {
   first: Scene;
   airport: string | null;
   labels: Labels;
+  /** A path in the area's data folder as an absolute URL. */
+  url: (path: string) => string;
   /** A procedure file by airport, cached by the caller. */
   procedures: (airport: string) => Promise<Procedure[]>;
   startScale: number;
@@ -176,14 +178,25 @@ export function freeRoam(c: Context): Promise<void> {
   tabs.inView.classList.add("sc-inview-tab");
   const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
 
-  // The procedure plate panel, filled by plate.ts. Beside the map on desktop and on a phone held sideways, over it on
-  // an upright phone; full screen covers the map. The fig's sc-plate class opens it, sc-plate-full makes it full screen.
-  const plateTitle = h("span", { class: "sc-plate-title" }, L.plate);
-  const plateFull = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
-  const plateClose = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
-  const plateBody = h("div", { class: "sc-plate-body" });
-  const divider = h("div", { class: "sc-divider", role: "separator", tabindex: "0", "aria-label": L.resize, "aria-controls": "sc-plate", "aria-valuemin": "25", "aria-valuemax": "75" });
-  const platePanel = h("aside", { class: "sc-plate", id: "sc-plate", "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, plateTitle, plateFull, plateClose), plateBody);
+  // The procedure plate panel (plate.ts), opened by the Plate button or tab, which show only when the area has charts.
+  const plates = plateView(c, {
+    show: (ref) => {
+      r = add(r, ref, has);
+      refresh();
+    },
+    mode: (m) => {
+      plateButton.setAttribute("aria-expanded", String(m !== null));
+      tabs.plate.setAttribute("aria-pressed", String(m !== null));
+    },
+    back: () => opener(plateButton, tabs.plate),
+    // The map's room on an upright phone: between the header and the tab bar.
+    room: () => ({ top: head.getBoundingClientRect().bottom, bottom: tabBar.getBoundingClientRect().top }),
+  });
+  plateButton.hidden = tabs.plate.hidden = !plates.has;
+  // A site's first scene can open a chart; its procedures go in first, so they are not news that would show theirs.
+  plates.procedures(r.procedures, r.airport);
+  if (c.first.plate) void plates.open(c.first.plate);
+  if (plates.el) plateButton.setAttribute("aria-controls", plates.el.id);
 
   // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
   // and again as the view takes focus, so it is current.
@@ -204,7 +217,7 @@ export function freeRoam(c: Context): Promise<void> {
 
   // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
   const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
-  fig.querySelector(".view")!.after(openButton, head, topLeft, topRight, bottomRight, viewSheet, platePanel);
+  fig.querySelector(".view")!.after(openButton, head, topLeft, topRight, bottomRight, viewSheet, ...(plates.el ? [plates.el] : []));
   fig.querySelector(".view")!.append(pad(c));
   fig.append(tabBar);
 
@@ -260,8 +273,8 @@ export function freeRoam(c: Context): Promise<void> {
       setFind(false);
       findButton.focus();
       return;
-    } else if (fig.classList.contains("sc-plate") && e.target !== input) {
-      setPlate(null);
+    } else if (plates.mode() !== null && e.target !== input) {
+      plates.set(null);
       opener(plateButton, tabs.plate).focus();
       return;
     } else return;
@@ -288,62 +301,12 @@ export function freeRoam(c: Context): Promise<void> {
     setFind(true);
   });
 
-  // The plate panel: its buttons, full screen, and the divider (drag it, or arrow keys) setting its share of the map's
-  // room: its width beside the map, its height over it on an upright phone.
-  const plates = plateView(c, { title: plateTitle, body: plateBody }, {
-    show: (ref) => {
-      r = add(r, ref, has);
-      refresh();
-    },
-  });
-  plateButton.hidden = tabs.plate.hidden = !plates.has;
-  const setPlate = (mode: "split" | "full" | null) => {
-    fig.classList.toggle("sc-plate", mode !== null);
-    fig.classList.toggle("sc-plate-full", mode === "full");
-    plateButton.setAttribute("aria-expanded", String(mode !== null));
-    tabs.plate.setAttribute("aria-pressed", String(mode !== null));
-    plateFull.setAttribute("aria-pressed", String(mode === "full"));
-    plateFull.setAttribute("aria-label", mode === "full" ? L.split : L.fullScreen);
-  };
-  const togglePlate = () => setPlate(fig.classList.contains("sc-plate") ? null : "split");
+  // The plate panel's buttons.
+  const togglePlate = () => plates.set(plates.mode() === null ? "split" : null);
   plateButton.addEventListener("click", togglePlate);
   tabs.plate.addEventListener("click", () => {
     sheet(null);
     togglePlate();
-  });
-  plateFull.addEventListener("click", () => setPlate(fig.classList.contains("sc-plate-full") ? "split" : "full"));
-  plateClose.addEventListener("click", () => {
-    setPlate(null);
-    opener(plateButton, tabs.plate).focus();
-  });
-  setPlate(null);
-  const upright = matchMedia("(max-width: 860px) and (orientation: portrait)");
-  const setShare = (x: number) => {
-    const share = Math.min(0.75, Math.max(0.25, x));
-    fig.style.setProperty("--sc-share", share.toFixed(3));
-    divider.setAttribute("aria-valuenow", String(Math.round(share * 100)));
-  };
-  const drawUpright = () => divider.setAttribute("aria-orientation", upright.matches ? "horizontal" : "vertical");
-  upright.addEventListener("change", drawUpright);
-  drawUpright();
-  setShare(0.38);
-  const shareNow = () => Number(fig.style.getPropertyValue("--sc-share"));
-  divider.addEventListener("pointerdown", (e) => {
-    divider.setPointerCapture(e.pointerId);
-    // The map's room: between the header and the tab bar on a phone, the whole figure on desktop.
-    const box = fig.getBoundingClientRect();
-    const top = upright.matches ? head.getBoundingClientRect().bottom : box.top;
-    const bottom = upright.matches ? tabBar.getBoundingClientRect().top : box.bottom;
-    const move = (m: PointerEvent) => setShare(upright.matches ? (m.clientY - top) / (bottom - top) : (box.right - m.clientX) / box.width);
-    divider.addEventListener("pointermove", move);
-    // Fires after pointerup and after a cancelled drag alike.
-    divider.addEventListener("lostpointercapture", () => divider.removeEventListener("pointermove", move), { once: true });
-  });
-  divider.addEventListener("keydown", (e) => {
-    const step = { ArrowLeft: 0.05, ArrowRight: -0.05, ArrowUp: -0.05, ArrowDown: 0.05 }[e.key];
-    if (step === undefined) return;
-    e.preventDefault();
-    setShare(shareNow() + step);
   });
 
   // Every change: the roam state becomes a scene, procedure files load, the viewer shows it. The newest change wins.

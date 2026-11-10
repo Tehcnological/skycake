@@ -8,6 +8,8 @@
  *   area.json          class airspace, Mode C veil, special use airspace inside BOUNDS, and the airports
  *   procedures/*.json  approaches, departures and arrivals of each airport inside BOUNDS, from the CIFP
  *   diagrams/*.webp    FAA airport diagrams (d-TPP), north up, placed by their own ticks
+ *   charts/*.png       FAA approach, departure and arrival charts (d-TPP), one greyscale page per PDF, turned to read left to right
+ *   charts/*.json      each airport's charts and the procedures they draw (src/tpp.ts)
  *
  *   npm run data                     # every area, current chart edition
  *   npm run data -- miami            # one area
@@ -31,6 +33,7 @@ import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, ty
 import { parseAirways } from "../src/airway.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
+import { airportBlock, chartGroups, chartRecords, noChart, pageFile, pageTurn, proceduresOn, type ChartEntry } from "../src/tpp.js";
 
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
@@ -320,23 +323,28 @@ async function procedures() {
   return { airports: kept, ...parseAirways(text, BOUNDS) };
 }
 
-// ---- Airport diagrams from the d-TPP of the same cycle, placed by their own latitude and longitude ticks, turned
-// north up, white made clear. A diagram whose ticks don't fit (src/diagram.ts) is left out and named in the log.
-async function diagrams(airports: Airport[]) {
+type Dtpp = { base: string; dir: string; meta: string };
+// The d-TPP of the same cycle: where its PDFs are, the folder they are cached in, and its metafile.
+async function dtpp(): Promise<Dtpp> {
   // The d-TPP numbers its cycles YYNN, NN counting from the year's first cycle.
   let first = cycleDate.getTime();
   while (new Date(first - 28 * DAY).getUTCFullYear() === cycleDate.getUTCFullYear()) first -= 28 * DAY;
   const code = `${String(cycleDate.getUTCFullYear()).slice(2)}${String((cycleDate.getTime() - first) / (28 * DAY) + 1).padStart(2, "0")}`;
   const base = `https://aeronav.faa.gov/d-tpp/${code}`;
   const dir = join(ROOT, ".cache", "dtpp", code);
-  const meta = Buffer.from(await download(`${base}/xml_data/d-tpp_Metafile.xml`, dir)).toString("utf8");
+  return { base, dir, meta: Buffer.from(await download(`${base}/xml_data/d-tpp_Metafile.xml`, dir)).toString("utf8") };
+}
+
+// ---- Airport diagrams from the d-TPP of the same cycle, placed by their own latitude and longitude ticks, turned
+// north up, white made clear. A diagram whose ticks don't fit (src/diagram.ts) is left out and named in the log.
+async function diagrams(airports: Airport[], { base, dir, meta }: Dtpp) {
   const out = join(OUT, "diagrams");
   await rm(out, { recursive: true, force: true });
   await mkdir(out, { recursive: true });
   const { getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   for (const a of airports) {
-    const block = meta.split("<airport_name").find((b) => new RegExp(`(icao_ident|apt_ident)="${a.id}"`).test(b.slice(0, b.indexOf(">"))));
-    const pdf = block?.split("<record>").find((r) => /<chart_code>APD<\/chart_code>/.test(r))?.match(/<pdf_name>([^<]+)<\/pdf_name>/)?.[1];
+    const block = airportBlock(meta, a.id);
+    const pdf = block && chartRecords(block).find((r) => r.code === "APD")?.pdf;
     if (!pdf) continue;
     const doc = await getDocument({ data: await download(`${base}/${pdf}`, dir), standardFontDataUrl: join(ROOT, "node_modules", "pdfjs-dist", "standard_fonts") + "/", verbosity: 0 }).promise;
     const page = await doc.getPage(1);
@@ -411,6 +419,51 @@ async function diagrams(airports: Airport[]) {
   }
 }
 
+// ---- Approach, departure and arrival charts from the same d-TPP, each page rendered once (an arrival several airports
+// share is one file) at 200 dpi in 8 shades of grey, turned to read left to right, and matched to the airport's procedures (src/tpp.ts). Returns whether
+// any chart was written.
+async function plates(airports: Airport[], { base, dir, meta }: Dtpp): Promise<boolean> {
+  const out = join(OUT, "charts");
+  await rm(out, { recursive: true, force: true });
+  await mkdir(out, { recursive: true });
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  // Each PDF written so far, with its page's text.
+  const texts = new Map<string, string>();
+  let bytes = 0;
+  const page = async (pdf: string) => {
+    if (texts.has(pdf)) return texts.get(pdf)!;
+    const task = getDocument({ data: await download(`${base}/${pdf}`, dir), standardFontDataUrl: join(ROOT, "node_modules", "pdfjs-dist", "standard_fonts") + "/", verbosity: 0 });
+    const p = await (await task.promise).getPage(1);
+    const items = ((await p.getTextContent()).items as { str?: string; transform?: number[] }[]).flatMap((it) => (it.transform ? [{ str: it.str ?? "", transform: it.transform }] : []));
+    const text = items.map((it) => it.str).join(" ");
+    const vp = p.getViewport({ scale: 200 / 72 });
+    const canvas = createCanvas(Math.ceil(vp.width), Math.ceil(vp.height));
+    const ctx = canvas.getContext("2d");
+    await p.render({ canvas: canvas as unknown as HTMLCanvasElement, canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport: vp }).promise;
+    const rgba = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const info = await sharp(rgba, { raw: { width: canvas.width, height: canvas.height, channels: 4 } }).removeAlpha().rotate(pageTurn(items)).greyscale().png({ palette: true, colours: 8, effort: 10 }).toFile(join(out, pageFile(pdf)));
+    await task.destroy();
+    bytes += info.size;
+    texts.set(pdf, text);
+    return text;
+  };
+  for (const a of airports) {
+    const block = airportBlock(meta, a.id);
+    const entries: ChartEntry[] = [];
+    for (const g of block ? chartGroups(chartRecords(block)) : []) {
+      const text = await page(g.pdfs[0]);
+      for (const pdf of g.pdfs.slice(1)) await page(pdf);
+      entries.push({ name: g.name, kind: g.kind, pages: g.pdfs.map(pageFile), procedures: proceduresOn(g.kind, g.name, text, a.procedures) });
+    }
+    if (entries.length) await writeFile(join(out, `${a.id}.json`), JSON.stringify(entries));
+    const none = entries.filter((e) => !e.procedures.length).map((e) => e.name), missing = noChart(entries, a.procedures);
+    if (none.length) console.log(`charts with no procedure: ${a.id} ${none.join(", ")}`);
+    if (missing.length) console.log(`procedures with no chart: ${a.id} ${missing.join(", ")}`);
+  }
+  console.log(`charts: ${texts.size} pages, ${(bytes / 1e6).toFixed(1)} MB`);
+  return texts.size > 0;
+}
+
 const named = args.filter((a) => a in AREAS);
 for (const name of named.length ? named : Object.keys(AREAS)) {
   const area = AREAS[name];
@@ -426,8 +479,10 @@ for (const name of named.length ? named : Object.keys(AREAS)) {
   if (process.argv.includes("--terrain-only")) continue;
   const areas = await airspace(ground);
   const { airports, airways, waypoints } = await procedures();
-  await diagrams(airports);
-  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, cycle: cycleDate.toISOString().slice(0, 10), bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints };
+  const t = await dtpp();
+  await diagrams(airports, t);
+  const hasPlates = await plates(airports, t);
+  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, cycle: cycleDate.toISOString().slice(0, 10), bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints, ...(hasPlates && { plates: true as const }) };
   await writeFile(join(OUT, "area.json"), JSON.stringify(file));
   console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
   console.log(`airways ${airways.length}, legs ${airways.reduce((n, a) => n + a.legs.length, 0)}, no MEA ${airways.flatMap((a) => a.legs).filter((l) => l.ft === null).length}, waypoints ${waypoints.length}`);
