@@ -298,10 +298,10 @@ export function plateView(c: Context, on: {
   close.addEventListener("click", shut);
   for (const x of modes) x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
   el.addEventListener("keydown", (e) => {
-    // Not from the picker: there Escape shuts its list.
-    if (e.key !== "Escape" || e.target === pick) return;
+    if (e.key !== "Escape") return;
     e.stopPropagation();
-    shut();
+    // Not from the picker: there Escape shuts its list.
+    if (e.target !== pick) shut();
   });
   set(null);
 

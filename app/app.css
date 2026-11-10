@@ -49,6 +49,7 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
   .areas .a11y input::before { background: ButtonText; }
   .areas .a11y input:checked { border-color: Highlight; background: Highlight; }
   .areas .a11y input:checked::before { background: HighlightText; }
+  .areas .a11y input:focus-visible { outline-color: Highlight; }
 }
 
 .areas p { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 14px; line-height: 20px; color: var(--ink2); }

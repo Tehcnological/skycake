@@ -301,11 +301,12 @@ export function plateView(c, on) {
     for (const x of modes)
         x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
     el.addEventListener("keydown", (e) => {
-        // Not from the picker: there Escape shuts its list.
-        if (e.key !== "Escape" || e.target === pick)
+        if (e.key !== "Escape")
             return;
         e.stopPropagation();
-        shut();
+        // Not from the picker: there Escape shuts its list.
+        if (e.target !== pick)
+            shut();
     });
     set(null);
     // The divider (drag it, or arrow keys) sets the panel's share of the map's room: its width beside the map, its

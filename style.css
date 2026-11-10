@@ -97,6 +97,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-switch input::before { background: ButtonText; }
   .skycake .sc-switch input:checked { border-color: Highlight; background: Highlight; }
   .skycake .sc-switch input:checked::before { background: HighlightText; }
+  .skycake .sc-switch input:focus-visible { outline-color: Highlight; }
   .skycake [aria-pressed="true"]:not(:focus-visible), .skycake .sc-pill[aria-expanded="true"]:not(:focus-visible), .skycake .sc-find[aria-expanded="true"]:not(:focus-visible) { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 
