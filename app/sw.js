@@ -3,8 +3,19 @@
 // from any cache first, then the network.
 const SHELL_CACHE = `shell:${VERSION}`;
 
+// One shell file into the cache. Cloudflare Pages answers help.html with a redirect to /help, and a redirected
+// response cannot answer a navigation, so such a page is stored as a plain copy under both addresses.
+async function keep(cache, url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url}: ${r.status}`);
+  if (!r.redirected) return cache.put(url, r);
+  const body = await r.blob();
+  const copy = () => new Response(body, { status: r.status, statusText: r.statusText, headers: r.headers });
+  await Promise.all([cache.put(url, copy()), cache.put(r.url, copy())]);
+}
+
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SHELL_CACHE).then((c) => Promise.all(SHELL.map((url) => keep(c, url)))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {

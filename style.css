@@ -11,7 +11,8 @@
   --sc-soft: var(--soft, #aab9c9);
   --sc-muted: var(--muted, #8d9db0);
   --sc-dim: var(--dim, #607287);
-  /* Blue by default. instrumentready.com's own --red and --redbg keep it red there; the shades below follow it. */
+  /* Blue by default. instrumentready.com's own --red keeps it red there; the shades below follow it. --sc-accent-bg is
+     not used here any more; it stays for sites that read it. */
   --sc-accent: var(--red, #3d7bc2);
   --sc-accent-bg: var(--redbg, rgb(61 123 194 / 0.16));
   /* Raised surfaces (sheets), control edges, a hovered control, a primary button (dark enough for white text at
@@ -31,6 +32,8 @@
   --sc-r-panel: 12px;
   --sc-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
   --sc-gap: 16px;
+  /* A control row's height; accessibility mode raises it. */
+  --sc-row: 44px;
   /* Phone chrome: the header over the view and the tab bar under it (with the home bar's inset). */
   --sc-headh: 48px;
   --sc-tabh: 56px;
@@ -87,6 +90,16 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-switch input::before { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--sc-soft); transition: transform 0.12s; }
 .skycake .sc-switch input:checked { border-color: var(--sc-mark); background: var(--sc-fill); }
 .skycake .sc-switch input:checked::before { transform: translateX(18px); background: #fff; }
+/* Windows contrast themes paint over backgrounds: a switch keeps its thumb and its state, and a selected or pressed
+   control an outline, in the theme's own colors. */
+@media (forced-colors: active) {
+  .skycake .sc-switch input { forced-color-adjust: none; border-color: ButtonText; background: Canvas; }
+  .skycake .sc-switch input::before { background: ButtonText; }
+  .skycake .sc-switch input:checked { border-color: Highlight; background: Highlight; }
+  .skycake .sc-switch input:checked::before { background: HighlightText; }
+  .skycake .sc-switch input:focus-visible { outline-color: Highlight; }
+  .skycake [aria-pressed="true"]:not(:focus-visible), .skycake .sc-pill[aria-expanded="true"]:not(:focus-visible), .skycake .sc-find[aria-expanded="true"]:not(:focus-visible) { outline: 2px solid Highlight; outline-offset: -2px; }
+}
 
 /* The header: the area and its note. Desktop: a card top left, over Airspace. */
 .skycake .sc-head { position: absolute; z-index: 3; left: var(--sc-gap); top: var(--sc-gap); display: flex; align-items: center; gap: 8px; }
@@ -101,8 +114,8 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; max-height: calc(100% - 2 * var(--sc-gap)); }
 .skycake:has(.sc-where) .sc-tl { top: calc(var(--sc-gap) + 66px); max-height: calc(100% - 2 * var(--sc-gap) - 66px); }
 .skycake .sc-tl .sc-pill { flex: none; }
-/* Above the tool rail (six 44px rows and its padding); the shown procedures scroll when they do not fit. */
-.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(400px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 290px); }
+/* Above the tool rail (six rows and its padding); the shown procedures scroll when they do not fit. */
+.skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(400px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 6 * var(--sc-row) - 26px); }
 .skycake .sc-findrow { display: flex; gap: 8px; flex: none; }
 .skycake .sc-findrow .sc-search { flex: 1; min-width: 0; }
 .skycake .sc-findrow .sc-pill { flex: none; }
@@ -226,7 +239,9 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   /* Whole tab names, never cut short: each tab at least as wide as its name, the bar scrolling sideways when they don't fit. */
   .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr); overflow-x: auto; height: var(--sc-tabs); box-sizing: border-box; flex: none; padding: 0 4px env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
   .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; margin: 4px 2px; min-width: 0; padding: 0 2px; border: 0; border-radius: var(--sc-r-ctl); background: none; color: var(--sc-soft); font: 600 12px var(--sc-head); cursor: pointer; }
-  .skycake .sc-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .skycake .sc-tab span { white-space: nowrap; }
+  /* The bar clips what leaves it, so a tab's ring is drawn inside. */
+  .skycake .sc-tab:focus-visible { outline-offset: -3px; }
   .skycake .sc-tab svg { width: 18px; height: 18px; }
   .skycake .sc-tab[aria-pressed="true"] { background: var(--sc-sel); color: var(--sc-ink); box-shadow: inset 0 -2px 0 var(--sc-mark); }
   .skycake .sc-caption { bottom: calc(var(--sc-tabs) + 8px); z-index: 4; }
@@ -405,21 +420,20 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
    control borders at least 3:1 on the panels. A host's own tokens still win, so instrumentready.com's raised ones apply
    there (and it stays red). The mode also makes controls 48px, the header and tab bar taller, and text larger, and
    stops motion. See docs/accessibility.md. */
-.skycake[data-a11y] { --sc-soft: var(--soft, #c5d0dc); --sc-muted: var(--muted, #b4c1cf); --sc-dim: var(--dim, #96a5b6); --sc-frame: var(--frame, #7d8fa5); --sc-accent: var(--red, #6aa6e8); --sc-headh: 56px; --sc-tabh: 64px; }
+.skycake[data-a11y] { --sc-soft: var(--soft, #c5d0dc); --sc-muted: var(--muted, #b4c1cf); --sc-dim: var(--dim, #96a5b6); --sc-frame: var(--frame, #7d8fa5); --sc-accent: var(--red, #6aa6e8); --sc-headh: 56px; --sc-tabh: 64px; --sc-row: 48px; }
 @media (prefers-contrast: more) {
   .skycake { --sc-soft: var(--soft, #c5d0dc); --sc-muted: var(--muted, #b4c1cf); --sc-dim: var(--dim, #96a5b6); --sc-frame: var(--frame, #7d8fa5); --sc-accent: var(--red, #6aa6e8); }
 }
 /* One focus ring for everything, seen over light and dark chart: a dark gap, a 3px ring in the text color, a dark halo. */
 .skycake[data-a11y] :focus-visible { outline: 3px solid var(--sc-ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--sc-side); }
 /* The view clips its children, so its ring is drawn inside. */
-.skycake[data-a11y] .view:focus-visible, .skycake[data-a11y] .sc-plate-body:focus-visible { outline-offset: -5px; box-shadow: none; }
+.skycake[data-a11y] .view:focus-visible, .skycake[data-a11y] .sc-plate-body:focus-visible, .skycake[data-a11y] .sc-tab:focus-visible { outline-offset: -5px; box-shadow: none; }
 .skycake[data-a11y] .sc-pill, .skycake[data-a11y] .sc-search, .skycake[data-a11y] .sc-number, .skycake[data-a11y] .sc-plate-pick { height: 48px; font-size: 16px; }
 .skycake[data-a11y] .sc-search input { font-size: 16px; }
 .skycake[data-a11y] .sc-round, .skycake[data-a11y] .sc-x, .skycake[data-a11y] .sc-find { width: 48px; height: 48px; }
 .skycake[data-a11y] .sc-tool, .skycake[data-a11y] .sc-seg button, .skycake[data-a11y] .sc-option, .skycake[data-a11y] .sc-row, .skycake[data-a11y] .sc-chip, .skycake[data-a11y] .sc-card .sc-choice { min-height: 48px; font-size: 16px; }
 /* Larger tab names, with more room around them. */
 .skycake[data-a11y] .sc-tab { padding: 0 8px; font-size: 13px; }
-.skycake[data-a11y] .sc-tab span { overflow: visible; }
 .skycake[data-a11y] .sc-tab svg { width: 20px; height: 20px; }
 .skycake[data-a11y] .sc-step p { font-size: 18px; line-height: 28px; }
 .skycake[data-a11y] .sc-caption { font-size: 14px; line-height: 20px; }
@@ -433,8 +447,8 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 }
 /* The mode's own toggle, when the site has none: a symbol under the tool rail; on a phone, in the header. */
 .skycake .sc-head .sc-a11y-toggle { display: none; }
-/* The search panel stops above the rail, the toggle (44px) and its gap too. */
-.skycake:has(.sc-a11y-toggle) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 342px); }
+/* The search panel stops above the rail, the toggle (one more row) and its gap too. */
+.skycake:has(.sc-a11y-toggle) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 7 * var(--sc-row) - 34px); }
 @media (max-width: 860px) {
   .skycake:has(.sc-a11y-toggle) .sc-tr { max-height: calc((100% - var(--sc-headh) - var(--sc-tabs)) * 0.6); }
   .skycake .sc-head .sc-a11y-toggle { display: flex; flex: none; border-color: transparent; background: none; box-shadow: none; }

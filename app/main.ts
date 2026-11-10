@@ -93,8 +93,11 @@ async function startScreen() {
   // One card per area: its name and date, Open area, and its offline copy's button.
   for (const [id, a] of Object.entries(manifest.areas)) {
     const old = a.through < today;
-    const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { textContent: TEXT.names[id] ?? id }), el("span", { textContent: note(a, today) })));
-    const actions = el("div", { className: "actions" }, el("a", { className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open }));
+    const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { id: `name-${id}`, textContent: TEXT.names[id] ?? id }), el("span", { textContent: note(a, today) })));
+    const go = el("a", { id: `go-${id}`, className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open });
+    // Named by its own words and the area's, so a list of links tells the areas apart.
+    go.setAttribute("aria-labelledby", `go-${id} name-${id}`);
+    const actions = el("div", { className: "actions" }, go);
     // Without Cache Storage (an http page other than localhost) there is no offline copy to offer.
     if (keys) {
       const mb = Math.ceil(a.bytes / 1e6);

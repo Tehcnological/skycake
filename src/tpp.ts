@@ -44,6 +44,8 @@ function approach(name: string) {
   if (!m) return { types: [name], tail: "" };
   return { types: m[1].split(" OR "), tail: m[4] ? `-${m[4]}` : m[2].padStart(2, "0") + m[3] };
 }
+// shortcut: VOR RWY 12 and VOR/DME RWY 12 at one airport would match each other's charts; neither area has such a
+// pair (cycle 2611). Match exact types before bare ones when one appears.
 const bare = (type: string) => type.replace("/DME", "");
 
 /** Whether an approach chart's name ("ILS OR LOC/DME RWY 07L") draws a skycake procedure ("LOC RWY 07L"). */

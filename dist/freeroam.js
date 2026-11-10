@@ -65,22 +65,24 @@ export function freeRoam(c) {
     const lastIn = { [modeOf(chart)]: chart };
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
     // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
+    // Ids for aria-controls, unique to this mount: two viewers can share a page.
+    const uid = Math.random().toString(36).slice(2);
     const rows = new Map(present.map((k) => {
         const box = h("input", { type: "checkbox" });
         const row = h("label", { class: `sc-row s-${k}` }, h("i", { "aria-hidden": "true" }), h("span", {}, L.kinds[k]), box);
         box.addEventListener("change", () => v.raise(k, box.checked));
         return [k, { row, box }];
     }));
-    const kindList = h("div", { class: "sc-panel sc-kinds", id: "sc-kinds" }, ...[...rows.values()].map((x) => x.row));
-    const kindButton = h("button", { type: "button", class: "sc-pill", "aria-expanded": "false", "aria-controls": "sc-kinds" }, icon(ICONS.layers), L.airspace);
+    const kindList = h("div", { class: "sc-panel sc-kinds", id: `sc-kinds-${uid}` }, ...[...rows.values()].map((x) => x.row));
+    const kindButton = h("button", { type: "button", class: "sc-pill", "aria-expanded": "false", "aria-controls": `sc-kinds-${uid}` }, icon(ICONS.layers), L.airspace);
     // In view (accessibility mode): what is on the map, numbered as on the map; picking an area raises or lowers it, an
     // airport lists its procedures. The picker (and its badges) lives only while the panel is open.
-    const inViewList = h("div", { class: "sc-panel sc-inview", id: "sc-inview" });
-    const inViewButton = h("button", { type: "button", class: "sc-pill sc-inview-pill", "aria-expanded": "false", "aria-controls": "sc-inview" }, icon(ICONS.list), L.inView);
+    const inViewList = h("div", { class: "sc-panel sc-inview", id: `sc-inview-${uid}` });
+    const inViewButton = h("button", { type: "button", class: "sc-pill sc-inview-pill", "aria-expanded": "false", "aria-controls": `sc-inview-${uid}` }, icon(ICONS.list), L.inView);
     const topLeft = h("div", { class: "sc-tl" }, kindButton, kindList, inViewButton, inViewList);
     // The header: the area and its note (desktop: top left, over Airspace; phone: a bar over the view), and on a phone the
     // button that opens search.
-    const findButton = h("button", { type: "button", class: "sc-find", "aria-label": L.search, "aria-expanded": "false", "aria-controls": "sc-tr" }, icon(ICONS.search));
+    const findButton = h("button", { type: "button", class: "sc-find", "aria-label": L.search, "aria-expanded": "false", "aria-controls": `sc-tr-${uid}` }, icon(ICONS.search));
     const where = c.title ? [h("div", { class: "sc-where" }, h("b", {}, c.title.name), ...(c.title.note ? [h("span", {}, c.title.note)] : []))] : [];
     const head = h("header", { class: "sc-head" }, ...where, findButton);
     // Search, the plate panel's button, results and the shown procedures (top right; phone: under the header, search
@@ -88,8 +90,8 @@ export function freeRoam(c) {
     const input = h("input", { type: "search", "aria-label": L.search, placeholder: L.search, autocomplete: "off", spellcheck: "false" });
     const results = h("div", { class: "sc-panel sc-results", role: "listbox", "aria-label": L.search, hidden: true });
     const chips = h("div", { class: "sc-chips" });
-    const plateButton = h("button", { type: "button", class: "sc-pill sc-plate-open", "aria-expanded": "false", "aria-controls": "sc-plate" }, icon(ICONS.plate), L.plateOpen);
-    const topRight = h("div", { class: "sc-tr", id: "sc-tr" }, h("div", { class: "sc-findrow" }, h("label", { class: "sc-search" }, icon(ICONS.search), input), plateButton), results, chips);
+    const plateButton = h("button", { type: "button", class: "sc-pill sc-plate-open", "aria-expanded": "false" }, icon(ICONS.plate), L.plateOpen);
+    const topRight = h("div", { class: "sc-tr", id: `sc-tr-${uid}` }, h("div", { class: "sc-findrow" }, h("label", { class: "sc-search" }, icon(ICONS.search), input), plateButton), results, chips);
     // The view's tools. Desktop: a rail, bottom right, each a row with its name and value; each press steps the value.
     // Phone: the View sheet, each a segmented choice (Diagram and Close have their own tabs).
     const tool = (label, paths, box) => {
@@ -124,7 +126,7 @@ export function freeRoam(c) {
     const heightSeg = seg(L.height), modeSeg = seg(L.mode), chartSeg = seg(L.chart);
     modeSeg.row.hidden = !hasIfr;
     const tagsBox = h("input", { type: "checkbox", role: "switch" });
-    const viewSheet = h("div", { class: "sc-panel sc-vs", id: "sc-vs" }, h("label", { class: "sc-row sc-switch" }, h("span", {}, L.tags), tagsBox), heightSeg.row, modeSeg.row, chartSeg.row);
+    const viewSheet = h("div", { class: "sc-panel sc-vs" }, h("label", { class: "sc-row sc-switch" }, h("span", {}, L.tags), tagsBox), heightSeg.row, modeSeg.row, chartSeg.row);
     // Accessibility mode's own toggle, when the site has none: a symbol under the rail (phone: in the header). Two
     // buttons, kept in step.
     if (c.setA11y) {
@@ -247,16 +249,9 @@ export function freeRoam(c) {
             opener(inViewButton, tabs.inView).focus();
         else if (fig.classList.contains("sc-open-view"))
             tabs.view.focus();
-        else if (fig.classList.contains("sc-open-find") && e.target !== input) {
-            setFind(false);
-            findButton.focus();
-            return;
-        }
-        else if (plates.mode() !== null && e.target !== input) {
-            plates.set(null);
-            opener(plateButton, tabs.plate).focus();
-            return;
-        }
+        else if (fig.classList.contains("sc-open-find") && e.target !== input)
+            return shutFind();
+        // The plate panel closes on Escape only from inside it (plate.ts): beside the map it is a panel, not a dialog.
         else
             return;
         sheet(null);
@@ -274,6 +269,10 @@ export function freeRoam(c) {
             results.hidden = true;
         else if (focus)
             input.focus();
+    };
+    const shutFind = () => {
+        setFind(false);
+        findButton.focus();
     };
     findButton.addEventListener("click", () => {
         sheet(null);
@@ -357,6 +356,9 @@ export function freeRoam(c) {
                         browse = hit.airport;
                     input.value = "";
                     results.hidden = true;
+                    // A phone's search closes on a pick, back to its button; the shown procedures stay listed.
+                    if (fig.classList.contains("sc-open-find"))
+                        shutFind();
                     refresh();
                 }));
             }
@@ -404,10 +406,8 @@ export function freeRoam(c) {
             return;
         results.hidden = true;
         // A phone's search closes too, back to its button.
-        if (fig.classList.contains("sc-open-find")) {
-            setFind(false);
-            findButton.focus();
-        }
+        if (fig.classList.contains("sc-open-find"))
+            shutFind();
     });
     fig.addEventListener("pointerdown", (e) => {
         if (!topRight.contains(e.target))
