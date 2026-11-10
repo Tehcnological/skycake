@@ -137,7 +137,7 @@ export const LABELS: Labels = {
   height: "Height",
   fullScreen: "Full screen",
   open: "Open 3D view",
-  wake: "Placeholder: Tap to move the map",
+  wake: "Tap to move the map",
   close: "Close",
   finalCourse: "Final course",
   glidepath: "Glidepath",
@@ -149,13 +149,13 @@ export const LABELS: Labels = {
   modes: { vfr: "VFR", ifr: "IFR" },
   chart: "Chart",
   charts: { tac: "TAC", sectional: "SEC", area: "AREA", low: "LOW" },
-  // Walkthrough and quiz words are the site's to write (instrumentready.com supplies them through `labels`); these defaults
-  // say Placeholder so any the site leaves out stand out on screen.
+  // Walkthrough and quiz words are the site's to write (instrumentready.com supplies them through `labels`); their
+  // defaults say Placeholder so any the site leaves out stand out on screen. Words free roam shows too are real.
   right: "Placeholder: Right",
   wrong: "Placeholder: Wrong",
   submit: "Placeholder: Check",
   continue: "Placeholder: Continue",
-  facts: (name, floor, ceiling) => `Placeholder: ${name} · ${floor} to ${ceiling}`,
+  facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
   answerWas: (answer) => `Placeholder: Answer: ${answer}`,
   play: "Placeholder: Play",
   pause: "Placeholder: Pause",
@@ -169,7 +169,7 @@ export const LABELS: Labels = {
   again: "Placeholder: Again",
   result: (right, total) => `Placeholder: ${right} of ${total}`,
   nothing: "Placeholder: Nothing to ask here",
-  a11y: "Placeholder: Accessibility mode",
+  a11y: "Accessibility mode",
   on: "On",
   off: "Off",
   plate: "Procedure plate",
@@ -185,23 +185,23 @@ export const LABELS: Labels = {
   zoomOut: "Zoom out",
   zoomFit: "Fit",
   plateMissing: "This chart did not load.",
-  inView: "Placeholder: In view",
+  inView: "In view",
   number: "Placeholder: Number",
   skip: "Placeholder: Skip",
-  summary: (chart, areas, procedures) => `Placeholder: ${chart}. Raised: ${areas.join("; ") || "none"}. Procedures: ${procedures.join("; ") || "none"}.`,
+  summary: (chart, areas, procedures) => `${chart}. Raised: ${areas.join("; ") || "none"}. Procedures: ${procedures.join("; ") || "none"}.`,
   camera: {
-    group: "Placeholder: Camera",
-    left: "Placeholder: Turn left",
-    right: "Placeholder: Turn right",
-    up: "Placeholder: Tilt up",
-    down: "Placeholder: Tilt down",
-    zoomIn: "Placeholder: Zoom in",
-    zoomOut: "Placeholder: Zoom out",
-    pan: "Placeholder: Pan",
-    panLeft: "Placeholder: Move left",
-    panRight: "Placeholder: Move right",
-    panUp: "Placeholder: Move forward",
-    panDown: "Placeholder: Move back",
+    group: "Camera",
+    left: "Turn left",
+    right: "Turn right",
+    up: "Tilt up",
+    down: "Tilt down",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    pan: "Pan",
+    panLeft: "Move left",
+    panRight: "Move right",
+    panUp: "Move forward",
+    panDown: "Move back",
   },
   ask: {
     findArea: (name) => `Placeholder: Tap the ${name}`,
@@ -247,7 +247,7 @@ export type Options = {
   /** A quiz calls this after each answer and at its end. skycake stores nothing; the site decides what to keep. */
   onResult?: (r: QuizResult) => void;
   /** Accessibility mode, driven by the site's own toggle (instrumentready.com: a11yOn()). Left out, skycake shows its own
-   * switch in free roam's view controls and keeps it per browser as "skycake-a11y". See docs/accessibility.md. */
+   * button in free roam and keeps it per browser as "skycake-a11y". See docs/accessibility.md. */
   a11y?: boolean;
 };
 export type QuizMode = { quiz: Quiz | "practice"; kinds?: Kind[]; types?: QuestionType[]; airports?: string[] };

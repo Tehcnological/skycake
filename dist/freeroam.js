@@ -49,6 +49,7 @@ export const ICONS = {
     height: ["M8 4v16", "m5 7 3-3 3 3", "m5 17 3 3 3-3", "M14 8h6", "M14 16h6"],
     rules: ["M4 7h10", "M18 7h2", "M4 17h4", "M12 17h8", "M16 5v4", "M10 15v4"],
     map: ["M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z", "M9 4v14", "M15 6v14"],
+    a11y: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z", "M12 8.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z", "M7.5 10.5c3 1 6 1 9 0", "M12 11.2v3.3", "m9.5 18 2.5-3.5 2.5 3.5"],
 };
 /** Resolves once the first scene is showing. */
 export function freeRoam(c) {
@@ -124,25 +125,25 @@ export function freeRoam(c) {
     modeSeg.row.hidden = !hasIfr;
     const tagsBox = h("input", { type: "checkbox", role: "switch" });
     const viewSheet = h("div", { class: "sc-panel sc-vs", id: "sc-vs" }, h("label", { class: "sc-row sc-switch" }, h("span", {}, L.tags), tagsBox), heightSeg.row, modeSeg.row, chartSeg.row);
-    // Accessibility mode's own switch, when the site has none: under the rail (phone: the foot of the View sheet). Two
-    // switches, kept in step.
+    // Accessibility mode's own toggle, when the site has none: a symbol under the rail (phone: in the header). Two
+    // buttons, kept in step.
     if (c.setA11y) {
-        const boxes = [];
-        const a11yRow = () => {
-            const box = h("input", { type: "checkbox", role: "switch" });
-            box.checked = c.a11y;
-            boxes.push(box);
-            box.addEventListener("change", () => {
-                for (const b of boxes)
-                    b.checked = box.checked;
-                if (!box.checked && fig.classList.contains("sc-open-inview"))
+        const toggles = [];
+        const a11yToggle = () => {
+            const b = h("button", { type: "button", class: "sc-round sc-a11y-toggle", "aria-label": L.a11y, title: L.a11y, "aria-pressed": String(c.a11y) }, icon(ICONS.a11y));
+            toggles.push(b);
+            b.addEventListener("click", () => {
+                const on = b.getAttribute("aria-pressed") !== "true";
+                for (const t of toggles)
+                    t.setAttribute("aria-pressed", String(on));
+                if (!on && fig.classList.contains("sc-open-inview"))
                     sheet(null);
-                c.setA11y(box.checked);
+                c.setA11y(on);
             });
-            return h("label", { class: "sc-row sc-switch sc-a11y-row" }, h("span", {}, L.a11y), box);
+            return b;
         };
-        bottomRight.append(a11yRow());
-        viewSheet.append(a11yRow());
+        bottomRight.append(a11yToggle());
+        head.append(a11yToggle());
     }
     const caption = fig.querySelector(".sc-caption");
     // Phone tab bar.
