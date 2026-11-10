@@ -223,8 +223,9 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-vs { position: absolute; z-index: 3; left: 0; right: 0; bottom: var(--sc-tabs); flex-direction: column; gap: 12px; padding: 14px 16px; overflow: auto; }
   .skycake.sc-open-view .sc-vs { display: flex; }
   .skycake .sc-vs .sc-switch { padding: 0; }
-  .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); height: var(--sc-tabs); box-sizing: border-box; flex: none; padding: 0 4px env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
-  .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; margin: 4px 2px; min-width: 0; border: 0; border-radius: var(--sc-r-ctl); background: none; color: var(--sc-soft); font: 600 12px var(--sc-head); cursor: pointer; }
+  /* Whole tab names, never cut short: each tab at least as wide as its name, the bar scrolling sideways when they don't fit. */
+  .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr); overflow-x: auto; height: var(--sc-tabs); box-sizing: border-box; flex: none; padding: 0 4px env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--sc-frame); background: var(--sc-panel); }
+  .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; margin: 4px 2px; min-width: 0; padding: 0 2px; border: 0; border-radius: var(--sc-r-ctl); background: none; color: var(--sc-soft); font: 600 12px var(--sc-head); cursor: pointer; }
   .skycake .sc-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .skycake .sc-tab svg { width: 18px; height: 18px; }
   .skycake .sc-tab[aria-pressed="true"] { background: var(--sc-sel); color: var(--sc-ink); box-shadow: inset 0 -2px 0 var(--sc-mark); }
@@ -416,8 +417,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake[data-a11y] .sc-search input { font-size: 16px; }
 .skycake[data-a11y] .sc-round, .skycake[data-a11y] .sc-x, .skycake[data-a11y] .sc-find { width: 48px; height: 48px; }
 .skycake[data-a11y] .sc-tool, .skycake[data-a11y] .sc-seg button, .skycake[data-a11y] .sc-option, .skycake[data-a11y] .sc-row, .skycake[data-a11y] .sc-chip, .skycake[data-a11y] .sc-card .sc-choice { min-height: 48px; font-size: 16px; }
-/* Whole tab names, never cut short: each tab as wide as its name, the bar scrolling sideways when they don't fit. */
-.skycake[data-a11y] .sc-tabs { grid-auto-columns: minmax(max-content, 1fr); overflow-x: auto; }
+/* Larger tab names, with more room around them. */
 .skycake[data-a11y] .sc-tab { padding: 0 8px; font-size: 13px; }
 .skycake[data-a11y] .sc-tab span { overflow: visible; }
 .skycake[data-a11y] .sc-tab svg { width: 20px; height: 20px; }
