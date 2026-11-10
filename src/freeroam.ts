@@ -285,11 +285,11 @@ export function freeRoam(c: Context): Promise<void> {
   tabs.airspace.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
   tabs.view.addEventListener("click", () => sheet(fig.classList.contains("sc-open-view") ? null : "view"));
   // Phone search: the header's button (or the Procedure tab) opens it under the header.
-  const setFind = (on: boolean) => {
+  const setFind = (on: boolean, focus = true) => {
     fig.classList.toggle("sc-open-find", on);
     findButton.setAttribute("aria-expanded", String(on));
-    if (on) input.focus();
-    else results.hidden = true;
+    if (!on) results.hidden = true;
+    else if (focus) input.focus();
   };
   findButton.addEventListener("click", () => {
     sheet(null);
@@ -384,6 +384,8 @@ export function freeRoam(c: Context): Promise<void> {
     browse = id;
     r = pickAirport(r, id, has);
     input.value = "";
+    // A phone's search is shut until asked for: open it for the list, without the keyboard.
+    if (findButton.offsetParent) setFind(true, false);
     showResults();
     refresh();
   };
