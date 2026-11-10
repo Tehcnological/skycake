@@ -38,7 +38,7 @@ mount(document.querySelector("#airspace")!, {
 
 `types` and `approach` still work as shorthand for a first scene. `close: () => ...` is for a standalone app: the view fills the window from the start, and its close button calls the function. `title: { name, note }` puts a header over the view: the area's name and a line under it, such as its current-through date. A procedure plate panel sits beside the map (beside or over it on a phone), with a divider to share the space; its buttons stay hidden until plates are built. Area ids are in `data/phoenix/area.json`. three.js and the chart load only when the view scrolls into sight. Colors and fonts follow the `--sc-*` variables in `style.css`, which fall back to the host site's own tokens. The accent is blue unless the site sets `--sc-accent` and `--sc-accent-bg`, or `--red` and `--redbg` (instrumentready.com does, so it stays red).
 
-Accessibility mode (higher contrast, a camera pad, numbered picks, no motion, no single-key shortcuts): pass `a11y` from the site's own toggle, or pass nothing and skycake shows its own switch. Every change and what a site must do: [docs/accessibility.md](docs/accessibility.md).
+Accessibility mode (higher contrast, a camera pad, numbered picks, no motion, no single-key shortcuts): pass `a11y` from the site's own toggle, or pass nothing and skycake shows its own button. Every change and what a site must do: [docs/accessibility.md](docs/accessibility.md).
 
 ### Walkthroughs
 
@@ -159,7 +159,7 @@ Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design
 
 The current-through date is the last day of the area's procedure cycle. Data built before `cycle` was recorded falls back to the chart edition, the earliest cycle it can be from.
 
-The start screen has the accessibility mode switch (the same `skycake-a11y` key as the map's own row) and links to `help.html`, `accessibility.html` and `privacy.html`. The app sets no cookies, stores nothing about anyone and loads nothing from other sites. Saved areas stay on the device, in Cache Storage. Two Cloudflare settings would make the notice untrue, so leave them off: Web Analytics on the Pages project, and Bot Fight Mode on the skycake.app zone, which sets a `__cf_bm` cookie.
+The start screen has the accessibility mode switch (the same `skycake-a11y` key as the map's own button) and links to `help.html`, `accessibility.html` and `privacy.html`. The app sets no cookies, stores nothing about anyone and loads nothing from other sites. Saved areas stay on the device, in Cache Storage. Two Cloudflare settings would make the notice untrue, so leave them off: Web Analytics on the Pages project, and Bot Fight Mode on the skycake.app zone, which sets a `__cf_bm` cookie.
 
 ### Hosting on Cloudflare Pages
 

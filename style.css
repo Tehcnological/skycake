@@ -378,13 +378,14 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 @media (prefers-reduced-motion: reduce) {
   .skycake *, .skycake *::before { transition: none !important; }
 }
-/* The mode's own switch, when the site has none: a row under the tool rail; on a phone, the View sheet's foot. */
-.skycake .sc-br .sc-a11y-row { box-sizing: border-box; padding: 0 10px 0 14px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-ctl); background: var(--sc-panel); box-shadow: var(--sc-shadow); }
-/* The search panel stops above the rail, the switch row (44px) and its gap too. */
-.skycake:has(.sc-a11y-row) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 342px); }
+/* The mode's own toggle, when the site has none: a symbol under the tool rail; on a phone, in the header. */
+.skycake .sc-head .sc-a11y-toggle { display: none; }
+/* The search panel stops above the rail, the toggle (44px) and its gap too. */
+.skycake:has(.sc-a11y-toggle) .sc-tr { max-height: calc(100% - 3 * var(--sc-gap) - 342px); }
 @media (max-width: 860px) {
-  .skycake:has(.sc-a11y-row) .sc-tr { max-height: calc((100% - var(--sc-headh) - var(--sc-tabs)) * 0.6); }
-  .skycake .sc-vs .sc-a11y-row { margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--sc-frame); border-radius: 0; }
+  .skycake:has(.sc-a11y-toggle) .sc-tr { max-height: calc((100% - var(--sc-headh) - var(--sc-tabs)) * 0.6); }
+  .skycake .sc-head .sc-a11y-toggle { display: flex; flex: none; border-color: transparent; background: none; box-shadow: none; }
+  .skycake .sc-head .sc-a11y-toggle[aria-pressed="true"] { background: var(--sc-sel); }
 }
 
 /* Accessibility mode's camera pad: inside the view, bottom left, above the caption line. A ring of arrows around a centre
