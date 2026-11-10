@@ -1,10 +1,10 @@
-/* SkyCake Viewer only. The same tokens as the map's (style.css); --accent is the brand blue, --fill the primary
+/* SkyCake Viewer only. The same tokens as the map's (style.css); --fill is the primary
    button (dark enough for white text at 4.5:1), --sel and --mark a selected control and its marker. */
 :root {
   color-scheme: dark;
   --canvas: #11161c; --surface: #1b232d; --raised: #24303d; --divider: #354353; --edge: #7d8fa5;
   --ink: #f2f5f8; --ink2: #aab9c9; --ink3: #8d9db0; --link: #7eb4f4;
-  --accent: #3d7bc2; --fill: #28598f; --fill-hover: #3068a6; --fill-down: #214b7a; --hover: #2c3a4a;
+  --fill: #28598f; --fill-hover: #3068a6; --fill-down: #214b7a; --hover: #2c3a4a;
   --sel: #244568; --mark: #7eb4f4; --focus: #91c5ff; --warn: #f2d28b;
 }
 html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/24px system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -43,6 +43,13 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas .a11y input::before { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink2); transition: transform 0.12s; }
 .areas .a11y input:checked { border-color: var(--mark); background: var(--fill); }
 .areas .a11y input:checked::before { transform: translateX(18px); background: #fff; }
+/* Windows contrast themes paint over backgrounds: the switch keeps its thumb and its state in the theme's own colors. */
+@media (forced-colors: active) {
+  .areas .a11y input { forced-color-adjust: none; border-color: ButtonText; background: Canvas; }
+  .areas .a11y input::before { background: ButtonText; }
+  .areas .a11y input:checked { border-color: Highlight; background: Highlight; }
+  .areas .a11y input:checked::before { background: HighlightText; }
+}
 
 .areas p { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 14px; line-height: 20px; color: var(--ink2); }
 .areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--link); text-decoration: underline; }

@@ -68,7 +68,7 @@ export function plateView(c: Context, on: {
   const el = h("aside", { class: "sc-plate", id, "aria-label": L.plate }, divider, h("div", { class: "sc-plate-head" }, title, back, next, switcher, full, close), body);
 
   // The charts: indexes by airport, fetched only while the panel is open and kept for its life. An airport without
-  // one has none; a fetch that fails (offline) is none for now and tried again next time.
+  // one has none; a fetch that fails (offline, or a server error) is none for now and tried again next time.
   const fetched = new Map<string, Promise<unknown>>();
   const indexes = new Map<string, ChartEntry[]>();
   const index = (a: string) => {
@@ -76,7 +76,7 @@ export function plateView(c: Context, on: {
       fetched.delete(a);
       return [];
     };
-    if (!fetched.has(a)) fetched.set(a, fetch(c.url(`charts/${a}.json`)).then((r) => (r.ok ? r.json() : [])).catch(retry).then((x: ChartEntry[]) => indexes.set(a, x)));
+    if (!fetched.has(a)) fetched.set(a, fetch(c.url(`charts/${a}.json`)).then((r) => (r.ok ? r.json() : r.status === 404 ? [] : Promise.reject(new Error(`charts/${a}.json: ${r.status}`)))).catch(retry).then((x: ChartEntry[]) => indexes.set(a, x)));
     return fetched.get(a)!;
   };
   let refs: ProcedureRef[] = [];
@@ -109,6 +109,8 @@ export function plateView(c: Context, on: {
     shown = p;
     page = n;
     pick.value = String(listed(p));
+    // The chart's region takes the chart's name, so it reads apart from the picker and the map's own Chart setting.
+    body.setAttribute("aria-label", p ? p.entry.name : L.plateChart);
     const a = p && pageArrows(p.entry.pages.length, n);
     back.hidden = next.hidden = !a;
     if (a && p) {
@@ -296,7 +298,8 @@ export function plateView(c: Context, on: {
   close.addEventListener("click", shut);
   for (const x of modes) x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
   el.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
+    // Not from the picker: there Escape shuts its list.
+    if (e.key !== "Escape" || e.target === pick) return;
     e.stopPropagation();
     shut();
   });
