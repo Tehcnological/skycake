@@ -22,10 +22,10 @@ const TEXT = {
   failed: "Retry",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
-  help: "Placeholder: How to use",
-  a11y: "Placeholder: Accessibility mode",
-  a11yNote: "Placeholder: Larger text and controls",
-  a11yHelp: "Placeholder: Accessibility",
+  help: "How to use",
+  a11y: "Accessibility mode",
+  a11yNote: "Larger text and controls",
+  a11yHelp: "Accessibility",
 };
 
 // Accessibility mode: the same switch as the map's own (skycake-a11y), so they agree; it also raises the start screen's

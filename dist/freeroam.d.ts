@@ -42,6 +42,7 @@ export declare const ICONS: {
     height: string[];
     rules: string[];
     map: string[];
+    a11y: string[];
 };
 /** Resolves once the first scene is showing. */
 export declare function freeRoam(c: Context): Promise<void>;

@@ -22,7 +22,7 @@ Also its own app, SkyCake Viewer (`app/`, `npm run app`, hosted at skycake.app o
 ## How Chris works
 
 - Concise and direct. Never use em dashes, in chat or in files.
-- Chris writes on-screen copy. Free roam's labels are real defaults; walkthrough and quiz labels default to "Placeholder: ..." because the sites supply them. Every one can be overridden through `labels`. SkyCake Viewer's words (`app/main.ts`, the `app/*.html` pages) are placeholders or drafts until Chris writes them.
+- Chris writes on-screen copy. Free roam's labels are real defaults; walkthrough and quiz labels default to "Placeholder: ..." because the sites supply them. Every one can be overridden through `labels`. SkyCake Viewer's words (`app/main.ts`, the `app/*.html` pages) are drafts until Chris rewrites them.
 - Keep on-screen text to the minimum. Neighbouring controls match in height and style. No Garmin or G1000 names.
 - Get a visual direction from Chris before building new design.
 
