@@ -12,7 +12,7 @@ const DAY = 864e5;
 
 await rm(out, { recursive: true, force: true });
 await build({ entryPoints: ["app/main.ts"], bundle: true, splitting: true, format: "esm", target: "es2022", minify: true, outdir: out, logLevel: "warning" });
-for (const f of ["index.html", "demo.html", "privacy.html", "accessibility.html", "app.css", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
+for (const f of ["index.html", "demo.html", "help.html", "privacy.html", "accessibility.html", "app.css", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
 await cp("style.css", `${out}/style.css`);
 await cp("app/shots", `${out}/shots`, { recursive: true });
 // The icons, from app/icon.svg (the source only; it embeds a large raster, so it is not shipped). Palette PNGs keep
@@ -56,5 +56,5 @@ const hash = createHash("sha256");
 for (const f of shell.slice(1)) hash.update(f).update(await readFile(`${out}/${f}`));
 const sw = `const VERSION = ${JSON.stringify(hash.digest("hex").slice(0, 12))};\nconst SHELL = ${JSON.stringify(shell)};\n${await readFile("app/sw.js", "utf8")}`;
 await writeFile(`${out}/sw.js`, sw);
-assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("privacy.html") && shell.includes("accessibility.html") && shell.includes("demo.html"));
+assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("help.html") && shell.includes("privacy.html") && shell.includes("accessibility.html") && shell.includes("demo.html"));
 console.log(`www/: ${shell.length} shell files, areas ${Object.entries(areas).map(([id, a]) => `${id} ${a.edition} through ${a.through}`).join(", ")}`);
