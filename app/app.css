@@ -56,6 +56,20 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--link); text-decoration: underline; }
 .areas p.notice { border: 0; font-size: 16px; line-height: 24px; color: var(--ink); }
 
+/* Faint contour lines at the top right of the start screen's window and of each card, drawn by scripts/contours.mjs.
+   Decoration only: they end before any button, hold still where motion is unwelcome, and go when more contrast is asked
+   for. #app keeps them off the other pages (main.areas, no #app) and off a map (no .areas). */
+body:has(#app > .areas) { background-image: url(contours-page-still.svg); background-position: top right; background-size: 480px 360px; background-repeat: no-repeat; }
+#app .areas li { background-image: url(contours-card-still.svg); background-position: top right; background-size: 200px 90px; background-repeat: no-repeat; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-a11y]) body:has(#app > .areas) { background-image: url(contours-page.svg); }
+  :root:not([data-a11y]) #app .areas li { background-image: url(contours-card.svg); }
+}
+/* !important: the moving rules above are more specific. */
+@media (prefers-contrast: more), (forced-colors: active) {
+  body, #app .areas li { background-image: none !important; }
+}
+
 /* Accessibility mode (and more contrast asked by the system): raised contrast, 48px targets, larger text, no motion. */
 :root[data-a11y] { --divider: #7d8fa5; --ink2: #c5d0dc; --edge: #aab9c9; }
 :root[data-a11y] .areas .actions > *, :root[data-a11y] .areas .a11y { min-height: 48px; font-size: 16px; }
