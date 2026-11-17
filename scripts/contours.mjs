@@ -3,6 +3,10 @@
 import assert from "node:assert/strict";
 
 const RIPPLE = 10; // seconds for the brightening to pass through every height once
+// Brightness steps per half ripple. A picture used as a background is redrawn whole on every change, so the ripple
+// moves in steps too small to see (under 2% each, 5.6 a second) instead of on every frame, which cost about a tenth of
+// a processor core. 28 is a multiple of 7: the heights' delays are then whole steps, and all seven change together.
+const STEPS = 28;
 const STEP = 3; // px, the grid the lines are traced on
 
 // Sizes in CSS px. The lines fade out with distance from `fade`, the top right corner, before the picture's other
@@ -55,7 +59,7 @@ export function contours(surface, moving) {
   assert.ok(levels.flat().length > 3, `${surface}: almost no contour lines`);
   // The grid's last cell may overhang the picture by one step; the viewBox clips it.
   for (const [x, y] of levels.flat(2)) assert.ok(x >= 0 && x <= w + STEP && y >= 0 && y <= h + STEP, `${surface}: a point at ${x}, ${y}`);
-  const groups = levels.map((level, n) => `<g${moving ? ` style="animation-delay:-${((n * RIPPLE) / levels.length).toFixed(1)}s"` : ""}>${level.map((line) => `<path d="M${line.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join("L")}"/>`).join("")}</g>`).join("");
-  const style = moving ? `@keyframes t{50%{opacity:1}}g{opacity:.5;animation:t ${RIPPLE}s ease-in-out infinite}` : "g{opacity:.8}";
+  const groups = levels.map((level, n) => `<g${moving ? ` style="animation-delay:-${((n * RIPPLE) / levels.length).toFixed(4)}s"` : ""}>${level.map((line) => `<path d="M${line.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join("L")}"/>`).join("")}</g>`).join("");
+  const style = moving ? `@keyframes t{50%{opacity:1}}g{opacity:.5;animation:t ${RIPPLE}s steps(${STEPS}) infinite}` : "g{opacity:.8}";
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" fill="none" stroke="url(#c)" stroke-linecap="round" stroke-linejoin="round"><defs><radialGradient id="c" gradientUnits="userSpaceOnUse" cx="${fade.cx}" cy="${fade.cy}" r="${fade.r}"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient></defs><style>${style}</style>${groups}</svg>`;
 }

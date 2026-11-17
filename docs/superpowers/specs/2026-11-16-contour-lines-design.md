@@ -47,6 +47,8 @@ Success: the start screen shows faint map contour lines that slowly ripple, nobo
 - **My calls, not Chris's words:**
   - The card's fade radius is 68 px, not the sample's 85, so the lines end above the button row (it starts 70 px down). The patch is slightly smaller than in the sample.
   - With `prefers-contrast: more` or `forced-colors: active` there are no lines at all.
+  - Added while building, after the review measured the cost: the ripple changes brightness in 28 small steps per half pass (5.6 a second, under 2% each, all seven heights together) and no longer eases in and out. A background picture is redrawn whole on every change; this cut the browser's work to about a third (about 3% of a processor core in headless Edge, from about 10%).
+  - The four files compress to about 34 KB in all (gzip), so the grid stays at 3 px.
 
 ## Left to the builder
 
