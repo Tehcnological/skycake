@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** SkyCake Viewer's start screen shows faint contour lines that slowly ripple, at the top right of the page column and of each area card.
+**Goal:** SkyCake Viewer's start screen shows faint contour lines that slowly ripple, at the top right of the window and of each area card.
 
 **Architecture:** A new build-time generator, `scripts/contours.mjs`, returns SVG text. `scripts/app.mjs` writes four SVG files into `www/` (top level, so the service worker's shell list picks them up). `app/app.css` uses them as backgrounds on the start screen only. The ripple is a CSS animation inside the SVG files; the still files have none.
 
@@ -56,10 +56,10 @@ Fixed values:
 | width, height (px) | 480, 360 | 200, 90 |
 | field seed | 111 | 112 |
 | field scale | 0.08 | 0.2 |
-| line colour | `#2c3b4c` | `#33445a` |
+| line colour | `#3f5369` | `#485c75` |
 | fade centre, radius | (480, 0), 350 | (200, 0), 68 |
 
-A comment beside the colours says they sit between `--canvas` and `--divider` (page) and `--surface` and `--divider` (card) in `app/app.css`, and why they are literal: a background picture cannot read the page's variables.
+A comment beside the colours says they sit just above `--divider` in `app/app.css`, and why they are literal: a background picture cannot read the page's variables.
 
 The field and the lines, exactly (this is what makes the picture the approved one):
 
@@ -102,7 +102,7 @@ function lines(f, w, h, level, step = 3) {
 - Seven heights, `k / 8` for k = 1 to 7, one `<g>` each, every line a `<path>` with coordinates to one decimal (`M x y L x y ...`).
 - Root: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 W H" fill="none" stroke="url(#c)" stroke-linecap="round" stroke-linejoin="round">`. Stroke width is the default, 1.
 - `<defs>`: one `radialGradient id="c" gradientUnits="userSpaceOnUse"` at the fade centre and radius, from the line colour at offset 0 to the same colour with `stop-opacity="0"` at offset 1.
-- `<style>`, still: `g{opacity:.65}`. Moving: `@keyframes t{50%{opacity:1}}g{opacity:.4;animation:t 10s ease-in-out infinite}`, and the `<g>` at index n (0 to 6) carries `style="animation-delay:-(n * 10 / 7)s"` to one decimal.
+- `<style>`, still: `g{opacity:.8}`. Moving: `@keyframes t{50%{opacity:1}}g{opacity:.5;animation:t 10s ease-in-out infinite}`, and the `<g>` at index n (0 to 6) carries `style="animation-delay:-(n * 10 / 7)s"` to one decimal.
 - Self-check with `node:assert/strict` before returning: more than three lines in all, and every coordinate finite, at least 0 and at most the width or height plus one grid step (3). Ruling: the spec says "inside the picture"; the grid's last cell overhangs the edge by up to one step and the viewBox clips it, and trimming the grid would leave a 2 px gap at a card's right edge.
 
 - [ ] **Step 3: Run the Step 1 check**
@@ -137,18 +137,18 @@ git commit -m "Contour line pictures for the start screen, made by the Viewer's 
 - [ ] **Step 1: Add the block to `app/app.css`**
 
 ```css
-/* Faint contour lines at the top right of the start screen and of each card, drawn by scripts/contours.mjs. Decoration
-   only: they end before any button, hold still where motion is unwelcome, and go when more contrast is asked for.
-   #app keeps them off the other pages, which use main.areas. */
-#app .areas { background: url(contours-page-still.svg) top right / 480px 360px no-repeat; }
+/* Faint contour lines at the top right of the start screen's window and of each card, drawn by scripts/contours.mjs.
+   Decoration only: they end before any button, hold still where motion is unwelcome, and go when more contrast is asked
+   for. #app keeps them off the other pages (main.areas, no #app) and off a map (no .areas). */
+body:has(#app > .areas) { background-image: url(contours-page-still.svg); background-position: top right; background-size: 480px 360px; background-repeat: no-repeat; }
 #app .areas li { background-image: url(contours-card-still.svg); background-position: top right; background-size: 200px 90px; background-repeat: no-repeat; }
 @media (prefers-reduced-motion: no-preference) {
-  :root:not([data-a11y]) #app .areas { background-image: url(contours-page.svg); }
+  :root:not([data-a11y]) body:has(#app > .areas) { background-image: url(contours-page.svg); }
   :root:not([data-a11y]) #app .areas li { background-image: url(contours-card.svg); }
 }
 /* !important: the moving rules above are more specific. */
 @media (prefers-contrast: more), (forced-colors: active) {
-  #app .areas, #app .areas li { background-image: none !important; }
+  body, #app .areas li { background-image: none !important; }
 }
 ```
 
@@ -158,9 +158,9 @@ Run: `npm run app`, then `npm run demo` in the background (serves http://localho
 
 - [ ] **Step 3: Check the computed backgrounds**
 
-In a browser that can emulate media features (headless Edge over its debugging port: `Emulation.setEmulatedMedia`), with a fresh profile, at 375 by 667, read `getComputedStyle(el).backgroundImage` for `#app .areas` and for the first `#app .areas li`. Expected:
+In a browser that can emulate media features (headless Edge over its debugging port: `Emulation.setEmulatedMedia`), with a fresh profile, at 375 by 667, read `getComputedStyle(el).backgroundImage` for `body` and for the first `#app .areas li`. Expected:
 
-| State | `#app .areas` | first card |
+| State | `body` | first card |
 |---|---|---|
 | default | ends `contours-page.svg")` | ends `contours-card.svg")` |
 | `prefers-reduced-motion: reduce` | ends `contours-page-still.svg")` | ends `contours-card-still.svg")` |
@@ -168,15 +168,15 @@ In a browser that can emulate media features (headless Edge over its debugging p
 | `prefers-contrast: more` | `none` | `none` |
 | `forced-colors: active` | `none` | `none` |
 
-And on `help.html`, `privacy.html` and `accessibility.html`, `.areas` has `none`; on `index.html?area=phoenix` there is no `.areas` element.
+And on `help.html`, `privacy.html`, `accessibility.html` and `index.html?area=phoenix` (once the map is up), `body` has `none`.
 
 - [ ] **Step 4: Look at it**
 
-Screenshots at 375 by 667 (2x) and at 1280 by 800, start screen, normal and accessibility mode. Expected: lines at the top right of the column and of each card; none behind Open area, Save, the accessibility switch or its text; the card's own background colour unchanged. Two default-state screenshots five seconds apart differ (the ripple runs); two with reduced motion do not. If a line shows behind a control, lower that surface's fade radius in `scripts/contours.mjs` and rebuild.
+Screenshots at 375 by 667 (2x) and at 1280 by 800, start screen, normal and accessibility mode. Expected: lines at the top right of the window and of each card, fading out with no hard edge; none behind Open area, Save, the accessibility switch or its text; the card's own background colour unchanged. Two default-state screenshots five seconds apart differ (the ripple runs); two with reduced motion do not. If a line shows behind a control, lower that surface's fade radius in `scripts/contours.mjs` and rebuild.
 
 - [ ] **Step 5: Docs**
 
-`CHANGELOG.md`, under Unreleased: `- SkyCake Viewer's start screen has faint contour lines at the top right of the page and of each card, with a slow ripple. The build draws them (\`scripts/contours.mjs\`); they hold still under reduced motion and in accessibility mode, and are off when more contrast is asked for.`
+`CHANGELOG.md`, under Unreleased: `- SkyCake Viewer's start screen has faint contour lines at the top right of the window and of each card, with a slow ripple. The build draws them (\`scripts/contours.mjs\`); they hold still under reduced motion and in accessibility mode, and are off when more contrast is asked for.`
 
 `README.md`: one sentence in the `npm run app` paragraph saying the build also draws the start screen's contour line pictures, from `scripts/contours.mjs`.
 

@@ -1,6 +1,6 @@
 # Contour lines on the start screen: design
 
-Status: approved by Chris, 2026-11-16. Spec only, no code. No on-screen words are added.
+Status: approved by Chris, 2026-11-16; the same day he chose the window corner and the medium strength from mockups ("B but make it more obvious", "1, medium"). Spec only, no code. No on-screen words are added.
 
 ## Why
 
@@ -10,8 +10,8 @@ Success: the start screen shows faint map contour lines that slowly ripple, nobo
 
 ## Goals
 
-- Faint solid contour lines, one pixel wide, at the top right of the start screen's column and in the top right corner of each area card.
-- Ripple: each of the seven heights brightens in turn (opacity .4 to 1), one pass every 10 seconds.
+- Faint solid contour lines, one pixel wide, at the top right of the start screen's window and in the top right corner of each area card.
+- Ripple: each of the seven heights brightens in turn (opacity .5 to 1), one pass every 10 seconds.
 - The same picture on every build.
 
 ## Not in this change
@@ -30,7 +30,7 @@ Success: the start screen shows faint map contour lines that slowly ripple, nobo
 
 - Free and offline: the pictures are part of the app's shell, so they must be top-level files in `www/` (the service worker caches only those).
 - No new dependency.
-- A picture used as a CSS background cannot read the page's colour variables, so the two line colours are written into the generator, next to a note naming the tokens they sit between (`--canvas`/`--divider` for the page, `--surface`/`--divider` for a card). Text over the strongest line keeps about 10:1.
+- A picture used as a CSS background cannot read the page's colour variables, so the two line colours are written into the generator, next to a note naming the token they sit just above (`--divider`). Main text over the strongest line keeps about 7:1 on the page and 6:1 on a card; a card's lines stay in its top right corner, where it has no text.
 
 ## Approaches
 
@@ -42,11 +42,11 @@ Success: the start screen shows faint map contour lines that slowly ripple, nobo
 
 - **Generator:** a new `scripts/contours.mjs`, about 60 lines, taken from the sample's generator with the second motion removed. A smooth field (five fixed-seed sine waves), the lines where it crosses seven heights (marching squares on a 3px grid, pieces joined into lines), drawn 1px wide with a radial fade from the top right corner so the lines die out before the picture's edges. It exports one function that returns the SVG text for a surface, moving or still. It checks itself: more than three lines, and every point inside the picture.
 - **Build:** `scripts/app.mjs` writes four files into `www/`: `contours-page.svg`, `contours-page-still.svg`, `contours-card.svg`, `contours-card-still.svg` (about 37 KB, 37 KB, 9 KB, 9 KB before compression), and asserts they are in the shell list.
-- **Styles, `app/app.css`:** `#app .areas` (the start screen only; the other pages use `main.areas`) gets the page picture, top right, 480 by 360 px, no repeat. `#app .areas li` gets the card picture, top right, 200 by 90 px. The moving files are used only inside `@media (prefers-reduced-motion: no-preference)` and only when `:root` has no `data-a11y`; otherwise the still files (opacity .65).
+- **Styles, `app/app.css`:** `body:has(#app > .areas)` (the start screen only: the other pages use `main.areas` with no `#app`, and a map has no `.areas`) gets the page picture at the window's top right, 480 by 360 px, no repeat. `style.css` already uses `:has()`; a browser without it shows the cards' lines only. `#app .areas li` gets the card picture, top right, 200 by 90 px. The moving files are used only inside `@media (prefers-reduced-motion: no-preference)` and only when `:root` has no `data-a11y`; otherwise the still files (opacity .8).
+- **Strength, chosen by Chris from mockups:** medium. Page lines `#3f5369`, card lines `#485c75`.
 - **My calls, not Chris's words:**
   - The card's fade radius is 68 px, not the sample's 85, so the lines end above the button row (it starts 70 px down). The patch is slightly smaller than in the sample.
   - With `prefers-contrast: more` or `forced-colors: active` there are no lines at all.
-  - On a wide screen the page picture sits at the top right of the 480 px column, not of the window.
 
 ## Left to the builder
 
