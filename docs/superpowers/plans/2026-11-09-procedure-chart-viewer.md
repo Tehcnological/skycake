@@ -26,7 +26,7 @@
   - build: `node node_modules/typescript/bin/tsc -p tsconfig.build.json` (commit `dist/` with every `src/` change; CI fails on a stale `dist/`)
   - data: `node node_modules/tsx/dist/cli.mjs scripts/build-area.ts <area> --no-chart`
   - app: `node scripts/app.mjs`
-- Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me" commit ...`.
+- Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com" commit ...`.
 - Phone checks use CDP device emulation (390x844, mobile, touch), upright and sideways; headless Chromium will not lay out under 500 px.
 - Out of scope: georeferencing, tapping a chart to find a fix in 3D, airport diagrams in the panel, takeoff and alternate minimums, hot spot pages, areas beyond Phoenix and Miami.
 
@@ -58,7 +58,7 @@
   - `proceduresOn(kind: ChartEntry["kind"], name: string, firstPageText: string, procedures: { type: "IAP" | "SID" | "STAR"; name: string }[]): string[]`: IAP by `approachMatches`; DP by SID names in `codesIn`; STR by STAR names in `codesIn`; deduped, in the airport's procedure order.
   - `noChart(entries: ChartEntry[], procedures: { name: string }[]): string[]`: procedure names no entry draws.
 
-- [ ] **Step 1: Get the metafile.** If `.cache/dtpp/2611/d-tpp_Metafile.xml` is missing in this worktree, copy it from the main checkout (`C:/Users/Chris/Documents/Claude/CFI Projects/skycake/.cache/dtpp/2611/d-tpp_Metafile.xml`) to the same path. Check the fixture below against the KPHX block's opening tag and records (an IAP, a DP, its `, CONT.1`, an STR) and fix any tag that differs.
+- [ ] **Step 1: Get the metafile.** If `.cache/dtpp/2611/d-tpp_Metafile.xml` is missing in this worktree, copy it from the main checkout (the same path there) to the same path. Check the fixture below against the KPHX block's opening tag and records (an IAP, a DP, its `, CONT.1`, an STR) and fix any tag that differs.
 
 - [ ] **Step 2: Write the failing tests** (`src/tpp.test.ts`)
 

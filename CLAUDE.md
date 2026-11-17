@@ -40,4 +40,4 @@ npm run demo           # http://localhost:5179/demo/ (and /www/ after npm run ap
 
 GitHub Actions runs on every PR to main and every push to main, on standard hosted runners, free because this repo is public. Use it. It fails if `dist/` is stale, and main requires its `build-and-test` check. See "CI" in README.md.
 
-Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`. Headless Chromium will not lay out narrower than 500 px; check phones with real device emulation.
+Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com"`. Headless Chromium will not lay out narrower than 500 px; check phones with real device emulation.
