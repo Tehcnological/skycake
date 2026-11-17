@@ -6,6 +6,7 @@ import sharp from "sharp";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { cp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { contours } from "./contours.mjs";
 
 const out = "www";
 const DAY = 864e5;
@@ -21,6 +22,14 @@ const icon = await readFile("app/icon.svg", "utf8");
 const fullBleed = icon.replace(' rx="112"', "");
 assert.notEqual(fullBleed, icon);
 for (const [size, svg] of [[180, fullBleed], [192, icon], [512, icon]]) await sharp(Buffer.from(svg)).resize(size).png({ palette: true, effort: 10 }).toFile(`${out}/icon-${size}.png`);
+// The start screen's contour lines: top-level files, so they are in the shell below and work offline. The still ones,
+// for reduced motion and accessibility mode, must not move.
+for (const surface of ["page", "card"]) {
+  const moving = contours(surface, true), still = contours(surface, false);
+  assert.ok(moving.includes("animation") && !still.includes("animation"));
+  await writeFile(`${out}/contours-${surface}.svg`, moving);
+  await writeFile(`${out}/contours-${surface}-still.svg`, still);
+}
 await cp("data", `${out}/data`, { recursive: true });
 
 // The data manifest: per area, its edition, the date it is current through, a revision that changes with any file,
@@ -57,4 +66,5 @@ for (const f of shell.slice(1)) hash.update(f).update(await readFile(`${out}/${f
 const sw = `const VERSION = ${JSON.stringify(hash.digest("hex").slice(0, 12))};\nconst SHELL = ${JSON.stringify(shell)};\n${await readFile("app/sw.js", "utf8")}`;
 await writeFile(`${out}/sw.js`, sw);
 assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("help.html") && shell.includes("privacy.html") && shell.includes("accessibility.html") && shell.includes("demo.html"));
+for (const f of ["contours-page.svg", "contours-page-still.svg", "contours-card.svg", "contours-card-still.svg"]) assert.ok(shell.includes(f), f);
 console.log(`www/: ${shell.length} shell files, areas ${Object.entries(areas).map(([id, a]) => `${id} ${a.edition} through ${a.through}`).join(", ")}`);
