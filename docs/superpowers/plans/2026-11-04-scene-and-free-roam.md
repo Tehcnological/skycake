@@ -23,7 +23,7 @@ This is plan 1 of 3. Walkthroughs (with `highlight`, `airplane` and `draw`) and 
 - Keyboard: arrows turn the view and `+` / `-` zoom only while the view has focus; no page-wide keys.
 - Free roam's first scene, unless the site gives one: every airspace type in the area raised, camera fit on the whole chart.
 - Picking a procedure adds it; any number show at once; a fix shared by two shown procedures gets one tag.
-- Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`, run `npm run build` and commit `dist/` with each task that changes `src/`.
+- Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com"`, run `npm run build` and commit `dist/` with each task that changes `src/`.
 
 ## Review Focus
 

@@ -23,7 +23,7 @@ This is plan 2 of 3 (plan 1: `2026-11-04-scene-and-free-roam.md`, done). Plan 3,
 - It starts paused on step 1 with a play button over the view; nothing moves until play.
 - Keyboard keys only while the view or the player has focus; no page-wide keys.
 - skycake stores nothing; walkthrough content and ACS/PTS tags stay on the site. The format has no tag fields and the validator ignores unknown fields, so a site can keep its own.
-- Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`; run `npm run build` and commit `dist/` with each task that changes `src/`.
+- Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com"`; run `npm run build` and commit `dist/` with each task that changes `src/`.
 
 ## Review Focus
 

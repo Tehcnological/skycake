@@ -21,4 +21,5 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404).end("not found");
   }
-}).listen(port, () => console.log(`skycake demo: http://localhost:${port}/demo/`));
+// 127.0.0.1 only: this serves the whole checkout, .git included, so it must not be reachable from the network.
+}).listen(port, "127.0.0.1", () => console.log(`skycake demo: http://localhost:${port}/demo/`));

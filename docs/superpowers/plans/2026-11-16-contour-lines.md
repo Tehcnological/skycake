@@ -17,7 +17,7 @@
 - Do not touch `style.css`, `src/` or `dist/`. `www/` is never committed.
 - No new dependency. Nothing that bills.
 - The picture is the one Chris approved: keep every seed, size, colour and timing below exactly.
-- Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`, messages ending with the `Co-Authored-By` line.
+- Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com"`, messages ending with the `Co-Authored-By` line.
 - Merging is Chris's call, after `/code-review` at level high.
 
 ## Review Focus

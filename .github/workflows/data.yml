@@ -23,7 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90 # a clean charts build (529 d-TPP PDFs) has not been timed; this bounds a hung job
     steps:
+      # The write token stays out of .git/config, so npm ci and the data build cannot read it. Only the last step uses it.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -73,7 +76,7 @@ jobs:
           git add data
           if git diff --cached --quiet; then echo "No data changes."; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Data for the $CYCLE cycle"
-          git push origin "$branch"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" "$branch"
           {
             echo "FAA data for the cycle effective $CYCLE, built by the Data cycle workflow. Check the notes below, then merge."
             echo

@@ -14,7 +14,7 @@
 
 - No em dashes anywhere, in code, comments or docs. No Garmin or G1000 names.
 - Every new on-screen word is a placeholder in `Labels` (`src/ui.ts`), prefixed `"Placeholder: "` as the walkthrough and quiz words are. Chris writes the copy.
-- Commit as `git -c user.name="Chris DeFoe" -c user.email="chris@defoe.me"`; run `npm run build` and commit `dist/` with each task that changes `src/` (CI fails on a stale `dist/`).
+- Commit as `git -c user.name="Christopher DeFoe" -c user.email="243516562+Tehcnological@users.noreply.github.com"`; run `npm run build` and commit `dist/` with each task that changes `src/` (CI fails on a stale `dist/`).
 - Every control 44 px or taller; number badges 24 px.
 - Mode tokens, exact: `--sc-soft: var(--soft, #c5c8cc)`, `--sc-muted: var(--muted, #b0b4b9)`, `--sc-dim: var(--dim, #969ba1)`, `--sc-frame: var(--frame, #767c83)`, `--sc-accent: var(--red, #6aa6e8)`. Host tokens still win. Keep `var(--red, ...)`.
 - Storage key `skycake-a11y`, value `"1"` when on; every read and write in try/catch.
