@@ -1,6 +1,6 @@
 # Contour lines on the start screen: design
 
-Status: waiting for Chris's approval, 2026-11-16. Spec only, no code. No on-screen words are added.
+Status: approved by Chris, 2026-11-16. Spec only, no code. No on-screen words are added.
 
 ## Why
 
