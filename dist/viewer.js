@@ -838,6 +838,7 @@ a11y = false) {
     el3d.addEventListener("pointerleave", () => label(null, 0, 0));
     // A tap (not a drag): a flat area rises; a raised one is picked, then lowers on the next tap.
     let down = [0, 0], downAt = 0, most = 0;
+    let downType = "";
     let picked = null;
     const fingers = new Map();
     let two = null;
@@ -850,11 +851,12 @@ a11y = false) {
         const r = el3d.getBoundingClientRect();
         return [e.clientX - r.left, e.clientY - r.top];
     };
-    // As on a map app: a double-click or a pen's double-tap zooms in on the spot, and holding the second press and dragging
-    // zooms (down in, up out), which a pen needs, having no wheel or pinch. Caught in the capture phase and stopped there, so
-    // the controls never see the second press: they are never switched off, so nothing can leave them off.
-    const pointer = (e) => (e.pointerType === "pen" || e.pointerType === "mouse") && e.button === 0;
+    // A pen can double-tap and drag to zoom without a wheel. Keep its second press out of OrbitControls.
+    // A mouse uses the browser's double-click and its normal drag handling.
+    const zoomButton = (e) => e.pointerType === "pen" && (e.button === 0 || e.button === 2);
+    let press = null;
     let firstUp = null;
+    let handledUp = null;
     let zoomDrag = null;
     const zoomTo = (p, off) => {
         takeOver();
@@ -865,36 +867,66 @@ a11y = false) {
         touchMoved();
     };
     el3d.addEventListener("pointerdown", (e) => {
-        if (!pointer(e) || !isSecondTap(firstUp, at(e), e.timeStamp))
+        handledUp = null;
+        if (zoomDrag)
             return;
+        press = zoomButton(e) ? { id: e.pointerId, button: e.button, at: at(e) } : null;
+        const pair = press && firstUp?.id === press.id && firstUp.button === press.button &&
+            isSecondTap(firstUp, press.at, e.timeStamp);
         firstUp = null;
+        if (!pair)
+            return;
         e.stopImmediatePropagation();
-        zoomDrag = { y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
+        zoomDrag = { id: e.pointerId, y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
         el3d.setPointerCapture(e.pointerId);
     }, { capture: true });
     el3d.addEventListener("pointermove", (e) => {
-        if (!zoomDrag || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP)
+        if (zoomDrag?.id !== e.pointerId || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP)
             return;
         zoomDrag.moved = true;
         zoomTo(zoomDrag.p, zoomDrag.off / dragZoom(e.clientY - zoomDrag.y));
     });
     const pointerDone = (e) => {
-        if (e.pointerType !== "pen" && e.pointerType !== "mouse")
-            return;
-        if (!zoomDrag) {
-            // Only a tap or click starts the pair: a quick press after a drag is a new drag.
-            firstUp = e.button === 0 && Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= TAP_SLOP ? { at: at(e), ms: e.timeStamp } : null;
-            return;
+        if (press?.id === e.pointerId) {
+            const end = at(e);
+            if (!zoomDrag && e.type === "pointerup" && e.button === press.button &&
+                Math.hypot(end[0] - press.at[0], end[1] - press.at[1]) <= TAP_SLOP) {
+                firstUp = { id: press.id, button: press.button, at: end, ms: e.timeStamp };
+            }
+            press = null;
         }
-        if (!zoomDrag.moved && e.type === "pointerup")
-            zoomTo(zoomDrag.p, zoomDrag.off / 2);
+        if (zoomDrag?.id !== e.pointerId)
+            return;
+        if (e.type === "pointerup") {
+            if (e.button === 0)
+                handledUp = { at: at(e), ms: e.timeStamp };
+            if (!zoomDrag.moved)
+                zoomTo(zoomDrag.p, zoomDrag.off / 2);
+        }
         zoomDrag = null;
         most = 0; // the second press is not a tap
     };
-    el3d.addEventListener("lostpointercapture", () => (zoomDrag = null));
+    el3d.addEventListener("lostpointercapture", (e) => {
+        if (zoomDrag?.id === e.pointerId)
+            zoomDrag = null;
+        if (press?.id === e.pointerId)
+            press = null;
+    });
     el3d.addEventListener("pointerup", pointerDone, { capture: true });
     el3d.addEventListener("pointercancel", pointerDone, { capture: true });
+    // Some pen drivers send a browser double-click directly. A pointer pair already zoomed on its second release.
+    el3d.addEventListener("dblclick", (e) => {
+        if (e.button !== 0 || downType === "touch")
+            return;
+        const alreadyZoomed = isSecondTap(handledUp, at(e), e.timeStamp);
+        handledUp = null;
+        if (alreadyZoomed)
+            return;
+        firstUp = null;
+        zoomTo(groundUnder(at(e)) ?? controls.target.clone(), camera.position.distanceTo(controls.target) / 2);
+    });
     el3d.addEventListener("pointerdown", (e) => {
+        downType = e.pointerType;
         if (!fingers.size) {
             down = [e.clientX, e.clientY];
             downAt = performance.now();
@@ -980,11 +1012,7 @@ a11y = false) {
         fingers.delete(e.pointerId);
         regrip();
     });
-    el3d.addEventListener("pointerup", (e) => {
-        const touch = fingers.delete(e.pointerId);
-        regrip();
-        if (fingers.size)
-            return;
+    const pickAt = (e, touch) => {
         if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose))
             return;
         // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
@@ -1010,6 +1038,17 @@ a11y = false) {
             set(l, true);
         picked = l;
         tell(l, e);
+    };
+    el3d.addEventListener("pointerup", (e) => {
+        const touch = fingers.delete(e.pointerId);
+        regrip();
+        if (!fingers.size && e.pointerType !== "mouse" && (touch || e.button === 0))
+            pickAt(e, touch);
+    });
+    // The browser counts mouse clicks at its own timing so the second click zooms without picking again.
+    el3d.addEventListener("click", (e) => {
+        if (downType === "mouse" && e.detail === 1)
+            pickAt(e, false);
     });
     let sized = [0, 0];
     let looping = false;

@@ -1,0 +1,58 @@
+{
+  "id": "ifr",
+  "title": "IFR practice on the Phoenix ILS 07L",
+  "area": "phoenix",
+  "items": [
+    {
+      "id": "find-faf",
+      "type": "find",
+      "prompt": "Find ZINGA on the ILS 07L plate, then select that fix on the 3D map.",
+      "answer": { "fix": "ZINGA" },
+      "scene": {
+        "chart": "low",
+        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
+        "plate": { "airport": "KPHX", "chart": "ILS OR LOC/DME RWY 07L" }
+      },
+      "explanation": "ZINGA sits on the final approach course between FOWLE and Runway 07L. Use the fix labels to match the plate to the 3D route."
+    },
+    {
+      "id": "read-profile",
+      "type": "read",
+      "prompt": "Read the plate's profile view. What altitude is printed at ZINGA?",
+      "number": { "answer": 2600, "tolerance": 0, "unit": "ft MSL" },
+      "scene": {
+        "chart": "low",
+        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
+        "camera": { "frame": [{ "procedure": { "airport": "KPHX", "name": "ILS RWY 07L" } }], "tilt": 45 },
+        "tags": false
+      },
+      "explanation": "The profile prints 2,600 ft MSL at ZINGA. The reveal turns on the map labels so you can find that altitude on the 3D route."
+    },
+    {
+      "id": "missed-fix",
+      "type": "procedure",
+      "prompt": "Follow the published missed approach on the plate. Which fix is named for the hold?",
+      "choices": ["FOWLE", "ZINGA", "PXR", "AVONA"],
+      "answer": 2,
+      "scene": {
+        "chart": "low",
+        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
+        "highlight": [{ "procedure": { "airport": "KPHX", "name": "ILS RWY 07L" } }]
+      },
+      "explanation": "The missed approach leads to the PXR VORTAC for the hold. The fixes west of the runway are on the inbound side of the procedure."
+    },
+    {
+      "id": "find-threshold",
+      "type": "find",
+      "prompt": "Follow the final approach course to Phoenix Sky Harbor. Select the Runway 07L threshold marked RW07L.",
+      "answer": { "fix": "RW07L" },
+      "scene": {
+        "chart": "low",
+        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
+        "diagram": "KPHX",
+        "camera": { "frame": [{ "fix": "ZINGA" }, { "diagram": "KPHX" }], "tilt": 90 }
+      },
+      "explanation": "RW07L marks the approach end of Runway 07L. The airport diagram shows the runway beneath the final approach course."
+    }
+  ]
+}
