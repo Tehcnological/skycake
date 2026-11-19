@@ -11,15 +11,15 @@ type Manifest = { areas: Record<string, AreaInfo> };
 const TEXT = {
   title: "SkyCake Viewer",
   choose: "Choose an area",
-  open: "Open area",
+  open: (name: string) => `Open ${name}`,
   names: { phoenix: "Phoenix", miami: "Miami" } as Record<string, string>,
   through: (d: string) => `Current through ${d}`,
   expired: (d: string) => `Out of date since ${d}`,
-  download: (mb: number) => `Save ${mb} MB`,
+  download: (mb: number) => `Save offline · ${mb} MB`,
   update: (mb: number) => `Update ${mb} MB`,
   saving: (pct: number) => `Saving ${pct}%`,
   saved: "Saved",
-  failed: "Retry",
+  failed: "Retry download",
   notForNavigation: "Not for navigation",
   privacy: "Privacy",
   help: "How to use",
@@ -36,7 +36,7 @@ const setA11y = (on: boolean) => document.documentElement.toggleAttribute("data-
 const root = document.querySelector<HTMLElement>("#app")!;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("skycake: offline unavailable", e));
 
-const manifest: Manifest = await fetch("data/manifest.json").then((r) => r.json());
+
 const params = new URLSearchParams(location.search);
 const area = params.get("area");
 
@@ -84,19 +84,18 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
 };
 const note = (a: AreaInfo, today: string) => (a.through < today ? TEXT.expired(a.through) : TEXT.through(a.through));
 
-async function startScreen() {
+async function startScreen(manifest: Manifest) {
   setA11y(stored(storage));
   const today = new Date().toISOString().slice(0, 10);
   const keys = "caches" in window ? await caches.keys() : null;
-  const h1 = el("h1", {}, el("img", { src: "icon-192.png", alt: "" }), TEXT.title);
+  const brand = el("div", { className: "brand" }, el("img", { src: "icon-192.png", alt: "" }), TEXT.title);
   const list = el("ul");
   // One card per area: its name and date, Open area, and its offline copy's button.
   for (const [id, a] of Object.entries(manifest.areas)) {
     const old = a.through < today;
     const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { id: `name-${id}`, textContent: TEXT.names[id] ?? id }), el("span", { textContent: note(a, today) })));
-    const go = el("a", { id: `go-${id}`, className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open });
-    // Named by its own words and the area's, so a list of links tells the areas apart.
-    go.setAttribute("aria-labelledby", `go-${id} name-${id}`);
+    const go = el("a", { id: `go-${id}`, className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open(TEXT.names[id] ?? id) });
+    li.prepend(el("img", { className: "chart-preview", src: `preview-${encodeURIComponent(id)}.webp`, alt: "" }));
     const actions = el("div", { className: "actions" }, go);
     // Without Cache Storage (an http page other than localhost) there is no offline copy to offer.
     if (keys) {
@@ -105,6 +104,7 @@ async function startScreen() {
       const show = (state: "download" | "update" | "saving" | "saved" | "failed", pct = 0) => {
         button.dataset.state = state;
         button.textContent = { download: TEXT.download(mb), update: TEXT.update(mb), saving: TEXT.saving(pct), saved: TEXT.saved, failed: TEXT.failed }[state];
+        button.setAttribute("aria-label", `${button.textContent}, ${TEXT.names[id] ?? id}`);
         button.disabled = state === "saving" || state === "saved";
       };
       show((await complete(keys, cacheOf(id, a))) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
@@ -128,20 +128,36 @@ async function startScreen() {
   });
   const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
   const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
-  root.replaceChildren(el("section", { className: "areas" }, h1, el("h2", { textContent: TEXT.choose }), list, row, foot));
+  root.replaceChildren(el("section", { className: "areas" }, brand, el("h1", { textContent: TEXT.choose }), list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
 }
 
-if (area && Object.hasOwn(manifest.areas, area)) {
-  let scene;
-  try {
-    scene = JSON.parse(params.get("scene") ?? "null") ?? undefined;
-  } catch {
-    console.warn("skycake: ignoring a scene that is not JSON");
+const status = document.querySelector<HTMLElement>("#load-status")!;
+try {
+  const response = await fetch("data/manifest.json");
+  if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
+  const manifest: Manifest = await response.json();
+  if (area && Object.hasOwn(manifest.areas, area)) {
+    let scene;
+    try {
+      scene = JSON.parse(params.get("scene") ?? "null") ?? undefined;
+    } catch {
+      console.warn("skycake: ignoring a scene that is not JSON");
+    }
+    // replace, so Back after Close doesn't reopen the map.
+    const a = manifest.areas[area];
+    const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
+    status.textContent = `Loading ${title.name} chart…`;
+    await mount(root, { base: `data/${area}/`, title, close: () => location.replace(location.pathname), ...(scene && { scene }) });
+  } else {
+    await startScreen(manifest);
   }
-  // replace, so Back after Close doesn't reopen the map.
-  const a = manifest.areas[area];
-  const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
-  await mount(root, { base: `data/${area}/`, title, close: () => location.replace(location.pathname), ...(scene && { scene }) });
-} else {
-  await startScreen();
+  status.remove();
+} catch (error) {
+  console.warn("skycake: viewer unavailable", error);
+  status.remove();
+  const retry = el("button", { type: "button", textContent: "Try again" });
+  retry.addEventListener("click", () => location.reload());
+  const actions = el("div", { className: "actions" }, retry);
+  if (area) actions.append(el("a", { className: "go", href: location.pathname, textContent: TEXT.choose }));
+  root.replaceChildren(el("section", { className: "areas" }, el("h1", { textContent: area ? "Chart unavailable" : "Areas unavailable" }), el("p", { className: "notice", role: "alert", textContent: "Check your connection and try again." }), actions));
 }

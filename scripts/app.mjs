@@ -38,6 +38,7 @@ await cp("data", `${out}/data`, { recursive: true });
 // their chart edition, the earliest cycle they can be from.
 const areas = {};
 for (const id of (await readdir("data")).sort()) {
+  await sharp(`data/${id}/sectional.webp`).resize(720, 210, { fit: "cover" }).webp({ quality: 72 }).toFile(`${out}/preview-${id}.webp`);
   const files = [];
   let bytes = 0;
   const rev = createHash("sha256");

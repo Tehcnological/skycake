@@ -82,3 +82,26 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 @media (prefers-reduced-motion: reduce) {
   *, *::before { transition: none !important; }
 }
+
+/* The area library uses small local crops of the same charts as the viewer. */
+#app > .areas { max-width: 900px; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px); }
+.areas .brand { display: flex; align-items: center; gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--divider); font-weight: 650; }
+.brand img { width: 32px; height: 32px; }
+#app .areas h1 { display: block; margin: 24px 0 18px; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
+#app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr)); gap: 16px; }
+#app .areas li { gap: 0; padding: 0; border-radius: 6px; }
+.chart-preview { display: block; width: 100%; height: clamp(74px, 10vw, 115px); object-fit: cover; border-radius: 5px 5px 0 0; }
+.areas .info { padding: 16px 16px 12px; }
+.areas .info b { font-size: 22px; line-height: 28px; }
+.areas li .actions { padding: 0 16px 16px; }
+.areas .actions > * { border-radius: 5px; }
+.areas .a11y { margin-top: 22px; padding-inline: 0; border-width: 1px 0 0; border-radius: 0; background: transparent; }
+#app .areas p { margin-top: 8px; }
+#load-status { position: fixed; z-index: 110; top: 24px; left: 50%; transform: translateX(-50%); margin: 0; padding: 12px 18px; border: 1px solid var(--divider); border-radius: 6px; background: var(--surface); }
+@media (max-width: 480px) {
+  .areas li .actions { padding: 0 12px 12px; }
+  .areas .actions > * { padding-inline: 10px; }
+  .areas .info { padding: 10px 12px; }
+  #app .areas h1 { margin: 18px 0 14px; }
+}
+.areas .notice + .actions { margin-top: 16px; }

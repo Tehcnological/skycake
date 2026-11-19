@@ -106,13 +106,15 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-where { display: flex; flex-direction: column; gap: 2px; padding: 8px 14px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-panel); background: color-mix(in srgb, var(--sc-panel) 96%, transparent); box-shadow: var(--sc-shadow); }
 .skycake .sc-where b { font: 600 16px/22px var(--sc-head); }
 .skycake .sc-where span { font: 400 12px/16px var(--sc-sans); color: var(--sc-soft); }
-.skycake .sc-find { display: none; }
+.skycake .sc-area-close, .skycake .sc-find { display: none; }
 
 /* Corners (desktop). */
 .skycake .sc-tl, .skycake .sc-tr, .skycake .sc-br { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 8px; }
 /* A definite height (from the figure), so the airspace list can scroll inside it. Under the area's card when there is one. */
 .skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; max-height: calc(100% - 2 * var(--sc-gap)); }
+@media (min-width: 861px) {
 .skycake:has(.sc-where) .sc-tl { top: calc(var(--sc-gap) + 66px); max-height: calc(100% - 2 * var(--sc-gap) - 66px); }
+}
 .skycake .sc-tl .sc-pill { flex: none; }
 /* Above the tool rail (six rows and its padding); the shown procedures scroll when they do not fit. */
 .skycake .sc-tr { right: var(--sc-gap); top: var(--sc-gap); width: min(400px, calc(100% - 320px)); max-height: calc(100% - 3 * var(--sc-gap) - 6 * var(--sc-row) - 26px); }
@@ -223,6 +225,9 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-head { position: static; order: -2; flex: none; height: var(--sc-headh); box-sizing: border-box; padding: 0 4px 0 16px; border-bottom: 1px solid var(--sc-frame); background: var(--sc-panel); }
   .skycake .sc-where { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; gap: 0; }
   .skycake .sc-where b, .skycake .sc-where span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .skycake .sc-head:has(.sc-area-close) { padding-left: 4px; }
+  .skycake .sc-area-close { display: inline-flex; align-items: center; justify-content: center; width: var(--sc-row); height: var(--sc-row); border: 0; background: none; color: var(--sc-ink); cursor: pointer; }
+  .skycake .sc-area-close span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .skycake .sc-find { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: auto; border: 0; border-radius: var(--sc-r-ctl); background: none; color: var(--sc-ink); cursor: pointer; }
   .skycake .sc-find[aria-expanded="true"] { background: var(--sc-sel); }
   .skycake .sc-tl .sc-pill { display: none; }

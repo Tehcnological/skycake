@@ -153,6 +153,10 @@ export function freeRoam(c) {
     const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: tab(L.close, ICONS.close) };
     tabs.inView.classList.add("sc-inview-tab");
     const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
+    if (c.close) {
+        tabs.close.className = "sc-area-close";
+        head.prepend(tabs.close);
+    }
     // The procedure plate panel (plate.ts), opened by the Plate button or tab, which show only when the area has charts.
     const plates = plateView(c, {
         show: (ref) => {
@@ -482,8 +486,7 @@ export function freeRoam(c) {
     const phone = matchMedia("(max-width: 860px) and (pointer: coarse)");
     const drawPhone = () => {
         fig.classList.toggle("sc-preview", phone.matches && !fig.classList.contains("full"));
-        fullButton.hidden = phone.matches;
-        tabs.close.hidden = !phone.matches;
+        tabs.close.hidden = !c.close && !fig.classList.contains("full");
     };
     const setFull = (on) => {
         fig.classList.toggle("full", on);
