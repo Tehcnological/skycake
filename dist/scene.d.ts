@@ -42,7 +42,7 @@ export type Scene = {
     procedures?: (ProcedureRef & {
         draw?: boolean;
     })[];
-    /** Drawn emphasised. */
+    /** Drawn emphasised; a highlighted area is raised too. */
     highlight?: Target[];
     /** A fixed spot, or flying a procedure for `seconds`. */
     airplane?: {
@@ -60,7 +60,8 @@ export type Scene = {
     /** Opens the plate panel to this chart in split; null closes it; left out, the panel stays as it is. */
     plate?: PlateRef | null;
 };
-/** What the viewer applies: every field filled in, names checked. raised holds area ids. */
+/** What the viewer applies: every field filled in, names checked. raised holds area ids. keepRaised: the raised areas show
+ * though the chart's rules would hide their kind (a lesson's Class B over the IFR chart its procedure picked). */
 export type Resolved = {
     camera: Camera | null;
     raised: Set<string>;
@@ -73,6 +74,7 @@ export type Resolved = {
     height: 1 | 4;
     tags: boolean;
     chart: ChartName;
+    keepRaised: boolean;
 };
 export declare class SceneError extends Error {
 }

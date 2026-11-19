@@ -1,6 +1,6 @@
 // A scene: everything the view shows at one moment. Free roam starts from one; walkthrough steps and quiz questions
 // each set one. resolve() fills in the defaults and checks every name against the area's data.
-import { KINDS, pickChart } from "./airspace.js";
+import { KINDS, chartsIn, modeOf, pickChart } from "./airspace.js";
 export class SceneError extends Error {
 }
 export function resolve(scene, data) {
@@ -24,6 +24,10 @@ export function resolve(scene, data) {
     const highlight = scene.highlight ?? [];
     for (const t of highlight)
         target(t, data);
+    // A highlighted area stands up out of the chart: what a lesson or question is about is in 3D.
+    for (const t of highlight)
+        if ("area" in t)
+            raised.add(t.area);
     const airplane = scene.airplane ?? null;
     if (airplane && "along" in airplane)
         procedureOf(airplane.along, data);
@@ -46,7 +50,10 @@ export function resolve(scene, data) {
     if (camera && typeof camera === "object" && "frame" in camera)
         for (const t of camera.frame)
             target(t, data);
-    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+    // A scene that shows or flies a procedure and names no chart is on an IFR chart, with what it raises still shown.
+    const ifr = scene.chart === undefined && (procedures.length > 0 || !!(airplane && "along" in airplane)) ? chartsIn(data.charts, "ifr")[0] : undefined;
+    const chart = pickChart(data.charts, scene.chart ?? ifr);
+    return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart, keepRaised: !!ifr && modeOf(chart) === "ifr" };
 }
 function procedureOf({ airport, name }, data) {
     if (!data.airports.find((a) => a.id === airport)?.procedures.some((p) => p.name === name))

@@ -112,6 +112,9 @@ export type Labels = {
         /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
         findPiece: (name: string, floor: string, ceiling: string) => string;
         findFix: (fix: string) => string;
+        /** Tap a procedure's final approach fix, or its missed approach point, by role: the tags name the fixes only. */
+        findFaf: (procedure: string) => string;
+        findMap: (procedure: string) => string;
         floor: string;
         ceiling: string;
         cls: string;

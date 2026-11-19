@@ -16,7 +16,7 @@ import { groundFt } from "./airclass.js";
 import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn } from "./airspace.js";
 import { dragZoom, isSecondTap, isTap, TAP_SLOP, twoFingers } from "./gesture.js";
 import { fixTags } from "./roam.js";
-import { along, flightLine } from "./fly.js";
+import { along, flightLine, flightShares } from "./fly.js";
 import { PLANE_GLB } from "./plane.js";
 const FT_PER_NM = 6076;
 const BLUE = 0x2f6bff;
@@ -310,8 +310,8 @@ a11y = false) {
         return m;
     };
     // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
-    let mode = "vfr";
-    const inMode = (l) => shownIn(mode, l.area.kind);
+    let mode = "vfr", keepRaised = false;
+    const inMode = (l) => shownIn(mode, l.area.kind) || (keepRaised && l.goal === 1);
     // Each pixel takes one layer of airspace color: a depth-only pass finds the nearest surface, then only that surface draws.
     // The FAA's shelves overlap their cores in one plane (Tucson's 4,200-6,600 shelf covers its surface area, both up to 6,600),
     // and such ties would fight. So the depth pass sits just behind the surfaces, letting all tied ones through, and the first
@@ -631,7 +631,8 @@ a11y = false) {
     // The airplane: outside the world, so a taller height scale lifts it without stretching it. Built on first use.
     let craft = null, prop = null, craftLoad = null;
     let flight = null, planeTag = null;
-    const planeAt = new THREE.Vector3();
+    const planeAt = new THREE.Vector3(), planeTagAt = new THREE.Vector3();
+    let perNm = 1; // the model's scale for a 1 NM span
     const loadCraft = () => (craftLoad ??= new GLTFLoader()
         .parseAsync(Uint8Array.from(atob(PLANE_GLB), (c) => c.charCodeAt(0)).buffer, "")
         .then((gltf) => {
@@ -643,11 +644,11 @@ a11y = false) {
             prop.traverse((o) => o.geometry?.translate(-c.x, -c.y, -c.z));
             prop.position.add(c);
         }
-        // Nose to -z (north), up +y; centred, scaled to a 0.6 NM span.
+        // Nose to -z (north), up +y; centred. Scaled in placePlane.
         const box = new THREE.Box3().setFromObject(model);
         model.position.sub(box.getCenter(new THREE.Vector3()));
         craft = new THREE.Group().add(model);
-        craft.scale.setScalar(0.6 / (box.max.x - box.min.x));
+        perNm = 1 / (box.max.x - box.min.x);
         scene.add(craft);
         placePlane();
     })
@@ -659,6 +660,8 @@ a11y = false) {
             return;
         const p = along(flight, tNow);
         planeAt.copy(toLocal(p));
+        // The altitude tag clears the airplane, whatever the height scale.
+        planeTagAt.copy(planeAt).setY(planeAt.y + 0.6 / world.scale.y);
         if (planeTag) {
             const text = Math.round(p[2]).toLocaleString("en-US");
             if (planeTag.el.textContent !== text) {
@@ -669,6 +672,8 @@ a11y = false) {
         if (!craft)
             return;
         craft.position.set(planeAt.x, planeAt.y * world.scale.y, planeAt.z);
+        // A 1.2 NM span flying a procedure; parked for a question, 2 NM, to find in a frame 10 NM across.
+        craft.scale.setScalar(perNm * (flight.length === 1 ? 2 : 1.2));
         // Along the line, or north on a single point.
         const [a, b] = tNow < 1 ? [p, along(flight, tNow + 0.001)] : [along(flight, tNow - 0.001), p];
         const [dx, dz] = [X(b[1]) - X(a[1]), Z(b[0]) - Z(a[0])];
@@ -1097,6 +1102,7 @@ a11y = false) {
         raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
         apply: async (sc, procs, now = false, framing = [], time = 1) => {
             mode = modeOf(sc.chart);
+            keepRaised = sc.keepRaised;
             airways.visible = mode === "ifr";
             for (const l of lives)
                 set(l, sc.raised.has(l.area.id));
@@ -1126,21 +1132,26 @@ a11y = false) {
                 t.el.classList.toggle("hl", hl.some((x) => "airport" in x && x.airport === t.el.textContent));
             // A procedure with draw grows path by path over the timeline; each fix tag shows once its point is drawn.
             const shows = new Map();
+            // Flown by the airplane, a procedure's route grows under it, by distance, and the paths off the route draw at the end.
+            const flown = sc.airplane && "along" in sc.airplane ? sc.airplane.along : null;
             procs.forEach((a) => {
                 const draw = sc.procedures.find((r) => same(r, a))?.draw, n = a.paths.length, o = dim(hlProcs.includes(a));
+                const shares = flown && same(flown, a) ? flightShares(a) : null;
                 a.paths.forEach((p, k) => {
+                    const [from, to] = shares ? (shares.get(p) ?? [0.999, 1]) : [k / n, (k + 1) / n];
                     const pts = p.pts.map(toLocal), run = runOf(pts);
                     const main = p.seg === "final" || p.seg === "common";
                     const c = curtain(pts, PATH[p.seg], o * (main ? 0.28 : p.seg === "vectors" ? 0.08 : 0.14));
                     const lines = path(pts, PATH[p.seg], p.seg === "missed" || p.seg === "vectors", o);
                     if (draw && lines.length)
-                        grows.push({ from: k / n, to: (k + 1) / n, pts, run, lines, curtain: c.mesh, quads: c.quads });
+                        grows.push({ from, to, pts, run, lines, curtain: c.mesh, quads: c.quads });
                     if (!draw)
                         return;
                     for (const f of a.fixes) {
                         const j = pts.findIndex((q) => Math.hypot(q.x - X(f.lon), q.z - Z(f.lat)) < 0.05);
-                        if (j >= 0 && !shows.has(f))
-                            shows.set(f, (k + run[j] / (run[run.length - 1] || 1)) / n);
+                        // The earliest any path reaches it: an off-route transition can list a fix the route reaches sooner.
+                        if (j >= 0)
+                            shows.set(f, Math.min(shows.get(f) ?? 1, from + (to - from) * (run[j] / (run[run.length - 1] || 1))));
                     }
                 });
                 if (draw)
@@ -1165,9 +1176,15 @@ a11y = false) {
             if (plane && !flight)
                 console.warn("skycake: the airplane's procedure was not passed to apply");
             planeTag = null;
+            if (flight?.length === 1) {
+                // A parked airplane: a dashed line down to the ground and a ring there, so where it is reads at any angle.
+                const [lat, lon, ft] = flight[0], x = X(lon), z = Z(lat);
+                path([new THREE.Vector3(x, nm(ft), z), new THREE.Vector3(x, groundAt(x, z), z)], 0xffffff, true, 0.9);
+                route.add(loop(circle(x, z, 0.5), 0xffffff, 3));
+            }
             if (flight) {
                 // The altitude shows even if the model fails to load: an airplane question is asked about it.
-                addTag(el("div", "tag plane"), planeAt, -1, () => true, approachTags);
+                addTag(el("div", "tag plane"), planeTagAt, -1, () => true, approachTags);
                 planeTag = approachTags[approachTags.length - 1];
                 void loadCraft();
             }

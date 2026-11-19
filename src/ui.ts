@@ -104,6 +104,9 @@ export type Labels = {
     /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
     findPiece: (name: string, floor: string, ceiling: string) => string;
     findFix: (fix: string) => string;
+    /** Tap a procedure's final approach fix, or its missed approach point, by role: the tags name the fixes only. */
+    findFaf: (procedure: string) => string;
+    findMap: (procedure: string) => string;
     floor: string;
     ceiling: string;
     cls: string;
@@ -207,6 +210,8 @@ export const LABELS: Labels = {
     findArea: (name) => `Placeholder: Tap the ${name}`,
     findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
     findFix: (fix) => `Placeholder: Tap ${fix}`,
+    findFaf: (procedure) => `Placeholder: Tap the final approach fix of the ${procedure}`,
+    findMap: (procedure) => `Placeholder: Tap the missed approach point of the ${procedure}`,
     floor: "Placeholder: What is the floor of the highlighted airspace?",
     ceiling: "Placeholder: What is its ceiling?",
     cls: "Placeholder: What class is the highlighted airspace?",

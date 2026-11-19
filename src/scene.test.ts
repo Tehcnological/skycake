@@ -137,3 +137,21 @@ test("a step without a plate shows the nearest earlier step's chart, whatever wa
   // The player and the quiz (DOM only, so read, not run) both show each step's or item's scene through it.
   for (const f of ["player.ts", "quizui.ts"]) assert.match(readFileSync(new URL(f, import.meta.url), "utf8"), /plate: inheritedPlate\(/, f);
 });
+
+test("a scene that shows or flies a procedure and names no chart is on the IFR chart, its raised areas still shown", () => {
+  const over = { url: "o.webp", bounds: data.bounds };
+  const d = { ...data, charts: { sectional: "s.webp", tac: over, low: "l.webp", area: over } };
+  const ils = { airport: "KPHX", name: "ILS RWY 07L" };
+  const r = resolve({ raise: ["B"], procedures: [ils] }, d);
+  assert.deepEqual([r.chart, r.keepRaised], ["area", true]);
+  assert.equal(resolve({ airplane: { along: ils, seconds: 10 } }, d).chart, "area");
+  assert.deepEqual([resolve({ procedures: [ils], chart: "tac" }, d).chart, resolve({ procedures: [ils], chart: "tac" }, d).keepRaised], ["tac", false]);
+  assert.deepEqual([resolve({ raise: ["B"] }, d).chart, resolve({ raise: ["B"] }, d).keepRaised], ["tac", false]);
+  // An area without IFR charts stays on its VFR one.
+  assert.equal(resolve({ procedures: [ils] }, { ...data, charts: { sectional: "s.webp" } }).chart, "sectional");
+});
+
+test("a highlighted area is raised too", () => {
+  const r = resolve({ highlight: [{ area: "d-chandler-municipal-airport-class-d" }, { airport: "KPHX" }] }, data);
+  assert.deepEqual([...r.raised], ["d-chandler-municipal-airport-class-d"]);
+});

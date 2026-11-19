@@ -90,6 +90,8 @@ export const LABELS = {
         findArea: (name) => `Placeholder: Tap the ${name}`,
         findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
         findFix: (fix) => `Placeholder: Tap ${fix}`,
+        findFaf: (procedure) => `Placeholder: Tap the final approach fix of the ${procedure}`,
+        findMap: (procedure) => `Placeholder: Tap the missed approach point of the ${procedure}`,
         floor: "Placeholder: What is the floor of the highlighted airspace?",
         ceiling: "Placeholder: What is its ceiling?",
         cls: "Placeholder: What class is the highlighted airspace?",
