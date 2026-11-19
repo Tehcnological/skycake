@@ -14,7 +14,7 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { groundFt } from "./airclass.js";
 import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn } from "./airspace.js";
-import { isTap, twoFingers } from "./gesture.js";
+import { dragZoom, isSecondTap, isTap, twoFingers } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import { along, flightLine } from "./fly.js";
 import { PLANE_GLB } from "./plane.js";
@@ -845,6 +845,42 @@ a11y = false) {
         const r = el3d.getBoundingClientRect();
         return [e.clientX - r.left, e.clientY - r.top];
     };
+    // A pen has no wheel or pinch: a double-tap and drag zooms, about the tapped spot, as on a map app. In the capture
+    // phase, so the controls (switched off for it) don't also start a drag.
+    let penUp = null;
+    let penZoom = null;
+    el3d.addEventListener("pointerdown", (e) => {
+        if (e.pointerType !== "pen" || e.button !== 0 || !isSecondTap(penUp, at(e), e.timeStamp))
+            return;
+        penUp = null;
+        controls.enabled = false;
+        penZoom = { y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone() };
+        el3d.setPointerCapture(e.pointerId);
+    }, { capture: true });
+    el3d.addEventListener("pointermove", (e) => {
+        if (!penZoom || e.pointerType !== "pen")
+            return;
+        takeOver();
+        const now = camera.position.distanceTo(controls.target);
+        const want = THREE.MathUtils.clamp(penZoom.off / dragZoom(e.clientY - penZoom.y), controls.minDistance, controls.maxDistance);
+        for (const q of [camera.position, controls.target])
+            q.sub(penZoom.p).multiplyScalar(want / now).add(penZoom.p);
+        touchMoved();
+    });
+    const penDone = (e) => {
+        if (e.pointerType !== "pen")
+            return;
+        if (!penZoom) {
+            // Only a tap starts the pair: a quick touch after a drag is a new drag.
+            penUp = Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 6 ? { at: at(e), ms: e.timeStamp } : null;
+            return;
+        }
+        penZoom = null;
+        controls.enabled = true;
+        most = 0; // the zoom's lift is not a tap
+    };
+    el3d.addEventListener("pointerup", penDone, { capture: true });
+    el3d.addEventListener("pointercancel", penDone, { capture: true });
     el3d.addEventListener("pointerdown", (e) => {
         if (!fingers.size) {
             down = [e.clientX, e.clientY];

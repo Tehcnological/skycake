@@ -64,3 +64,10 @@ export function twoFingers(a0: Pt, b0: Pt): (a: Pt, b: Pt) => TwoFingerStep | nu
 /** Fingers: the most on the view at once. Lifting after a pinch or a long press is not a tap. loose: accessibility mode. */
 export const isTap = (t: { fingers: number; moved: number; ms: number }, loose = false) =>
   t.fingers === 1 && (loose ? t.moved <= TAP_PX_LOOSE : t.moved <= TAP_PX && t.ms < TAP_MS);
+
+const DOUBLE_MS = 350, DOUBLE_PX = 24;
+/** A second tap soon after and near the first: with a pen, it starts a zoom, as a map app's double-tap and drag. */
+export const isSecondTap = (first: { at: Pt; ms: number } | null, at: Pt, ms: number) =>
+  !!first && ms - first.ms < DOUBLE_MS && Math.hypot(at[0] - first.at[0], at[1] - first.at[1]) < DOUBLE_PX;
+/** How far a double-tap and drag zooms: down zooms in, up zooms out, twice per 150 px. */
+export const dragZoom = (dy: number) => 2 ** (dy / 150);
