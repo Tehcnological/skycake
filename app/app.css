@@ -97,7 +97,17 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 .areas .actions > * { border-radius: 5px; }
 .areas .a11y { margin-top: 22px; padding-inline: 0; border-width: 1px 0 0; border-radius: 0; background: transparent; }
 #app .areas p { margin-top: 8px; }
-#load-status { position: fixed; z-index: 110; top: 24px; left: 50%; transform: translateX(-50%); margin: 0; padding: 12px 18px; border: 1px solid var(--divider); border-radius: 6px; background: var(--surface); }
+/* The loading screen: over the map until it is built and ready to move. The spinner turns on the compositor, so it
+   keeps turning while the page is busy. */
+#load-status { position: fixed; z-index: 110; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 16px; background: var(--canvas); text-align: center; }
+#load-status p { margin: 0; }
+#load-status .spinner { width: 32px; height: 32px; box-sizing: border-box; border: 3px solid var(--divider); border-top-color: var(--mark); border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(1turn); } }
+#load-status progress { width: min(240px, 70vw); height: 4px; border: 0; border-radius: 2px; background: var(--divider); accent-color: var(--mark); appearance: none; }
+#load-status progress::-webkit-progress-bar { border-radius: 2px; background: var(--divider); }
+#load-status progress::-webkit-progress-value { border-radius: 2px; background: var(--mark); transition: width 0.2s; }
+#load-status progress::-moz-progress-bar { border-radius: 2px; background: var(--mark); }
+@media (prefers-reduced-motion: reduce) { #load-status .spinner { animation-duration: 3s; } }
 @media (max-width: 480px) {
   .areas li .actions { padding: 0 12px 12px; }
   .areas .actions > * { padding-inline: 10px; }

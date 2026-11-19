@@ -1,4 +1,4 @@
-import type { Fix, Procedure } from "./procedure.js";
+import type { Fix, Procedure, ProcType } from "./procedure.js";
 import type { Kind } from "./airspace.js";
 import type { AreaRef, Camera, ProcedureRef, Scene } from "./scene.js";
 /**
@@ -14,13 +14,16 @@ export type Roam = {
 };
 /** Starts from the first scene: its procedures and diagram are shown and removable, its camera used until a change. */
 export declare function start(first: Scene, airport?: string): Roam;
-/** Adds a procedure once and frames what is shown; its airport becomes the current one, its diagram on only if it has one. */
-export declare function add(r: Roam, p: ProcedureRef, hasDiagram?: (airport: string) => boolean): Roam;
+/**
+ * Adds a procedure once and frames what is shown; its airport becomes the current one, its diagram on only if it has
+ * one. With typeOf, adding a departure removes the approaches shown and adding an approach removes the departures.
+ */
+export declare function add(r: Roam, p: ProcedureRef, hasDiagram?: (airport: string) => boolean, typeOf?: (p: ProcedureRef) => ProcType | undefined): Roam;
 /** Removing the last one goes back to the first view. */
 export declare function remove(r: Roam, p: ProcedureRef): Roam;
 /** Makes an airport current; its diagram stays on only if it has one. */
 export declare function pickAirport(r: Roam, airport: string, hasDiagram: (airport: string) => boolean): Roam;
-/** Turning it on frames the airport, even with procedures shown; turning it off leaves the camera. */
+/** Turning it on or off leaves the camera where it is. */
 export declare function toggleDiagram(r: Roam, hasDiagram: (airport: string) => boolean): Roam;
 /**
  * The raise to show: the first scene's until the viewer has shown it, then exactly what is raised on screen (raised:

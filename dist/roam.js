@@ -4,9 +4,16 @@ export function start(first, airport) {
     const procedures = (first.procedures ?? []).map((p) => ({ airport: p.airport, name: p.name }));
     return { first, procedures, airport: first.diagram ?? airport ?? procedures[0]?.airport ?? null, diagram: !!first.diagram, camera: first.camera ?? "fit" };
 }
-/** Adds a procedure once and frames what is shown; its airport becomes the current one, its diagram on only if it has one. */
-export function add(r, p, hasDiagram = () => true) {
-    const procedures = r.procedures.some((q) => same(q, p)) ? r.procedures : [...r.procedures, { airport: p.airport, name: p.name }];
+// A departure and an approach are never flown together, so showing one takes the other kind away. Arrivals go with either.
+const APART = { SID: "IAP", IAP: "SID" };
+/**
+ * Adds a procedure once and frames what is shown; its airport becomes the current one, its diagram on only if it has
+ * one. With typeOf, adding a departure removes the approaches shown and adding an approach removes the departures.
+ */
+export function add(r, p, hasDiagram = () => true, typeOf) {
+    const apart = typeOf && APART[typeOf(p)];
+    const kept = apart ? r.procedures.filter((q) => typeOf(q) !== apart) : r.procedures;
+    const procedures = kept.some((q) => same(q, p)) ? kept : [...kept, { airport: p.airport, name: p.name }];
     return { ...r, procedures, airport: p.airport, diagram: r.diagram && hasDiagram(p.airport), camera: undefined };
 }
 /** Removing the last one goes back to the first view. */
@@ -19,10 +26,10 @@ export function remove(r, p) {
 export function pickAirport(r, airport, hasDiagram) {
     return { ...r, airport, diagram: r.diagram && hasDiagram(airport), camera: null };
 }
-/** Turning it on frames the airport, even with procedures shown; turning it off leaves the camera. */
+/** Turning it on or off leaves the camera where it is. */
 export function toggleDiagram(r, hasDiagram) {
     const diagram = !r.diagram && r.airport !== null && hasDiagram(r.airport);
-    return { ...r, diagram, camera: diagram ? { frame: [{ diagram: r.airport }] } : null };
+    return { ...r, diagram, camera: null };
 }
 /**
  * The raise to show: the first scene's until the viewer has shown it, then exactly what is raised on screen (raised:

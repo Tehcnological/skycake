@@ -60,3 +60,7 @@ Chris chose to keep the current behavior for all three: lessons stay on the host
 1. Keep lessons on the host sites, or give the standalone viewer a lesson entry point? The current draft keeps the viewer focused on exploring areas.
 2. Keep Split as the initial plate view on phones, or open the plate full-screen? Split preserves map context, while full-screen gives a more legible first look.
 3. Keep both the header search shortcut and the Procedure tab, or consolidate them? Both currently open the same picker. Consolidation needs a decision about which location should own search.
+
+## Later
+
+- Every departure from an airport drawn at once, so routes can be compared and picked from the map rather than the list. Worth a storyboard before any build; free roam shows only the departures picked, never with approaches.

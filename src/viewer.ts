@@ -96,6 +96,8 @@ export type View = {
   raiseArea(id: string, on: boolean): void;
   /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
   raisedAreas(): string[];
+  /** Loads a chart's images ahead of showing it (not onto the GPU), so picking it later is quick. */
+  preload(chart: ChartName): void;
   /**
    * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
    * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
@@ -146,6 +148,17 @@ export async function build(
   a11y = false,
 ): Promise<View> {
   const { bounds: b } = data;
+  // Loading steps, for a page's loading screen: terrain, chart, airspace, then prepare (the GPU's first work).
+  // Each waits for a paint, so the step shows before the work that follows holds the page (a background tab, which
+  // paints nothing, goes on after 50 ms).
+  const step = (name: "terrain" | "chart" | "airspace" | "prepare") => {
+    host.dispatchEvent(new CustomEvent("skycake-loading", { bubbles: true, detail: { step: name } }));
+    return new Promise<void>((done) => {
+      requestAnimationFrame(() => setTimeout(done));
+      setTimeout(done, 50);
+    });
+  };
+  await step("terrain");
   const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
   const k = Math.cos((lat0 * Math.PI) / 180);
   const X = (lon: number) => (lon - lon0) * 60 * k;
@@ -243,6 +256,8 @@ export async function build(
   // A chart over the whole area (sectional or low) and, when on, a sharper one over its own map (TAC or area chart).
   const load = async (url: string) => {
     const t = await new THREE.TextureLoader().loadAsync(url);
+    // Decoded off the main thread now, not in the frame that first draws it.
+    await (t.image as HTMLImageElement).decode?.().catch(() => {});
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -253,7 +268,9 @@ export async function build(
     return textures.get(url)!;
   };
   const { tac, low, area } = data.charts;
+  await step("chart");
   const [sectional, tacTex] = await Promise.all([texture(data.charts.sectional), tac ? texture(tac.url) : new THREE.Texture()]);
+  await step("airspace");
   const span = (lo: number, hi: number, a: number, b: number) => [(lo - a) / (b - a), (hi - a) / (b - a)];
   const rectOf = (m: Bounds) => {
     const [u0, u1] = span(m.w, m.e, b.w, b.e);
@@ -965,6 +982,7 @@ export async function build(
   });
 
   let sized = [0, 0];
+  let looping = false;
   const size = () => {
     const { clientWidth: w, clientHeight: h } = host;
     const changed = sized[0] > 0 && (w !== sized[0] || h !== sized[1]);
@@ -972,9 +990,12 @@ export async function build(
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    dirty = true;
     // A new shape (full screen, a turned phone) would clip what was in view.
     if (changed && framed) frame(framed.spots, framed.tilt, true);
+    // Drawn now: setSize clears the canvas, and waiting for the next frame shows it blank (a flash while dragging the
+    // plate's divider). Not before the loop starts, when the scene is still being built.
+    if (looping) draw();
+    else dirty = true;
   };
   new ResizeObserver(size).observe(host);
   size();
@@ -1198,6 +1219,10 @@ export async function build(
       });
       placeBadges();
     },
+    preload: (name) => {
+      const over = name === "tac" ? tac : name === "area" ? area : undefined;
+      for (const u of [(name === "area" || name === "low") && low ? low : data.charts.sectional, over?.url]) if (u) texture(u).catch(() => {});
+    },
     hints: (on) => {
       host.classList.toggle("sc-no-hints", !on);
       for (const t of approachTags) t.w = 0; // the altitudes change the tags' widths
@@ -1206,6 +1231,27 @@ export async function build(
   };
 
   frame(whole(), 32, true);
+
+  // The first frame's work, the chart uploads and every shader (hidden things too, for the first raise), done now,
+  // under the page's loading screen, not as a stall once the map is up.
+  await step("prepare");
+  for (const t of [sectional, tacTex]) renderer.initTexture(t);
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((o) => {
+    if (o.visible) return;
+    hidden.push(o);
+    o.visible = true;
+  });
+  await renderer.compileAsync(scene, camera);
+  for (const o of hidden) o.visible = false;
+  const draw = () => {
+    dirty = false;
+    renderer.render(scene, camera);
+    place();
+    placeBadges();
+  };
+  draw();
+  looping = true;
 
   let last = performance.now();
   renderer.setAnimationLoop((now) => {
@@ -1236,11 +1282,7 @@ export async function build(
     }
     if (free) keepOnChart();
     controls.update();
-    if (!dirty) return;
-    dirty = false;
-    renderer.render(scene, camera);
-    place();
-    placeBadges();
+    if (dirty) draw();
   });
 
   return view;

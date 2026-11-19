@@ -86,6 +86,17 @@ airport = () => { },
 /** Accessibility mode at first; View.setA11y changes it. */
 a11y = false) {
     const { bounds: b } = data;
+    // Loading steps, for a page's loading screen: terrain, chart, airspace, then prepare (the GPU's first work).
+    // Each waits for a paint, so the step shows before the work that follows holds the page (a background tab, which
+    // paints nothing, goes on after 50 ms).
+    const step = (name) => {
+        host.dispatchEvent(new CustomEvent("skycake-loading", { bubbles: true, detail: { step: name } }));
+        return new Promise((done) => {
+            requestAnimationFrame(() => setTimeout(done));
+            setTimeout(done, 50);
+        });
+    };
+    await step("terrain");
     const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
     const k = Math.cos((lat0 * Math.PI) / 180);
     const X = (lon) => (lon - lon0) * 60 * k;
@@ -184,6 +195,8 @@ a11y = false) {
     // A chart over the whole area (sectional or low) and, when on, a sharper one over its own map (TAC or area chart).
     const load = async (url) => {
         const t = await new THREE.TextureLoader().loadAsync(url);
+        // Decoded off the main thread now, not in the frame that first draws it.
+        await t.image.decode?.().catch(() => { });
         t.colorSpace = THREE.SRGBColorSpace;
         t.anisotropy = renderer.capabilities.getMaxAnisotropy();
         return t;
@@ -195,7 +208,9 @@ a11y = false) {
         return textures.get(url);
     };
     const { tac, low, area } = data.charts;
+    await step("chart");
     const [sectional, tacTex] = await Promise.all([texture(data.charts.sectional), tac ? texture(tac.url) : new THREE.Texture()]);
+    await step("airspace");
     const span = (lo, hi, a, b) => [(lo - a) / (b - a), (hi - a) / (b - a)];
     const rectOf = (m) => {
         const [u0, u1] = span(m.w, m.e, b.w, b.e);
@@ -945,6 +960,7 @@ a11y = false) {
         tell(l, e);
     });
     let sized = [0, 0];
+    let looping = false;
     const size = () => {
         const { clientWidth: w, clientHeight: h } = host;
         const changed = sized[0] > 0 && (w !== sized[0] || h !== sized[1]);
@@ -952,10 +968,15 @@ a11y = false) {
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
-        dirty = true;
         // A new shape (full screen, a turned phone) would clip what was in view.
         if (changed && framed)
             frame(framed.spots, framed.tilt, true);
+        // Drawn now: setSize clears the canvas, and waiting for the next frame shows it blank (a flash while dragging the
+        // plate's divider). Not before the loop starts, when the scene is still being built.
+        if (looping)
+            draw();
+        else
+            dirty = true;
     };
     new ResizeObserver(size).observe(host);
     size();
@@ -1211,6 +1232,12 @@ a11y = false) {
             });
             placeBadges();
         },
+        preload: (name) => {
+            const over = name === "tac" ? tac : name === "area" ? area : undefined;
+            for (const u of [(name === "area" || name === "low") && low ? low : data.charts.sectional, over?.url])
+                if (u)
+                    texture(u).catch(() => { });
+        },
         hints: (on) => {
             host.classList.toggle("sc-no-hints", !on);
             for (const t of approachTags)
@@ -1219,6 +1246,29 @@ a11y = false) {
         },
     };
     frame(whole(), 32, true);
+    // The first frame's work, the chart uploads and every shader (hidden things too, for the first raise), done now,
+    // under the page's loading screen, not as a stall once the map is up.
+    await step("prepare");
+    for (const t of [sectional, tacTex])
+        renderer.initTexture(t);
+    const hidden = [];
+    scene.traverse((o) => {
+        if (o.visible)
+            return;
+        hidden.push(o);
+        o.visible = true;
+    });
+    await renderer.compileAsync(scene, camera);
+    for (const o of hidden)
+        o.visible = false;
+    const draw = () => {
+        dirty = false;
+        renderer.render(scene, camera);
+        place();
+        placeBadges();
+    };
+    draw();
+    looping = true;
     let last = performance.now();
     renderer.setAnimationLoop((now) => {
         const dt = Math.min((now - last) / 1000, 0.1);
@@ -1251,12 +1301,8 @@ a11y = false) {
         if (free)
             keepOnChart();
         controls.update();
-        if (!dirty)
-            return;
-        dirty = false;
-        renderer.render(scene, camera);
-        place();
-        placeBadges();
+        if (dirty)
+            draw();
     });
     return view;
 }

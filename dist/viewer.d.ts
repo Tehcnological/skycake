@@ -1,4 +1,4 @@
-import { type AirspaceFile, type Area, type Kind } from "./airspace.js";
+import { type AirspaceFile, type Area, type ChartName, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import type { Camera, Resolved } from "./scene.js";
 type Style = {
@@ -21,6 +21,8 @@ export type View = {
     raiseArea(id: string, on: boolean): void;
     /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
     raisedAreas(): string[];
+    /** Loads a chart's images ahead of showing it (not onto the GPU), so picking it later is quick. */
+    preload(chart: ChartName): void;
     /**
      * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
      * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.

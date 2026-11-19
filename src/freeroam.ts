@@ -185,10 +185,28 @@ export function freeRoam(c: Context): Promise<void> {
     head.prepend(tabs.close);
   }
 
+  // Showing a procedure the viewer picked: a departure takes the approaches away and the reverse (roam.ts), and the
+  // first approach in this view switches the chart to IFR, once, so someone who goes back to VFR stays there.
+  const typeOf = (p: ProcedureRef) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
+  let ifrDone = false;
+  let toIfr = () => {};
+  // While someone is choosing a procedure, the IFR chart that an approach would switch to loads.
+  const ifrNext = () => lastIn.ifr ?? chartsIn(data.charts, "ifr")[0];
+  const warmIfr = () => {
+    const ifr = ifrNext();
+    if (!ifrDone && ifr && modeOf(chart) === "vfr") v.preload(ifr);
+  };
+  const addShown = (p: ProcedureRef) => {
+    r = add(r, p, has, typeOf);
+    if (ifrDone || typeOf(p) !== "IAP") return;
+    ifrDone = true;
+    toIfr();
+  };
+
   // The procedure plate panel (plate.ts), opened by the Plate button or tab, which show only when the area has charts.
   const plates = plateView(c, {
     show: (ref) => {
-      r = add(r, ref, has);
+      addShown(ref);
       refresh();
     },
     mode: (m) => {
@@ -307,7 +325,10 @@ export function freeRoam(c: Context): Promise<void> {
   });
 
   // The plate panel's buttons.
-  const togglePlate = () => plates.set(plates.mode() === null ? "split" : null);
+  const togglePlate = () => {
+    warmIfr();
+    plates.set(plates.mode() === null ? "split" : null);
+  };
   plateButton.addEventListener("click", togglePlate);
   tabs.plate.addEventListener("click", () => {
     sheet(null);
@@ -376,7 +397,7 @@ export function freeRoam(c: Context): Promise<void> {
       results.append(h("p", { class: "sc-group" }, `${g.airport} · ${L.groups[g.type]}`));
       for (const hit of g.hits) {
         results.append(option([hit.procedure.name], () => {
-          r = add(r, { airport: hit.airport, name: hit.procedure.name }, has);
+          addShown({ airport: hit.airport, name: hit.procedure.name });
           // The list follows the airport the diagram now follows.
           if (browse !== null) browse = hit.airport;
           input.value = "";
@@ -398,6 +419,7 @@ export function freeRoam(c: Context): Promise<void> {
     refresh();
   };
   const showResults = () => {
+    warmIfr();
     const q = input.value;
     results.replaceChildren();
     const at = browse === null ? undefined : data.airports.find((a) => a.id === browse);
@@ -483,6 +505,13 @@ export function freeRoam(c: Context): Promise<void> {
     r = { ...r, camera: null };
     drawChart();
     refresh();
+  };
+  // The caller refreshes, with the camera framing the approach just added.
+  toIfr = () => {
+    const ifr = ifrNext();
+    if (modeOf(chart) === "ifr" || !ifr) return;
+    chart = lastIn.ifr = ifr;
+    drawChart();
   };
   const setMode = (mode: Mode) => {
     if (mode !== modeOf(chart)) setChart(lastIn[mode] ?? chartsIn(data.charts, mode)[0]);

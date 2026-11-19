@@ -132,6 +132,10 @@ async function startScreen(manifest: Manifest) {
 }
 
 const status = document.querySelector<HTMLElement>("#load-status")!;
+const statusText = status.querySelector("p")!;
+const progress = status.querySelector("progress")!;
+// The viewer's loading steps (skycake-loading events), in order, as the words under the spinner and the bar's value.
+const STEPS: Record<string, [number, string]> = { terrain: [1, "Loading terrain"], chart: [2, "Loading charts"], airspace: [3, "Building airspace"], prepare: [4, "Preparing the 3D view"] };
 try {
   const response = await fetch("data/manifest.json");
   if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
@@ -146,7 +150,14 @@ try {
     // replace, so Back after Close doesn't reopen the map.
     const a = manifest.areas[area];
     const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
-    status.textContent = `Loading ${title.name} chart…`;
+    statusText.textContent = `Loading ${title.name}…`;
+    progress.hidden = false;
+    root.addEventListener("skycake-loading", (e) => {
+      const [n, words] = STEPS[(e as CustomEvent).detail.step] ?? [];
+      if (!n) return;
+      progress.value = n;
+      statusText.textContent = `${title.name}: ${words}…`;
+    });
     await mount(root, { base: `data/${area}/`, title, close: () => location.replace(location.pathname), ...(scene && { scene }) });
   } else {
     await startScreen(manifest);
