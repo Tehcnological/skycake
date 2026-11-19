@@ -192,7 +192,10 @@ export async function build(
   // Far enough back to see the whole area in a tall, narrow view.
   controls.maxDistance = Math.max(300, 4 * Math.max(width, depth));
   controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the chart
-  controls.screenSpacePanning = false; // a right drag slides over the chart, not up off it
+  // A mouse as on a map app: a drag moves the map, a right drag (or Ctrl, Shift or Cmd and a drag) turns and tilts it,
+  // the wheel zooms. A drag slides over the chart, not up off it.
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.screenSpacePanning = false;
   controls.zoomToCursor = true;
   controls.touches = { ONE: null, TWO: null }; // touch is handled below, as on a maps app
   let dirty = true;
