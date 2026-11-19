@@ -317,8 +317,9 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 
 /* The airport list and an airport's procedures in the results. */
 .skycake .sc-airport { display: flex; align-items: center; gap: 10px; }
-.skycake .sc-airport b { font: 600 14px var(--sc-mono); }
-.skycake .sc-airport span { overflow: hidden; color: var(--sc-muted); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+/* The id in a fixed column, so the names line up and read at the id's size. */
+.skycake .sc-airport b { flex: none; min-width: 5ch; font: 600 14px var(--sc-mono); }
+.skycake .sc-airport span { overflow: hidden; color: var(--sc-soft); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .skycake .sc-back { color: var(--sc-muted); }
 .skycake .sc-back::before { content: "‹ "; }
 

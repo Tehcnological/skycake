@@ -13,6 +13,20 @@ Reviewed November 19, 2026, starting at `3c21590`. The installable mobile viewer
 | Medium | 5. Find a procedure and read a plate · [search](docs/ui-audit/phone-search.png) · [phone split](docs/ui-audit/phone-plate.png) · [desktop split](docs/ui-audit/desktop-plate.png) | Airport IDs scan well, but text identifying each airport is small beside its ID. Search and Procedure enter the same picker with different labels. Split keeps context and the plate can be enlarged. At phone size the initial plate is too small to read without zooming. |
 | Lower | 6. Learn with the embedded player | Walkthroughs and quizzes have separate demo entry points. Production lesson content and labels belong to the host. The standalone chooser gives no route to these modes. Decide whether they belong in this app before adding navigation. |
 
+## Status on this branch
+
+| Finding | Status |
+| --- | --- |
+| 1. Open an area | Done. The shell names the chart while it loads, and a failed manifest or chart load shows Try again (plus Choose an area for a chart). |
+| 2. Return to areas | Done. Close sits at the leading edge of the phone header for touch and mouse alike, and is no longer a tab. |
+| 3. Raise airspace | Done. The desktop offset under the area card applies only above 860 px, so the phone sheet sits on its tab bar. |
+| 4. Choose and save an area | Done. Chart previews, side by side on desktop, Open Miami / Open Phoenix, Save offline with its size, and the accessibility switch as a plain row. |
+| 5. Find a procedure and read a plate | Done for airport names: 14 px like the ID, in the brighter text color, in a fixed ID column. Split as the first phone plate view and the two entries to the picker are kept by decision (below). |
+| 6. Learn with the embedded player | Kept by decision: lessons stay on the host sites. |
+| States: empty list, bare Retry | Done. An empty manifest says No areas available; a failed save says Retry download and names its area to screen readers. |
+
+`src/style.test.ts` checks the stylesheet rules these fixes depend on.
+
 ## Accessibility and states
 
 The existing system typeface, reserved chart colors, visible focus styles, 44 px control rows, higher-contrast accessibility mode and reduced-motion contours are worth keeping. The phone header has little room for extra controls. Preserve one reachable exit without increasing the number of tabs. The chart attribution needs to stay legible over the map and sheets. The initial chooser has no empty-list message. Save exposes progress, completion and retry, though a bare Retry does not explain which operation failed.
@@ -39,6 +53,9 @@ The chart crops come from the bundled FAA sectionals and add about 90 KB total t
 - Search already has a no-matches message. A valid empty area manifest now gets its own message. Physical-device assistive technology and storage eviction remain unverified.
 
 ## Decisions for Chris
+
+Chris chose to keep the current behavior for all three: lessons stay on the host sites, phone plates open in Split, and both the header search and the Procedure tab stay.
+
 
 1. Keep lessons on the host sites, or give the standalone viewer a lesson entry point? The current draft keeps the viewer focused on exploring areas.
 2. Keep Split as the initial plate view on phones, or open the plate full-screen? Split preserves map context, while full-screen gives a more legible first look.
