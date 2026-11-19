@@ -74,7 +74,8 @@ export declare function suaKind(typeCode: string | null): Kind | null;
 export declare function feet(val: number, uom: string | null, code: string | null, ground: number): number;
 /** An altitude as the answer card says it: SFC at the surface, else feet with a thousands comma (5,000). */
 export declare const feetText: (ft: number, ground: number) => string;
-/** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
+/** Hundreds of feet, as the chart writes them; the ground floor reads SFC, and a ceiling up to but not including an
+ * altitude (2,999) reads with a minus (-30). */
 export declare const hundreds: (ft: number, ground: number) => string;
 /**
  * One readable id per area, in the same order: kind and name ("d-chandler-municipal-airport-class-d"); where that

@@ -219,7 +219,9 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
     // and the 700 ft area is a sheet.
     const upper = Number(p.UPPER_VAL);
     const rs = rings(f.geometry);
-    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND));
+    // TNI: up to but not including, charted with a minus (-30, under a Class B floor at 3,000): the ceiling is 2,999.
+    const tni = p.UPPER_DESC === "TNI" && ["B", "C", "D"].includes(kind) ? 1 : 0;
+    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND)) - tni;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rs });
   }
   for (const f of await query("Special_Use_Airspace")) {

@@ -846,8 +846,8 @@ a11y = false) {
         return [e.clientX - r.left, e.clientY - r.top];
     };
     // As on a map app: a double-click or a pen's double-tap zooms in on the spot, and holding the second press and dragging
-    // zooms (down in, up out), which a pen needs, having no wheel or pinch. In the capture phase, so the controls
-    // (switched off for it) don't also start a drag.
+    // zooms (down in, up out), which a pen needs, having no wheel or pinch. Caught in the capture phase and stopped there, so
+    // the controls never see the second press: they are never switched off, so nothing can leave them off.
     const pointer = (e) => (e.pointerType === "pen" || e.pointerType === "mouse") && e.button === 0;
     let firstUp = null;
     let zoomDrag = null;
@@ -863,7 +863,7 @@ a11y = false) {
         if (!pointer(e) || !isSecondTap(firstUp, at(e), e.timeStamp))
             return;
         firstUp = null;
-        controls.enabled = false;
+        e.stopImmediatePropagation();
         zoomDrag = { y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
         el3d.setPointerCapture(e.pointerId);
     }, { capture: true });
@@ -884,9 +884,9 @@ a11y = false) {
         if (!zoomDrag.moved && e.type === "pointerup")
             zoomTo(zoomDrag.p, zoomDrag.off / 2);
         zoomDrag = null;
-        controls.enabled = true;
         most = 0; // the second press is not a tap
     };
+    el3d.addEventListener("lostpointercapture", () => (zoomDrag = null));
     el3d.addEventListener("pointerup", pointerDone, { capture: true });
     el3d.addEventListener("pointercancel", pointerDone, { capture: true });
     el3d.addEventListener("pointerdown", (e) => {
