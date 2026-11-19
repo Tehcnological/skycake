@@ -15,7 +15,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { groundFt } from "./airclass.js";
 import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
-import { dragZoom, isSecondTap, isTap, twoFingers, type Pt } from "./gesture.js";
+import { dragZoom, isSecondTap, isTap, TAP_SLOP, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import type { Camera, ProcedureRef, Resolved, Target } from "./scene.js";
 import { along, flightLine } from "./fly.js";
@@ -879,39 +879,45 @@ export async function build(
     const r = el3d.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   };
-  // A pen has no wheel or pinch: a double-tap and drag zooms, about the tapped spot, as on a map app. In the capture
-  // phase, so the controls (switched off for it) don't also start a drag.
-  let penUp: { at: Pt; ms: number } | null = null;
-  let penZoom: { y: number; off: number; p: THREE.Vector3 } | null = null;
+  // As on a map app: a double-click or a pen's double-tap zooms in on the spot, and holding the second press and dragging
+  // zooms (down in, up out), which a pen needs, having no wheel or pinch. In the capture phase, so the controls
+  // (switched off for it) don't also start a drag.
+  const pointer = (e: PointerEvent) => (e.pointerType === "pen" || e.pointerType === "mouse") && e.button === 0;
+  let firstUp: { at: Pt; ms: number } | null = null;
+  let zoomDrag: { y: number; off: number; p: THREE.Vector3; moved: boolean } | null = null;
+  const zoomTo = (p: THREE.Vector3, off: number) => {
+    takeOver();
+    const want = THREE.MathUtils.clamp(off, controls.minDistance, controls.maxDistance);
+    const now = camera.position.distanceTo(controls.target);
+    for (const q of [camera.position, controls.target]) q.sub(p).multiplyScalar(want / now).add(p);
+    touchMoved();
+  };
   el3d.addEventListener("pointerdown", (e) => {
-    if (e.pointerType !== "pen" || e.button !== 0 || !isSecondTap(penUp, at(e), e.timeStamp)) return;
-    penUp = null;
+    if (!pointer(e) || !isSecondTap(firstUp, at(e), e.timeStamp)) return;
+    firstUp = null;
     controls.enabled = false;
-    penZoom = { y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone() };
+    zoomDrag = { y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
     el3d.setPointerCapture(e.pointerId);
   }, { capture: true });
   el3d.addEventListener("pointermove", (e) => {
-    if (!penZoom || e.pointerType !== "pen") return;
-    takeOver();
-    const now = camera.position.distanceTo(controls.target);
-    const want = THREE.MathUtils.clamp(penZoom.off / dragZoom(e.clientY - penZoom.y), controls.minDistance, controls.maxDistance);
-    for (const q of [camera.position, controls.target]) q.sub(penZoom.p).multiplyScalar(want / now).add(penZoom.p);
-    touchMoved();
+    if (!zoomDrag || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP) return;
+    zoomDrag.moved = true;
+    zoomTo(zoomDrag.p, zoomDrag.off / dragZoom(e.clientY - zoomDrag.y));
   });
-  const penDone = (e: PointerEvent) => {
-    if (e.pointerType !== "pen") return;
-    if (!penZoom) {
-      // Only a tap starts the pair: a quick touch after a drag is a new drag.
-      penUp = Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= 6 ? { at: at(e), ms: e.timeStamp } : null;
+  const pointerDone = (e: PointerEvent) => {
+    if (e.pointerType !== "pen" && e.pointerType !== "mouse") return;
+    if (!zoomDrag) {
+      // Only a tap or click starts the pair: a quick press after a drag is a new drag.
+      firstUp = e.button === 0 && Math.hypot(e.clientX - down[0], e.clientY - down[1]) <= TAP_SLOP ? { at: at(e), ms: e.timeStamp } : null;
       return;
     }
-    penZoom = null;
+    if (!zoomDrag.moved && e.type === "pointerup") zoomTo(zoomDrag.p, zoomDrag.off / 2);
+    zoomDrag = null;
     controls.enabled = true;
-    most = 0; // the zoom's lift is not a tap
-
+    most = 0; // the second press is not a tap
   };
-  el3d.addEventListener("pointerup", penDone, { capture: true });
-  el3d.addEventListener("pointercancel", penDone, { capture: true });
+  el3d.addEventListener("pointerup", pointerDone, { capture: true });
+  el3d.addEventListener("pointercancel", pointerDone, { capture: true });
   el3d.addEventListener("pointerdown", (e) => {
     if (!fingers.size) {
       down = [e.clientX, e.clientY];

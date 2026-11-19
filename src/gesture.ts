@@ -65,8 +65,11 @@ export function twoFingers(a0: Pt, b0: Pt): (a: Pt, b: Pt) => TwoFingerStep | nu
 export const isTap = (t: { fingers: number; moved: number; ms: number }, loose = false) =>
   t.fingers === 1 && (loose ? t.moved <= TAP_PX_LOOSE : t.moved <= TAP_PX && t.ms < TAP_MS);
 
-const DOUBLE_MS = 350, DOUBLE_PX = 24;
-/** A second tap soon after and near the first: with a pen, it starts a zoom, as a map app's double-tap and drag. */
+// The pair's limits are Windows' own for a pen, looser than a mouse's: a pen's tip wanders between taps.
+const DOUBLE_MS = 500, DOUBLE_PX = 30;
+/** How far a click or pen tap may wander and still be one, also before a drag zooms. */
+export const TAP_SLOP = 10;
+/** A second tap or click soon after and near the first: it zooms, as a map app's double-click and double-tap and drag. */
 export const isSecondTap = (first: { at: Pt; ms: number } | null, at: Pt, ms: number) =>
   !!first && ms - first.ms < DOUBLE_MS && Math.hypot(at[0] - first.at[0], at[1] - first.at[1]) < DOUBLE_PX;
 /** How far a double-tap and drag zooms: down zooms in, up zooms out, twice per 150 px. */
