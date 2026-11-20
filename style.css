@@ -113,7 +113,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* A definite height (from the figure), so the airspace list can scroll inside it. Under the area's card when there is one. */
 .skycake .sc-tl { left: var(--sc-gap); top: var(--sc-gap); width: 260px; max-height: calc(100% - 2 * var(--sc-gap)); }
 @media (min-width: 861px) {
-.skycake:has(.sc-back) .sc-tl { top: calc(var(--sc-gap) + 52px); max-height: calc(100% - 2 * var(--sc-gap) - 52px); }
+.skycake:has(.sc-quiz-back) .sc-tl { top: calc(var(--sc-gap) + 52px); max-height: calc(100% - 2 * var(--sc-gap) - 52px); }
 .skycake:has(.sc-where) .sc-tl { top: calc(var(--sc-gap) + 66px); max-height: calc(100% - 2 * var(--sc-gap) - 66px); }
 }
 .skycake .sc-tl .sc-pill { flex: none; }
@@ -359,7 +359,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-title { box-sizing: border-box; min-height: 44px; margin: 0; padding: 10px 14px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-panel); background: var(--sc-panel); box-shadow: var(--sc-shadow); font: 600 16px/22px var(--sc-head); }
 .skycake .sc-wtop .sc-pill { flex: none; }
 .skycake .sc-wtools { display: flex; gap: 8px; }
-.skycake .sc-back { flex: none; }
+.skycake .sc-quiz-back { flex: none; }
 .skycake .sc-player { position: absolute; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); box-sizing: border-box; width: min(640px, calc(100% - 2 * var(--sc-gap))); display: flex; flex-direction: column; gap: 8px; }
 .skycake .sc-step { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border: 1px solid var(--sc-frame); border-radius: var(--sc-r-panel); background: var(--sc-panel); box-shadow: var(--sc-shadow); }
 .skycake .sc-step p { margin: 0; font: 400 16px/24px var(--sc-sans); }

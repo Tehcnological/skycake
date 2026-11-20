@@ -589,7 +589,7 @@ export function freeRoam(c: Context): Promise<void> {
   // Back to the quiz: free roam takes itself off the page first.
   if (c.back) {
     const back = c.back;
-    const backButton = h("button", { type: "button", class: "sc-pill sc-back" }, L.backToQuiz);
+    const backButton = h("button", { type: "button", class: "sc-pill sc-quiz-back" }, L.backToQuiz);
     head.prepend(backButton);
     backButton.addEventListener("click", () => {
       ticket++;
