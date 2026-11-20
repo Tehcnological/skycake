@@ -82,6 +82,8 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
     view.hints(false);
     if ("choices" in q) {
         const list = h("div", "sc-choices");
+        if (o.platePick && !o.a11y)
+            list.classList.add("sc-plate-choices");
         q.choices.forEach((c, i) => {
             const b = button("sc-choice", c, () => {
                 if (!o.a11y)
@@ -205,6 +207,7 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
     };
     return {
         el,
+        selectChoice: (index) => choiceButtons[index]?.click(),
         reveal(right, facts, label, onNext) {
             for (const c of controls)
                 c.disabled = true;

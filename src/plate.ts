@@ -38,6 +38,8 @@ export function plateView(c: Context, on: {
   back?: () => HTMLElement;
   /** The map's room on an upright phone, for the divider. Default: the figure's box. */
   room?: () => { top: number; bottom: number };
+  /** A quiz locks the chart and receives taps in normalized image coordinates. */
+  pick?: (at: Pt) => void;
 }): Plates {
   if (!c.data.plates) {
     let told = false;
@@ -241,6 +243,11 @@ export function plateView(c: Context, on: {
     if (two) mid = middle(pair());
     if (down.size) return;
     const tapped = e.type === "pointerup" && isTap({ fingers: tap.fingers, moved: tap.moved, ms: e.timeStamp - tap.start }, c.a11y);
+    if (tapped && img?.naturalWidth && fig.classList.contains("sc-plate-question") && on.pick) {
+      const r = img.getBoundingClientRect();
+      on.pick([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+      return;
+    }
     if (tapped && tap.start - lastTap < 300) {
       fitNow();
       lastTap = -Infinity;
@@ -291,6 +298,7 @@ export function plateView(c: Context, on: {
   };
   const away = () => (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
   const shut = () => {
+    if (fig.classList.contains("sc-plate-question")) return;
     set(null);
     away();
   };
@@ -364,13 +372,17 @@ export function plateView(c: Context, on: {
         n = 1;
       }
       // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
-      if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) return;
+      const mode = fig.classList.contains("sc-plate-question") ? "full" : "split";
+      if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) {
+        if (mode === "full" && now !== mode) set(mode);
+        return;
+      }
       want = null;
       sceneAt = p.airport;
       show({ airport: p.airport, entry }, n);
       // Opening redraws the picker; an open panel needs it redrawn too.
       if (now !== null) void sync();
-      set("split");
+      set(mode);
     },
     destroy: () => {
       ticket++;

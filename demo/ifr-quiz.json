@@ -4,26 +4,57 @@
   "area": "phoenix",
   "items": [
     {
-      "id": "find-faf",
-      "type": "find",
-      "prompt": "Find ZINGA on the ILS 07L plate, then select that fix on the 3D map.",
-      "answer": { "fix": "ZINGA" },
+      "id": "profile-faf-symbol",
+      "type": "read",
+      "prompt": "In the plate’s profile view, select the symbol that marks the final approach fix for the localizer approach.",
+      "choices": [
+        "Start of the 4,000 ft segment",
+        "Maltese cross at ZINGA",
+        "First step-down fix after ZINGA"
+      ],
+      "plateRegions": [
+        [0.144, 0.724, 0.204, 0.774],
+        [0.316, 0.753, 0.373, 0.797],
+        [0.449, 0.776, 0.492, 0.828]
+      ],
+      "answer": 1,
       "scene": {
-        "chart": "low",
-        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
-        "plate": { "airport": "KPHX", "chart": "ILS OR LOC/DME RWY 07L" }
+        "chart": "area",
+        "plate": {
+          "airport": "KPHX",
+          "chart": "ILS OR LOC/DME RWY 07L"
+        }
       },
-      "explanation": "ZINGA sits on the final approach course between FOWLE and Runway 07L. Use the fix labels to match the plate to the 3D route."
+      "explanation": "The Maltese cross at ZINGA marks the localizer final approach fix. The lightning-bolt symbol identifies the ILS glideslope intercept."
     },
     {
       "id": "read-profile",
       "type": "read",
       "prompt": "Read the plate's profile view. What altitude is printed at ZINGA?",
-      "number": { "answer": 2600, "tolerance": 0, "unit": "ft MSL" },
+      "number": {
+        "answer": 2600,
+        "tolerance": 0,
+        "unit": "ft MSL"
+      },
       "scene": {
-        "chart": "low",
-        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
-        "camera": { "frame": [{ "procedure": { "airport": "KPHX", "name": "ILS RWY 07L" } }], "tilt": 45 },
+        "chart": "area",
+        "procedures": [
+          {
+            "airport": "KPHX",
+            "name": "ILS RWY 07L"
+          }
+        ],
+        "camera": {
+          "frame": [
+            {
+              "procedure": {
+                "airport": "KPHX",
+                "name": "ILS RWY 07L"
+              }
+            }
+          ],
+          "tilt": 45
+        },
         "tags": false
       },
       "explanation": "The profile prints 2,600 ft MSL at ZINGA. The reveal turns on the map labels so you can find that altitude on the 3D route."
@@ -32,27 +63,65 @@
       "id": "missed-fix",
       "type": "procedure",
       "prompt": "Follow the published missed approach on the plate. Which fix is named for the hold?",
-      "choices": ["FOWLE", "ZINGA", "PXR", "AVONA"],
+      "choices": [
+        "FOWLE",
+        "ZINGA",
+        "PXR",
+        "AVONA"
+      ],
       "answer": 2,
       "scene": {
-        "chart": "low",
-        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
-        "highlight": [{ "procedure": { "airport": "KPHX", "name": "ILS RWY 07L" } }]
+        "chart": "area",
+        "procedures": [
+          {
+            "airport": "KPHX",
+            "name": "ILS RWY 07L"
+          }
+        ],
+        "highlight": [
+          {
+            "procedure": {
+              "airport": "KPHX",
+              "name": "ILS RWY 07L"
+            }
+          }
+        ]
       },
       "explanation": "The missed approach leads to the PXR VORTAC for the hold. The fixes west of the runway are on the inbound side of the procedure."
     },
     {
-      "id": "find-threshold",
-      "type": "find",
-      "prompt": "Follow the final approach course to Phoenix Sky Harbor. Select the Runway 07L threshold marked RW07L.",
-      "answer": { "fix": "RW07L" },
+      "id": "inbound-course",
+      "type": "read",
+      "prompt": "Read the plate's plan view. What inbound course is published for the final approach to Runway 07L?",
+      "choices": [
+        "078°",
+        "258°",
+        "073°",
+        "088°"
+      ],
+      "answer": 0,
       "scene": {
-        "chart": "low",
-        "procedures": [{ "airport": "KPHX", "name": "ILS RWY 07L" }],
-        "diagram": "KPHX",
-        "camera": { "frame": [{ "fix": "ZINGA" }, { "diagram": "KPHX" }], "tilt": 90 }
+        "chart": "area",
+        "procedures": [
+          {
+            "airport": "KPHX",
+            "name": "ILS RWY 07L"
+          }
+        ],
+        "highlight": [
+          {
+            "procedure": {
+              "airport": "KPHX",
+              "name": "ILS RWY 07L"
+            }
+          }
+        ],
+        "plate": {
+          "airport": "KPHX",
+          "chart": "ILS OR LOC/DME RWY 07L"
+        }
       },
-      "explanation": "RW07L marks the approach end of Runway 07L. The airport diagram shows the runway beneath the final approach course."
+      "explanation": "The plan view prints 078° along the localizer course into Runway 07L. 258° is its reciprocal, the back course."
     }
   ]
 }

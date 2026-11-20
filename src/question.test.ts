@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { locator, questionScene, revealScene, score, typedNumber, type Locate, type Question } from "./question.js";
+import { locator, plateChoice, questionScene, revealScene, score, typedNumber, type Locate, type PlateRegion, type Question } from "./question.js";
+
+test("plate picks match a choice in normalized image coordinates", () => {
+  const regions: PlateRegion[] = [[0.1, 0.7, 0.2, 0.75], [0.3, 0.75, 0.4, 0.8]];
+  assert.equal(plateChoice(regions, [0.35, 0.78]), 1);
+  assert.equal(plateChoice(regions, [0.15, 0.72]), 0);
+  assert.equal(plateChoice(regions, [0.35, 0.81]), -1);
+});
 
 const at: Locate = (t) => ("fix" in t && t.fix === "SCADE" ? [33.4, -112.2] : "airport" in t && t.airport === "KCHD" ? [33.27, -111.81] : null);
 test("each type scores right and wrong", () => {

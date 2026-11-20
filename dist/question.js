@@ -1,4 +1,7 @@
 import { nm } from "./cifp.js";
+export function plateChoice(regions, [x, y]) {
+    return regions.findIndex(([left, top, right, bottom]) => x >= left && x <= right && y >= top && y <= bottom);
+}
 /** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
 export const locator = (data, procedures) => (t) => {
     if ("point" in t)

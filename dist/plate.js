@@ -238,6 +238,11 @@ export function plateView(c, on) {
         if (down.size)
             return;
         const tapped = e.type === "pointerup" && isTap({ fingers: tap.fingers, moved: tap.moved, ms: e.timeStamp - tap.start }, c.a11y);
+        if (tapped && img?.naturalWidth && fig.classList.contains("sc-plate-question") && on.pick) {
+            const r = img.getBoundingClientRect();
+            on.pick([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+            return;
+        }
         if (tapped && tap.start - lastTap < 300) {
             fitNow();
             lastTap = -Infinity;
@@ -293,6 +298,8 @@ export function plateView(c, on) {
     };
     const away = () => (on.back?.() ?? fig.querySelector(".view")).focus();
     const shut = () => {
+        if (fig.classList.contains("sc-plate-question"))
+            return;
         set(null);
         away();
     };
@@ -372,15 +379,19 @@ export function plateView(c, on) {
                 n = 1;
             }
             // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
-            if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n)
+            const mode = fig.classList.contains("sc-plate-question") ? "full" : "split";
+            if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) {
+                if (mode === "full" && now !== mode)
+                    set(mode);
                 return;
+            }
             want = null;
             sceneAt = p.airport;
             show({ airport: p.airport, entry }, n);
             // Opening redraws the picker; an open panel needs it redrawn too.
             if (now !== null)
                 void sync();
-            set("split");
+            set(mode);
         },
         destroy: () => {
             ticket++;

@@ -78,6 +78,13 @@ export function questionProblems(q: Question, data: AirspaceFile, hasFix: (name:
       if (!Number.isInteger(q.answer) || q.answer < 0 || q.answer >= q.choices.length) out.push(`answer ${q.answer} is not a choice`);
       if (new Set(q.choices).size < q.choices.length) out.push("choices repeat");
     }
+    if (q.plateRegions !== undefined) {
+      if (!q.scene?.plate) out.push("plate regions require a plate in the question's scene");
+      if (!Array.isArray(q.plateRegions) || q.plateRegions.length !== q.choices?.length ||
+        q.plateRegions.some((region) => !Array.isArray(region) || region.length !== 4 ||
+          !region.every((n) => Number.isFinite(n) && n >= 0 && n <= 1) ||
+          region[0] >= region[2] || region[1] >= region[3])) out.push("plate regions must give one normalized rectangle per choice");
+    }
   }
   if ("number" in q && !(q.number.tolerance >= 0)) out.push("tolerance is below 0");
   return out;
@@ -105,6 +112,7 @@ export async function validateWalkthrough(w: Walkthrough, data: AirspaceFile, pr
     if (typeof s.caption !== "string") problems.push("caption is not text");
     if (s.seconds !== undefined && !(s.seconds > 0)) problems.push("seconds must be above 0");
     problems.push(...sceneProblems(s.scene, data, fixesIn(data, loaded, s.scene ?? {})), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+    if (s.check && "plateRegions" in s.check && s.check.plateRegions) problems.push("plate regions require a quiz");
     problems.push(...(await plateProblems(s.scene, data, charts)), ...(await plateProblems(s.check?.scene, data, charts)));
     out.push(...problems.map((p) => at + p));
   }

@@ -6,14 +6,21 @@ import type { AreaRef, Scene, Target } from "./scene.js";
 
 /** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area).
  * also: on a find question for an area, other areas that are right too (every piece of the Phoenix Class B). */
+/** Plate choice regions in image coordinates, normalized to 0–1, in the same order as choices. */
+export type PlateRegion = [left: number, top: number, right: number, bottom: number];
+
 export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; answerArea?: string } & (
   | { type: "find"; answer: Target; also?: string[] }
-  | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number }
+  | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number; plateRegions?: PlateRegion[] }
   | { type: "read"; number: { answer: number; tolerance: number; unit?: string } }
 );
 export type Answer = { choice: number } | { number: number } | { area: string | null; at: [lat: number, lon: number] | null };
 /** A fix or airport's position; the caller builds it from the area's airports, waypoints and loaded procedure fixes. */
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
+
+export function plateChoice(regions: PlateRegion[], [x, y]: [number, number]): number {
+  return regions.findIndex(([left, top, right, bottom]) => x >= left && x <= right && y >= top && y <= bottom);
+}
 
 /** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
 export const locator = (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]): Locate => (t) => {

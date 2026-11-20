@@ -5,7 +5,7 @@ import { card } from "./card.js";
 import { h, wakeOnTap } from "./freeroam.js";
 import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
-import { locator, questionScene, revealScene, score } from "./question.js";
+import { locator, plateChoice, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice, progress, skip } from "./quiz.js";
 import { inheritedPlate, stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
@@ -26,7 +26,15 @@ export async function quiz(c, mode, onResult, explore) {
     const box = h("div", { class: "sc-quiz" }, live);
     // The plate panel: a question's scene opens its chart; picking another leaves the question's scene as it is. On an
     // upright phone its room is between the count's row and the map's foot.
-    const plates = plateView(c, { show: () => { }, room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }) });
+    let regions;
+    const plates = plateView(c, {
+        show: () => { },
+        room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }),
+        pick: (at) => {
+            if (regions)
+                open?.selectChoice(plateChoice(regions, at));
+        },
+    });
     viewEl.after(top, ...(plates.el ? [plates.el] : []));
     // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
     const camera = pad(c);
@@ -109,6 +117,10 @@ export async function quiz(c, mode, onResult, explore) {
             return Promise.resolve();
         }
         const it = a.items[a.i];
+        const picking = it.q.scene?.plate && "plateRegions" in it.q ? it.q.plateRegions : undefined;
+        if (fig.classList.toggle("sc-plate-question", !!picking) === false && regions)
+            plates.set("split");
+        regions = picking;
         let shownAt = 0;
         // Its chart, its own or the nearest earlier item's; plates.open leaves a chart already shown as it is.
         const scene = { ...questionScene(it.q), plate: inheritedPlate(a.items.map((x) => x.q.scene), a.i) };
@@ -132,7 +144,7 @@ export async function quiz(c, mode, onResult, explore) {
             report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
             void show(revealScene(withArea(it.q)));
             k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next());
-        }, { a11y: c.a11y, ...(find && { onSkip }) });
+        }, { a11y: c.a11y, platePick: !!picking, ...(find && { onSkip }) });
         const had = put(k.el) || (c.a11y && asked > 0);
         asked++;
         open = k;
@@ -150,6 +162,11 @@ export async function quiz(c, mode, onResult, explore) {
         a = advance(a, make, rng);
         if (!a.done)
             return void ask(); // practice is done only when nothing more can be made; it ends with its score too
+        if (fig.classList.contains("sc-plate-question")) {
+            fig.classList.remove("sc-plate-question");
+            plates.set("split");
+            regions = undefined;
+        }
         const { total } = progress(a);
         report({ quiz: id, end: true, right: a.right, total });
         note(L.result(a.right, total), pill(L.again, () => {
@@ -166,7 +183,7 @@ export async function quiz(c, mode, onResult, explore) {
         top.remove();
         box.remove();
         camera.remove();
-        fig.classList.remove("sc-quizzing");
+        fig.classList.remove("sc-quizzing", "sc-plate-question");
         viewEl.focus();
         explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));
     }

@@ -1015,12 +1015,15 @@ a11y = false) {
     const pickAt = (e, touch) => {
         if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose))
             return;
+        const quizzing = host.closest(".sc-quizzing") !== null;
+        if (quizzing && !tapFn)
+            return;
         // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
         const tag = airportTags.find((t) => {
             const r = t.el.getBoundingClientRect();
             return t.el.style.visibility === "visible" && e.clientX > r.left - 6 && e.clientX < r.right + 6 && e.clientY > r.top - 6 && e.clientY < r.bottom + 6;
         });
-        if (tag)
+        if (tag && !quizzing)
             return tapAirport(tag.el.textContent);
         const l = pick(e);
         if (tapFn) {

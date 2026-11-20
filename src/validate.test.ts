@@ -51,6 +51,10 @@ test("VFR and IFR examples reference the bundled Phoenix charts and procedures",
   for (const id of ["vfr", "ifr"]) {
     const quiz = JSON.parse(readFileSync(`demo/${id}-quiz.json`, "utf8")) as Quiz;
     assert.deepEqual(await validateQuiz(quiz, data, files, "phoenix", charts), []);
+    // No airport diagram laid over the map; VFR reads the TAC and IFR the area chart.
+    const scenes = quiz.items.map((it) => ("scene" in it ? it.scene : undefined));
+    assert.ok(scenes.every((s) => !s?.diagram));
+    assert.ok(scenes.every((s) => s?.chart === (id === "vfr" ? "tac" : "area")));
   }
 });
 test("catches bad written items and impossible generate items", async () => {

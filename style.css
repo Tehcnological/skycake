@@ -518,3 +518,14 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-card .sc-pick-numbers .sc-option { min-width: 48px; justify-content: center; padding: 0 8px; border: 1px solid var(--sc-line); border-radius: var(--sc-r-ctl); }
 .skycake .sc-card .sc-pick-numbers .sc-option[aria-pressed="true"] { border-color: var(--sc-mark); background: var(--sc-sel); box-shadow: none; }
 .skycake .sc-card .sc-pick-numbers .sc-num { border: 0; background: none; color: inherit; }
+
+/* A chart-reading question gives its assigned plate the canvas and keeps its prompt and feedback in view. */
+.skycake.sc-plate-question .view { position: absolute; inset: 0; visibility: hidden; }
+.skycake.sc-plate-question .sc-wtop { position: static; order: -2; padding: var(--sc-gap); }
+.skycake.sc-plate-question .sc-plate { position: relative; inset: auto; width: 100%; height: 68svh; flex: none; border: 0; }
+.skycake.sc-plate-question .sc-plate-head { display: none; }
+.skycake.sc-plate-question .sc-plate-zoom { bottom: 12px; }
+.skycake.sc-plate-question .sc-plate-body { cursor: crosshair; }
+.skycake.sc-plate-question .sc-caption { position: static; align-self: flex-start; margin: 6px var(--sc-gap); }
+.skycake.sc-plate-question .sc-quiz { position: static; transform: none; width: 100%; margin: 0; }
+.skycake .sc-plate-choices:not(:focus-within) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

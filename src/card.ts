@@ -40,7 +40,7 @@ const owner = new WeakMap<View, object>();
  * a11y (accessibility mode): an answer is chosen, then Check scores it; a find question is answered by number (badges on
  * the map, a list, a field), and onSkip, when given, adds Skip.
  */
-export function card(q: Question, L: Labels, view: View, say: (text: string) => void, onAnswer: (a: Answer) => void, o: { a11y: boolean; onSkip?: () => void } = { a11y: false }): { el: HTMLElement; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void } {
+export function card(q: Question, L: Labels, view: View, say: (text: string) => void, onAnswer: (a: Answer) => void, o: { a11y: boolean; onSkip?: () => void; platePick?: boolean } = { a11y: false }): { el: HTMLElement; selectChoice(index: number): void; reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void; remove(): void } {
   const el = h("section", "sc-card");
   const text = h("div", "sc-text", h("p", "sc-prompt", q.prompt));
   el.append(text);
@@ -87,6 +87,7 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
   view.hints(false);
   if ("choices" in q) {
     const list = h("div", "sc-choices");
+    if (o.platePick && !o.a11y) list.classList.add("sc-plate-choices");
     q.choices.forEach((c, i) => {
       const b = button("sc-choice", c, () => {
         if (!o.a11y) return answer({ choice: i }) && b.setAttribute("aria-pressed", "true");
@@ -195,6 +196,7 @@ export function card(q: Question, L: Labels, view: View, say: (text: string) => 
   };
   return {
     el,
+    selectChoice: (index) => choiceButtons[index]?.click(),
     reveal(right, facts, label, onNext) {
       for (const c of controls) c.disabled = true;
       done();

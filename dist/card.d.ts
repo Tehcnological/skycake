@@ -11,8 +11,10 @@ export declare function pickByNumber(text: string, count: number): number | null
 export declare function card(q: Question, L: Labels, view: View, say: (text: string) => void, onAnswer: (a: Answer) => void, o?: {
     a11y: boolean;
     onSkip?: () => void;
+    platePick?: boolean;
 }): {
     el: HTMLElement;
+    selectChoice(index: number): void;
     reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void;
     remove(): void;
 };
