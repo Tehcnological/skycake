@@ -3,11 +3,14 @@ import type { Procedure } from "./procedure.js";
 import type { Scene, Target } from "./scene.js";
 /** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area).
  * also: on a find question for an area, other areas that are right too (every piece of the Phoenix Class B). */
+/** Plate choice regions in image coordinates, normalized to 0–1, in the same order as choices. */
+export type PlateRegion = [left: number, top: number, right: number, bottom: number];
 export type Question = {
     id?: string;
     prompt: string;
     scene?: Scene;
     explanation?: string;
+    hint?: string;
     answerArea?: string;
 } & ({
     type: "find";
@@ -17,6 +20,7 @@ export type Question = {
     type: "read" | "airplane" | "procedure";
     choices: string[];
     answer: number;
+    plateRegions?: PlateRegion[];
 } | {
     type: "read";
     number: {
@@ -35,6 +39,7 @@ export type Answer = {
 };
 /** A fix or airport's position; the caller builds it from the area's airports, waypoints and loaded procedure fixes. */
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
+export declare function plateChoice(regions: PlateRegion[], [x, y]: [number, number]): number;
 /** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
 export declare const locator: (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]) => Locate;
 /** A malformed question (one validateQuiz would reject) scores false with a warning: the quiz goes on. */

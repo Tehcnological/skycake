@@ -1,0 +1,116 @@
+{
+  "id": "vfr",
+  "title": "VFR practice around Phoenix",
+  "area": "phoenix",
+  "items": [
+    {
+      "id": "shelf-floor",
+      "type": "read",
+      "prompt": "Read the blue fraction on the chart. What is the floor of the highlighted Class B shelf?",
+      "hint": "The fraction reads ceiling over floor, in hundreds of feet MSL.",
+      "choices": [
+        "4,000 ft MSL",
+        "5,000 ft MSL",
+        "6,000 ft MSL",
+        "9,000 ft MSL"
+      ],
+      "answer": 1,
+      "scene": {
+        "chart": "tac",
+        "highlight": [
+          {
+            "area": "b-phoenix-class-b-50-90-4"
+          }
+        ]
+      },
+      "explanation": "The chart prints 90 over 50. The lower number is the floor, in hundreds of feet MSL."
+    },
+    {
+      "id": "chandler-ceiling",
+      "type": "read",
+      "prompt": "Chandler's Class D ceiling is marked −30. What is the highest whole-foot altitude inside it, in feet MSL?",
+      "hint": "The minus sign means up to but not including that altitude.",
+      "number": {
+        "answer": 2999,
+        "tolerance": 0,
+        "unit": "ft MSL"
+      },
+      "scene": {
+        "chart": "tac",
+        "highlight": [
+          {
+            "area": "d-chandler-municipal-airport-class-d"
+          }
+        ]
+      },
+      "explanation": "The minus sign excludes 3,000 ft MSL. The highest whole-foot altitude below that is 2,999 ft MSL."
+    },
+    {
+      "id": "chandler-airport",
+      "type": "find",
+      "prompt": "Find Chandler Municipal (CHD) on the VFR chart and select it.",
+      "hint": "It is about 5 NM east of Stellar Airpark (P19), inside the dashed blue Class D ring whose ceiling is marked -30.",
+      "answer": {
+        "airport": "KCHD"
+      },
+      "scene": {
+        "chart": "tac",
+        "camera": {
+          "frame": [
+            {
+              "point": [32.97, -112.57]
+            },
+            {
+              "point": [32.97, -111.47]
+            },
+            {
+              "point": [33.94, -112.57]
+            },
+            {
+              "point": [33.94, -111.47]
+            }
+          ],
+          "tilt": 90
+        }
+      },
+      "explanation": "Chandler Municipal sits inside its own dashed blue Class D ring, about 5 NM east of Stellar Airpark (P19)."
+    },
+    {
+      "id": "class-at-airplane",
+      "type": "airplane",
+      "prompt": "The airplane is at 4,500 ft MSL. Use the ground marker to find its position on the chart. Which class of airspace is it in?",
+      "hint": "Find the shelf over the ring on the ground, then compare 4,500 ft to its floor and ceiling.",
+      "choices": [
+        "Class B",
+        "Class C",
+        "Class D",
+        "Class E"
+      ],
+      "answer": 0,
+      "scene": {
+        "chart": "tac",
+        "airplane": {
+          "at": [33.4, -111.95, 4500]
+        },
+        "camera": {
+          "frame": [
+            {
+              "point": [32.97, -112.57]
+            },
+            {
+              "point": [32.97, -111.47]
+            },
+            {
+              "point": [33.94, -112.57]
+            },
+            {
+              "point": [33.94, -111.47]
+            }
+          ],
+          "tilt": 56
+        }
+      },
+      "explanation": "The airplane is inside the Phoenix Class B. The raised volume shows the shelf containing the airplane."
+    }
+  ]
+}

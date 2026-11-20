@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { locator, questionScene, revealScene, score, typedNumber, type Locate, type Question } from "./question.js";
+import { locator, plateChoice, questionScene, revealScene, score, typedNumber, type Locate, type PlateRegion, type Question } from "./question.js";
+
+test("plate picks match a choice in normalized image coordinates", () => {
+  const regions: PlateRegion[] = [[0.1, 0.7, 0.2, 0.75], [0.3, 0.75, 0.4, 0.8]];
+  assert.equal(plateChoice(regions, [0.35, 0.78]), 1);
+  assert.equal(plateChoice(regions, [0.15, 0.72]), 0);
+  assert.equal(plateChoice(regions, [0.35, 0.81]), -1);
+});
 
 const at: Locate = (t) => ("fix" in t && t.fix === "SCADE" ? [33.4, -112.2] : "airport" in t && t.airport === "KCHD" ? [33.27, -111.81] : null);
 test("each type scores right and wrong", () => {
@@ -23,9 +30,11 @@ test("default scenes per type, with the question's own fields winning", () => {
   assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" } }), { camera: "top", raise: [], tags: false });
   assert.deepEqual(questionScene({ type: "find", prompt: "", answer: { airport: "KCHD" }, scene: { raise: ["D"] } }).raise, ["D"]);
   const read = questionScene({ type: "read", prompt: "", choices: ["a", "b"], answer: 0, scene: { highlight: [{ area: "x" }] } });
-  assert.deepEqual([read.raise, read.camera], [[], { frame: [{ area: "x" }], tilt: 90 }]); // top-down, flat, to read the chart
+  assert.deepEqual([read.raise, read.camera, read.height, read.tags], [[{ area: "x" }], { frame: [{ area: "x" }], tilt: 40 }, 4, false]); // raised, at an angle, tags off
+  const fix = questionScene({ type: "find", prompt: "", answer: { fix: "ZINGA" }, scene: { procedures: [{ airport: "KPHX", name: "ILS RWY 07L" }] } });
+  assert.deepEqual([fix.camera, fix.tags], [{ frame: [{ procedure: { airport: "KPHX", name: "ILS RWY 07L" } }], tilt: 90 }, true]);
   const plane = questionScene({ type: "airplane", prompt: "", choices: ["a", "b"], answer: 0, scene: { airplane: { at: [33.4, -112, 4500] } } });
-  assert.equal((plane.camera as { tilt: number }).tilt, 90);
+  assert.equal((plane.camera as { tilt: number }).tilt, 50);
   assert.equal((plane.camera as { frame: unknown[] }).frame.length, 4);
   const proc = questionScene({ type: "procedure", prompt: "", choices: ["a", "b"], answer: 0, scene: { procedures: [{ airport: "KCHD", name: "I04R" }] } });
   assert.deepEqual(proc.camera, { frame: [{ procedure: { airport: "KCHD", name: "I04R" } }] });

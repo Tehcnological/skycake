@@ -55,9 +55,12 @@ export function feet(val: number, uom: string | null, code: string | null, groun
 
 /** An altitude as the answer card says it: SFC at the surface, else feet with a thousands comma (5,000). */
 export const feetText = (ft: number, ground: number) => (ft <= ground ? "SFC" : ft.toLocaleString("en-US"));
-/** Hundreds of feet, as the chart writes them; the ground floor reads SFC. */
-export const hundreds = (ft: number, ground: number) => (ft <= ground ? "SFC" : String(Math.round(ft / 100)));
+/** Hundreds of feet, as the chart writes them; the ground floor reads SFC, and a ceiling up to but not including an
+ * altitude (2,999) reads with a minus (-30). */
+export const hundreds = (ft: number, ground: number) => (ft <= ground ? "SFC" : ft % 100 === 99 ? `-${(ft + 1) / 100}` : String(Math.round(ft / 100)));
 
+// Ids keep a TNI ceiling's whole hundreds (30, not -30), so they stayed the same when the data started recording it.
+const idFeet = (ft: number, ground: number) => (ft <= ground ? "SFC" : String(Math.round(ft / 100)));
 /**
  * One readable id per area, in the same order: kind and name ("d-chandler-municipal-airport-class-d"); where that
  * repeats, the floor and ceiling as the chart writes them ("b-phoenix-class-b-50-90"); where that still repeats, a
@@ -68,7 +71,7 @@ export function areaIds(areas: Omit<Area, "id">[], ground: number): string[] {
   const count = <T>(xs: T[]) => xs.reduce((m, x) => m.set(x, (m.get(x) ?? 0) + 1), new Map<T, number>());
   const base = areas.map(slug);
   const baseN = count(base);
-  const mid = areas.map((a, i) => (baseN.get(base[i])! > 1 ? `${base[i]}-${hundreds(a.floor, ground)}-${hundreds(a.ceiling, ground)}`.toLowerCase() : base[i]));
+  const mid = areas.map((a, i) => (baseN.get(base[i])! > 1 ? `${base[i]}-${idFeet(a.floor, ground)}-${idFeet(a.ceiling, ground)}`.toLowerCase() : base[i]));
   const midN = count(mid);
   const centre = (a: Omit<Area, "id">) => {
     const r = a.rings[0];

@@ -1,4 +1,5 @@
 import { type Context } from "./freeroam.js";
+import { type Pt } from "./gesture.js";
 import type { PlateRef, ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
 export type PlateMode = "split" | "full" | null;
@@ -34,6 +35,8 @@ export declare function plateView(c: Context, on: {
         top: number;
         bottom: number;
     };
+    /** A quiz locks the chart and receives taps in normalized image coordinates. */
+    pick?: (at: Pt) => void;
 }): Plates;
 /** A chart in the picker, with the airport whose index listed it (a shared arrival is one chart per airport). */
 export type PlatePick = {
@@ -62,6 +65,14 @@ export type PanZoom = {
 };
 /** The whole chart in the box, centred. */
 export declare function fitChart(img: {
+    w: number;
+    h: number;
+}, box: {
+    w: number;
+    h: number;
+}): PanZoom;
+/** Keeps the chart in the box: smaller than the box on an axis, it stays wholly inside; larger, it covers the box. */
+export declare function keepIn(t: PanZoom, img: {
     w: number;
     h: number;
 }, box: {

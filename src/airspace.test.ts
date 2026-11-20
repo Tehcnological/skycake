@@ -43,6 +43,18 @@ test("a tag's spot stays inside its ring, even on a curved shelf", () => {
 test("hundreds of feet as the chart writes them", () => {
   assert.equal(hundreds(9000, 1135), "90");
   assert.equal(hundreds(1135, 1135), "SFC");
+  assert.equal(hundreds(2999, 1135), "-30"); // up to but not including 3,000
+});
+
+test("a ceiling up to but not including keeps its whole hundreds in the id", () => {
+  const ring = [[[33, -112], [33.1, -112], [33.1, -111.9]]] as Ring[];
+  const d = (ceiling: number) => ({ kind: "D" as const, name: "X CLASS D", floor: 1135, ceiling, rings: ring });
+  assert.deepEqual(areaIds([d(2999), d(4000)], 1135), ["d-x-class-d-sfc-30", "d-x-class-d-sfc-40"]);
+});
+
+test("the Chandler Municipal Class D under the Class B's 3,000 ft floor tops out at 2,999, charted -30", () => {
+  const a = (JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8")) as AirspaceFile).areas.find((x) => x.id === "d-chandler-municipal-airport-class-d")!;
+  assert.equal(a.ceiling, 2999);
 });
 
 test("built Phoenix data has the Class B surface area and only known kinds", () => {

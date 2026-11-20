@@ -21,3 +21,12 @@ export declare const isTap: (t: {
     moved: number;
     ms: number;
 }, loose?: boolean) => boolean;
+/** How far a click or pen tap may wander and still be one, also before a drag zooms. */
+export declare const TAP_SLOP = 10;
+/** A second tap or click soon after and near the first: it zooms, as a map app's double-click and double-tap and drag. */
+export declare const isSecondTap: (first: {
+    at: Pt;
+    ms: number;
+} | null, at: Pt, ms: number) => boolean;
+/** How far a double-tap and drag zooms: down zooms in, up zooms out, twice per 150 px. */
+export declare const dragZoom: (dy: number) => number;

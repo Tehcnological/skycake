@@ -33,6 +33,8 @@ export type Context = {
   setA11y?: (on: boolean) => void;
   /** See Options.title in ui.ts. */
   title?: { name: string; note?: string };
+  /** Free roam entered from a quiz: a button that leaves free roam and goes back to it. */
+  back?: () => void;
 };
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -110,6 +112,9 @@ export function freeRoam(c: Context): Promise<void> {
   const findButton = h("button", { type: "button", class: "sc-find", "aria-label": L.search, "aria-expanded": "false", "aria-controls": `sc-tr-${uid}` }, icon(ICONS.search));
   const where = c.title ? [h("div", { class: "sc-where" }, h("b", {}, c.title.name), ...(c.title.note ? [h("span", {}, c.title.note)] : []))] : [];
   const head = h("header", { class: "sc-head" }, ...where, findButton);
+  // Everything free roam hangs on the page outside its own elements, undone in one go when it is left for the quiz.
+  const off = new AbortController();
+  const signal = off.signal;
 
   // Search, the plate panel's button, results and the shown procedures (top right; phone: under the header, search
   // only once opened).
@@ -180,10 +185,33 @@ export function freeRoam(c: Context): Promise<void> {
   tabs.inView.classList.add("sc-inview-tab");
   const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
 
+  if (c.close) {
+    tabs.close.className = "sc-area-close";
+    head.prepend(tabs.close);
+  }
+
+  // Showing a procedure the viewer picked: a departure takes the approaches away and the reverse (roam.ts), and the
+  // first approach in this view switches the chart to IFR, once, so someone who goes back to VFR stays there.
+  const typeOf = (p: ProcedureRef) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
+  let ifrDone = false;
+  let toIfr = () => {};
+  // While someone is choosing a procedure, the IFR chart that an approach would switch to loads.
+  const ifrNext = () => lastIn.ifr ?? chartsIn(data.charts, "ifr")[0];
+  const warmIfr = () => {
+    const ifr = ifrNext();
+    if (!ifrDone && ifr && modeOf(chart) === "vfr") v.preload(ifr);
+  };
+  const addShown = (p: ProcedureRef) => {
+    r = add(r, p, has, typeOf);
+    if (ifrDone || typeOf(p) !== "IAP") return;
+    ifrDone = true;
+    toIfr();
+  };
+
   // The procedure plate panel (plate.ts), opened by the Plate button or tab, which show only when the area has charts.
   const plates = plateView(c, {
     show: (ref) => {
-      r = add(r, ref, has);
+      addShown(ref);
       refresh();
     },
     mode: (m) => {
@@ -215,12 +243,13 @@ export function freeRoam(c: Context): Promise<void> {
     }, L);
   };
   writeSummary();
-  viewEl.addEventListener("focus", writeSummary);
+  viewEl.addEventListener("focus", writeSummary, { signal });
 
   // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
   const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
   fig.querySelector(".view")!.after(openButton, head, topLeft, topRight, bottomRight, viewSheet, ...(plates.el ? [plates.el] : []));
-  fig.querySelector(".view")!.append(pad(c));
+  const padEl = pad(c);
+  fig.querySelector(".view")!.append(padEl);
   fig.append(tabBar);
 
   let inView: ReturnType<typeof picker> | null = null;
@@ -275,7 +304,7 @@ export function freeRoam(c: Context): Promise<void> {
     // The plate panel closes on Escape only from inside it (plate.ts): beside the map it is a panel, not a dialog.
     else return;
     sheet(null);
-  });
+  }, { signal });
   inViewButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
   tabs.inView.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
   kindButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
@@ -302,7 +331,10 @@ export function freeRoam(c: Context): Promise<void> {
   });
 
   // The plate panel's buttons.
-  const togglePlate = () => plates.set(plates.mode() === null ? "split" : null);
+  const togglePlate = () => {
+    warmIfr();
+    plates.set(plates.mode() === null ? "split" : null);
+  };
   plateButton.addEventListener("click", togglePlate);
   tabs.plate.addEventListener("click", () => {
     sheet(null);
@@ -371,7 +403,7 @@ export function freeRoam(c: Context): Promise<void> {
       results.append(h("p", { class: "sc-group" }, `${g.airport} · ${L.groups[g.type]}`));
       for (const hit of g.hits) {
         results.append(option([hit.procedure.name], () => {
-          r = add(r, { airport: hit.airport, name: hit.procedure.name }, has);
+          addShown({ airport: hit.airport, name: hit.procedure.name });
           // The list follows the airport the diagram now follows.
           if (browse !== null) browse = hit.airport;
           input.value = "";
@@ -393,6 +425,7 @@ export function freeRoam(c: Context): Promise<void> {
     refresh();
   };
   const showResults = () => {
+    warmIfr();
     const q = input.value;
     results.replaceChildren();
     const at = browse === null ? undefined : data.airports.find((a) => a.id === browse);
@@ -423,7 +456,7 @@ export function freeRoam(c: Context): Promise<void> {
   });
   fig.addEventListener("pointerdown", (e) => {
     if (!topRight.contains(e.target as Node)) results.hidden = true;
-  });
+  }, { signal });
 
   const toggleDiagramNow = () => {
     r = toggleDiagram(r, has);
@@ -479,6 +512,13 @@ export function freeRoam(c: Context): Promise<void> {
     drawChart();
     refresh();
   };
+  // The caller refreshes, with the camera framing the approach just added.
+  toIfr = () => {
+    const ifr = ifrNext();
+    if (modeOf(chart) === "ifr" || !ifr) return;
+    chart = lastIn.ifr = ifr;
+    drawChart();
+  };
   const setMode = (mode: Mode) => {
     if (mode !== modeOf(chart)) setChart(lastIn[mode] ?? chartsIn(data.charts, mode)[0]);
   };
@@ -493,8 +533,7 @@ export function freeRoam(c: Context): Promise<void> {
   const phone = matchMedia("(max-width: 860px) and (pointer: coarse)");
   const drawPhone = () => {
     fig.classList.toggle("sc-preview", phone.matches && !fig.classList.contains("full"));
-    fullButton.hidden = phone.matches;
-    tabs.close.hidden = !phone.matches;
+    tabs.close.hidden = !c.close && !fig.classList.contains("full");
   };
   const setFull = (on: boolean) => {
     fig.classList.toggle("full", on);
@@ -520,7 +559,7 @@ export function freeRoam(c: Context): Promise<void> {
     if (c.close) leave(c.close);
     else goFull(false);
   });
-  phone.addEventListener("change", drawPhone);
+  phone.addEventListener("change", drawPhone, { signal });
   // A standalone app: the view fills the window from the start and only close leaves it.
   if (c.close) {
     fig.classList.add("full");
@@ -531,13 +570,13 @@ export function freeRoam(c: Context): Promise<void> {
   // The page's own gestures over the map are stopped in mount() (ui.ts), for every mode.
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement) setFull(false);
-  });
+  }, { signal });
 
   // A tap on an airport's tag on the chart lists its procedures.
   c.fig.addEventListener("skycake-airport", (e) => {
     sheet(null);
     showAirport((e as CustomEvent).detail.airport);
-  });
+  }, { signal });
   // The chip and type list state follows the viewer, including areas raised by tapping the chart.
   const onRaised = (kind: Kind, on: boolean) => {
     const x = rows.get(kind);
@@ -545,7 +584,25 @@ export function freeRoam(c: Context): Promise<void> {
     x.box.checked = on;
     x.row.classList.toggle("on", on);
   };
-  c.fig.addEventListener("skycake-raised", (e) => onRaised((e as CustomEvent).detail.kind, (e as CustomEvent).detail.on));
+  c.fig.addEventListener("skycake-raised", (e) => onRaised((e as CustomEvent).detail.kind, (e as CustomEvent).detail.on), { signal });
+
+  // Back to the quiz: free roam takes itself off the page first.
+  if (c.back) {
+    const back = c.back;
+    const backButton = h("button", { type: "button", class: "sc-pill sc-quiz-back" }, L.backToQuiz);
+    head.prepend(backButton);
+    backButton.addEventListener("click", () => {
+      ticket++;
+      sheet(null);
+      setFind(false, false);
+      off.abort();
+      plates.destroy();
+      for (const x of [openButton, head, topLeft, topRight, bottomRight, viewSheet, padEl, tabBar, summary]) x.remove();
+      viewEl.removeAttribute("aria-describedby");
+      fig.classList.remove("sc-plate", "sc-plate-full");
+      back();
+    });
+  }
   sheet(null);
   return refresh(true);
 }

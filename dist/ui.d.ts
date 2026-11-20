@@ -43,6 +43,10 @@ export type Labels = {
     /** The question card: the result words, the number question's button, the next button, and a revealed area's name and altitudes. */
     right: string;
     wrong: string;
+    /** A first wrong answer: the card asks again (with the question's hint under it); the second answer reveals. */
+    tryAgain: string;
+    /** Right on the second try, which the score counts as wrong. */
+    rightSecondTry: string;
     submit: string;
     continue: string;
     facts: (name: string, floor: string, ceiling: string) => string;
@@ -54,6 +58,8 @@ export type Labels = {
     back: string;
     next: string;
     explore: string;
+    /** Free roam entered from a quiz: the button back to the question it left. */
+    backToQuiz: string;
     stepOf: (n: number, total: number) => string;
     /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
      * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
@@ -112,6 +118,9 @@ export type Labels = {
         /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
         findPiece: (name: string, floor: string, ceiling: string) => string;
         findFix: (fix: string) => string;
+        /** Tap a procedure's final approach fix, or its missed approach point, by role: the tags name the fixes only. */
+        findFaf: (procedure: string) => string;
+        findMap: (procedure: string) => string;
         floor: string;
         ceiling: string;
         cls: string;

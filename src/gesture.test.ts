@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTap, twoFingers, type Pt } from "./gesture.js";
+import { dragZoom, isSecondTap, isTap, twoFingers, type Pt } from "./gesture.js";
 
 const near = (a: number, b: number) => assert.ok(Math.abs(a - b) < 1e-9, `${a} is not ${b}`);
 /** Runs a gesture from its first two finger positions and returns what the last step did. */
@@ -148,4 +148,19 @@ test("loose taps: further and without a time limit", () => {
   assert.equal(isTap({ fingers: 1, moved: 4, ms: 2000 }, true), true);
   assert.equal(isTap({ fingers: 1, moved: 17, ms: 100 }, true), false);
   assert.equal(isTap({ fingers: 2, moved: 0, ms: 100 }, true), false);
+});
+
+test("a pen's second tap counts when it comes soon after and near the first", () => {
+  assert.equal(isSecondTap(null, [0, 0], 0), false);
+  assert.equal(isSecondTap({ at: [100, 100], ms: 1000 }, [110, 105], 1200), true);
+  assert.equal(isSecondTap({ at: [100, 100], ms: 1000 }, [110, 105], 1450), true);
+  assert.equal(isSecondTap({ at: [100, 100], ms: 1000 }, [110, 105], 1550), false);
+  assert.equal(isSecondTap({ at: [100, 100], ms: 1000 }, [125, 115], 1200), true);
+  assert.equal(isSecondTap({ at: [100, 100], ms: 1000 }, [140, 100], 1200), false);
+});
+
+test("a double-tap and drag zooms in going down and out going up", () => {
+  near(dragZoom(150), 2);
+  near(dragZoom(-150), 0.5);
+  near(dragZoom(0), 1);
 });

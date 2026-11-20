@@ -66,7 +66,7 @@ export function plateView(c, on) {
     let fit = { x: 0, y: 0, s: 1 };
     let t = fit;
     const place = (to) => {
-        t = to;
+        t = img?.naturalWidth && body.clientWidth ? keepIn(to, { w: img.naturalWidth, h: img.naturalHeight }, { w: body.clientWidth, h: body.clientHeight }) : to;
         if (img)
             img.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.s})`;
     };
@@ -186,7 +186,6 @@ export function plateView(c, on) {
     next.addEventListener("click", () => shown && show(shown, page + 1));
     // Pan and zoom: one pointer drags, two pinch (twoFingers: shape zooms and follows the fingers, tilt pans), the wheel
     // zooms about the cursor, a double tap or click fits.
-    // shortcut: no pan limit, Fit brings the chart back; clamp if students lose it
     const at = (e) => {
         const b = body.getBoundingClientRect();
         return [e.clientX - b.left, e.clientY - b.top];
@@ -238,6 +237,11 @@ export function plateView(c, on) {
         if (down.size)
             return;
         const tapped = e.type === "pointerup" && isTap({ fingers: tap.fingers, moved: tap.moved, ms: e.timeStamp - tap.start }, c.a11y);
+        if (tapped && img?.naturalWidth && fig.classList.contains("sc-plate-question") && on.pick) {
+            const r = img.getBoundingClientRect();
+            on.pick([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+            return;
+        }
         if (tapped && tap.start - lastTap < 300) {
             fitNow();
             lastTap = -Infinity;
@@ -293,6 +297,8 @@ export function plateView(c, on) {
     };
     const away = () => (on.back?.() ?? fig.querySelector(".view")).focus();
     const shut = () => {
+        if (fig.classList.contains("sc-plate-question"))
+            return;
         set(null);
         away();
     };
@@ -372,15 +378,19 @@ export function plateView(c, on) {
                 n = 1;
             }
             // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
-            if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n)
+            const mode = fig.classList.contains("sc-plate-question") ? "full" : "split";
+            if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) {
+                if (mode === "full" && now !== mode)
+                    set(mode);
                 return;
+            }
             want = null;
             sceneAt = p.airport;
             show({ airport: p.airport, entry }, n);
             // Opening redraws the picker; an open panel needs it redrawn too.
             if (now !== null)
                 void sync();
-            set("split");
+            set(mode);
         },
         destroy: () => {
             ticket++;
@@ -427,6 +437,13 @@ export function pageArrows(pages, page) {
 export function fitChart(img, box) {
     const s = Math.min(box.w / img.w, box.h / img.h);
     return { x: (box.w - img.w * s) / 2, y: (box.h - img.h * s) / 2, s };
+}
+/** Keeps the chart in the box: smaller than the box on an axis, it stays wholly inside; larger, it covers the box. */
+export function keepIn(t, img, box) {
+    const axis = (at, size, room) => Math.min(Math.max(at, Math.min(0, room - size)), Math.max(0, room - size));
+    const x = axis(t.x, img.w * t.s, box.w), y = axis(t.y, img.h * t.s, box.h);
+    // The same object when nothing moved: a fitted chart stays the fit (plateView compares them).
+    return x === t.x && y === t.y ? t : { x, y, s: t.s };
 }
 /** Zooms by `factor`, the scale clamped to min..max, keeping the chart point under `at` where it is. */
 export function zoomAbout(t, factor, at, min, max) {

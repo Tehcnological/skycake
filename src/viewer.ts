@@ -15,10 +15,10 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { groundFt } from "./airclass.js";
 import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
-import { isTap, twoFingers, type Pt } from "./gesture.js";
+import { dragZoom, isSecondTap, isTap, TAP_SLOP, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import type { Camera, ProcedureRef, Resolved, Target } from "./scene.js";
-import { along, flightLine } from "./fly.js";
+import { along, flightLine, flightShares } from "./fly.js";
 import { PLANE_GLB } from "./plane.js";
 
 const FT_PER_NM = 6076;
@@ -96,6 +96,8 @@ export type View = {
   raiseArea(id: string, on: boolean): void;
   /** The ids of the areas raised now, by any means: a scene, the type list or a tap on the chart. */
   raisedAreas(): string[];
+  /** Loads a chart's images ahead of showing it (not onto the GPU), so picking it later is quick. */
+  preload(chart: ChartName): void;
   /**
    * Shows a scene. procedures: the procedure files' objects for scene.procedures, same order. now: no animation.
    * framing: files for procedures the camera frames but the scene does not show (framedOnly()); not drawn.
@@ -146,6 +148,17 @@ export async function build(
   a11y = false,
 ): Promise<View> {
   const { bounds: b } = data;
+  // Loading steps, for a page's loading screen: terrain, chart, airspace, then prepare (the GPU's first work).
+  // Each waits for a paint, so the step shows before the work that follows holds the page (a background tab, which
+  // paints nothing, goes on after 50 ms).
+  const step = (name: "terrain" | "chart" | "airspace" | "prepare") => {
+    host.dispatchEvent(new CustomEvent("skycake-loading", { bubbles: true, detail: { step: name } }));
+    return new Promise<void>((done) => {
+      requestAnimationFrame(() => setTimeout(done));
+      setTimeout(done, 50);
+    });
+  };
+  await step("terrain");
   const lat0 = (b.s + b.n) / 2, lon0 = (b.w + b.e) / 2;
   const k = Math.cos((lat0 * Math.PI) / 180);
   const X = (lon: number) => (lon - lon0) * 60 * k;
@@ -179,7 +192,10 @@ export async function build(
   // Far enough back to see the whole area in a tall, narrow view.
   controls.maxDistance = Math.max(300, 4 * Math.max(width, depth));
   controls.maxPolarAngle = Math.PI / 2 - 0.03; // stay above the chart
-  controls.screenSpacePanning = false; // a right drag slides over the chart, not up off it
+  // A mouse as on a map app: a drag moves the map, a right drag (or Ctrl, Shift or Cmd and a drag) turns and tilts it,
+  // the wheel zooms. A drag slides over the chart, not up off it.
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.screenSpacePanning = false;
   controls.zoomToCursor = true;
   controls.touches = { ONE: null, TWO: null }; // touch is handled below, as on a maps app
   let dirty = true;
@@ -243,6 +259,8 @@ export async function build(
   // A chart over the whole area (sectional or low) and, when on, a sharper one over its own map (TAC or area chart).
   const load = async (url: string) => {
     const t = await new THREE.TextureLoader().loadAsync(url);
+    // Decoded off the main thread now, not in the frame that first draws it.
+    await (t.image as HTMLImageElement).decode?.().catch(() => {});
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = renderer.capabilities.getMaxAnisotropy();
     return t;
@@ -253,7 +271,9 @@ export async function build(
     return textures.get(url)!;
   };
   const { tac, low, area } = data.charts;
+  await step("chart");
   const [sectional, tacTex] = await Promise.all([texture(data.charts.sectional), tac ? texture(tac.url) : new THREE.Texture()]);
+  await step("airspace");
   const span = (lo: number, hi: number, a: number, b: number) => [(lo - a) / (b - a), (hi - a) / (b - a)];
   const rectOf = (m: Bounds) => {
     const [u0, u1] = span(m.w, m.e, b.w, b.e);
@@ -351,8 +371,8 @@ export async function build(
   };
 
   // VFR shows all the airspace; IFR only special use, airways and their fixes. Areas keep their raised state across modes.
-  let mode: Mode = "vfr";
-  const inMode = (l: Live) => shownIn(mode, l.area.kind);
+  let mode: Mode = "vfr", keepRaised = false;
+  const inMode = (l: Live) => shownIn(mode, l.area.kind) || (keepRaised && l.goal === 1);
 
   // Each pixel takes one layer of airspace color: a depth-only pass finds the nearest surface, then only that surface draws.
   // The FAA's shelves overlap their cores in one plane (Tucson's 4,200-6,600 shelf covers its surface area, both up to 6,600),
@@ -661,7 +681,8 @@ export async function build(
   // The airplane: outside the world, so a taller height scale lifts it without stretching it. Built on first use.
   let craft: THREE.Group | null = null, prop: THREE.Object3D | null = null, craftLoad: Promise<void> | null = null;
   let flight: Point[] | null = null, planeTag: Tag | null = null;
-  const planeAt = new THREE.Vector3();
+  const planeAt = new THREE.Vector3(), planeTagAt = new THREE.Vector3();
+  let perNm = 1; // the model's scale for a 1 NM span
   const loadCraft = () =>
     (craftLoad ??= new GLTFLoader()
       .parseAsync(Uint8Array.from(atob(PLANE_GLB), (c) => c.charCodeAt(0)).buffer, "")
@@ -674,11 +695,11 @@ export async function build(
           prop.traverse((o) => (o as THREE.Mesh).geometry?.translate(-c.x, -c.y, -c.z));
           prop.position.add(c);
         }
-        // Nose to -z (north), up +y; centred, scaled to a 0.6 NM span.
+        // Nose to -z (north), up +y; centred. Scaled in placePlane.
         const box = new THREE.Box3().setFromObject(model);
         model.position.sub(box.getCenter(new THREE.Vector3()));
         craft = new THREE.Group().add(model);
-        craft.scale.setScalar(0.6 / (box.max.x - box.min.x));
+        perNm = 1 / (box.max.x - box.min.x);
         scene.add(craft);
         placePlane();
       })
@@ -688,6 +709,8 @@ export async function build(
     if (!flight) return;
     const p = along(flight, tNow);
     planeAt.copy(toLocal(p));
+    // The altitude tag clears the airplane, whatever the height scale.
+    planeTagAt.copy(planeAt).setY(planeAt.y + 0.6 / world.scale.y);
     if (planeTag) {
       const text = Math.round(p[2]).toLocaleString("en-US");
       if (planeTag.el.textContent !== text) {
@@ -697,6 +720,8 @@ export async function build(
     }
     if (!craft) return;
     craft.position.set(planeAt.x, planeAt.y * world.scale.y, planeAt.z);
+    // A 1.2 NM span flying a procedure; parked for a question, 2 NM, to find in a frame 10 NM across.
+    craft.scale.setScalar(perNm * (flight.length === 1 ? 2 : 1.2));
     // Along the line, or north on a single point.
     const [a, b] = tNow < 1 ? [p, along(flight, tNow + 0.001)] : [along(flight, tNow - 0.001), p];
     const [dx, dz] = [X(b[1]) - X(a[1]), Z(b[0]) - Z(a[0])];
@@ -814,7 +839,7 @@ export async function build(
   };
   // A fix sits at its altitude, so the ground under a tap on it can be miles past it in a tilted view: a tap on a shown
   // fix's tag, or within 24 px of its point, is at the fix.
-  const fixAt = (e: PointerEvent): [lat: number, lon: number] | null => {
+  const fixAt = (e: MouseEvent): [lat: number, lon: number] | null => {
     if (!tagsOn) return null;
     const r = renderer.domElement.getBoundingClientRect();
     let best: Fix | null = null, bestD = 24;
@@ -829,7 +854,7 @@ export async function build(
     }
     return best && [best.lat, best.lon];
   };
-  const pick = (e: PointerEvent): Live | null => {
+  const pick = (e: MouseEvent): Live | null => {
     const r = renderer.domElement.getBoundingClientRect();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
     const up = lives.filter((l) => l.goal === 1 && inMode(l));
@@ -838,7 +863,7 @@ export async function build(
     const p = groundHit();
     return (p && tappable.find((l) => l.goal === 0 && inMode(l) && l.rings.some((ring) => inRing([p.x, p.z], ring)))) ?? null;
   };
-  const tell = (l: Live | null, e: PointerEvent) => {
+  const tell = (l: Live | null, e: MouseEvent) => {
     const r = renderer.domElement.getBoundingClientRect();
     label(l && l.area, e.clientX - r.left, e.clientY - r.top);
   };
@@ -847,6 +872,7 @@ export async function build(
   el3d.addEventListener("pointerleave", () => label(null, 0, 0));
   // A tap (not a drag): a flat area rises; a raised one is picked, then lowers on the next tap.
   let down = [0, 0], downAt = 0, most = 0;
+  let downType = "";
   let picked: Live | null = null;
   const fingers = new Map<number, Pt>();
   let two: ReturnType<typeof twoFingers> | null = null;
@@ -855,11 +881,76 @@ export async function build(
     const [a, b] = [...fingers.values()];
     two = fingers.size === 2 ? twoFingers(a, b) : null;
   };
-  const at = (e: PointerEvent): Pt => {
+  const at = (e: MouseEvent): Pt => {
     const r = el3d.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   };
+  // A pen can double-tap and drag to zoom without a wheel. Keep its second press out of OrbitControls.
+  // A mouse uses the browser's double-click and its normal drag handling.
+  const zoomButton = (e: PointerEvent) =>
+    e.pointerType === "pen" && (e.button === 0 || e.button === 2);
+  let press: { id: number; button: number; at: Pt } | null = null;
+  let firstUp: { id: number; button: number; at: Pt; ms: number } | null = null;
+  let handledUp: { at: Pt; ms: number } | null = null;
+  let zoomDrag: { id: number; y: number; off: number; p: THREE.Vector3; moved: boolean } | null = null;
+  const zoomTo = (p: THREE.Vector3, off: number) => {
+    takeOver();
+    const want = THREE.MathUtils.clamp(off, controls.minDistance, controls.maxDistance);
+    const now = camera.position.distanceTo(controls.target);
+    for (const q of [camera.position, controls.target]) q.sub(p).multiplyScalar(want / now).add(p);
+    touchMoved();
+  };
   el3d.addEventListener("pointerdown", (e) => {
+    handledUp = null;
+    if (zoomDrag) return;
+    press = zoomButton(e) ? { id: e.pointerId, button: e.button, at: at(e) } : null;
+    const pair = press && firstUp?.id === press.id && firstUp.button === press.button &&
+      isSecondTap(firstUp, press.at, e.timeStamp);
+    firstUp = null;
+    if (!pair) return;
+    e.stopImmediatePropagation();
+    zoomDrag = { id: e.pointerId, y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
+    el3d.setPointerCapture(e.pointerId);
+  }, { capture: true });
+  el3d.addEventListener("pointermove", (e) => {
+    if (zoomDrag?.id !== e.pointerId || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP) return;
+    zoomDrag.moved = true;
+    zoomTo(zoomDrag.p, zoomDrag.off / dragZoom(e.clientY - zoomDrag.y));
+  });
+  const pointerDone = (e: PointerEvent) => {
+    if (press?.id === e.pointerId) {
+      const end = at(e);
+      if (!zoomDrag && e.type === "pointerup" && e.button === press.button &&
+          Math.hypot(end[0] - press.at[0], end[1] - press.at[1]) <= TAP_SLOP) {
+        firstUp = { id: press.id, button: press.button, at: end, ms: e.timeStamp };
+      }
+      press = null;
+    }
+    if (zoomDrag?.id !== e.pointerId) return;
+    if (e.type === "pointerup") {
+      if (e.button === 0) handledUp = { at: at(e), ms: e.timeStamp };
+      if (!zoomDrag.moved) zoomTo(zoomDrag.p, zoomDrag.off / 2);
+    }
+    zoomDrag = null;
+    most = 0; // the second press is not a tap
+  };
+  el3d.addEventListener("lostpointercapture", (e) => {
+    if (zoomDrag?.id === e.pointerId) zoomDrag = null;
+    if (press?.id === e.pointerId) press = null;
+  });
+  el3d.addEventListener("pointerup", pointerDone, { capture: true });
+  el3d.addEventListener("pointercancel", pointerDone, { capture: true });
+  // Some pen drivers send a browser double-click directly. A pointer pair already zoomed on its second release.
+  el3d.addEventListener("dblclick", (e) => {
+    if (e.button !== 0 || downType === "touch") return;
+    const alreadyZoomed = isSecondTap(handledUp, at(e), e.timeStamp);
+    handledUp = null;
+    if (alreadyZoomed) return;
+    firstUp = null;
+    zoomTo(groundUnder(at(e)) ?? controls.target.clone(), camera.position.distanceTo(controls.target) / 2);
+  });
+  el3d.addEventListener("pointerdown", (e) => {
+    downType = e.pointerType;
     if (!fingers.size) {
       down = [e.clientX, e.clientY];
       downAt = performance.now();
@@ -937,17 +1028,16 @@ export async function build(
     fingers.delete(e.pointerId);
     regrip();
   });
-  el3d.addEventListener("pointerup", (e) => {
-    const touch = fingers.delete(e.pointerId);
-    regrip();
-    if (fingers.size) return;
+  const pickAt = (e: MouseEvent, touch: boolean) => {
     if (!isTap({ fingers: most, moved: Math.hypot(e.clientX - down[0], e.clientY - down[1]), ms: touch ? performance.now() - downAt : 0 }, loose)) return;
+    const quizzing = host.closest(".sc-quizzing") !== null;
+    if (quizzing && !tapFn) return;
     // Where a finger can drag from a tag, the tag isn't the one receiving the tap (style.css).
     const tag = airportTags.find((t) => {
       const r = t.el.getBoundingClientRect();
       return t.el.style.visibility === "visible" && e.clientX > r.left - 6 && e.clientX < r.right + 6 && e.clientY > r.top - 6 && e.clientY < r.bottom + 6;
     });
-    if (tag) return tapAirport(tag.el.textContent!);
+    if (tag && !quizzing) return tapAirport(tag.el.textContent!);
     const l = pick(e);
     if (tapFn) {
       const fix = fixAt(e), p = fix ? null : groundHit();
@@ -962,9 +1052,19 @@ export async function build(
     if (l && l.goal === 0) set(l, true);
     picked = l;
     tell(l, e);
+  };
+  el3d.addEventListener("pointerup", (e) => {
+    const touch = fingers.delete(e.pointerId);
+    regrip();
+    if (!fingers.size && e.pointerType !== "mouse" && (touch || e.button === 0)) pickAt(e, touch);
+  });
+  // The browser counts mouse clicks at its own timing so the second click zooms without picking again.
+  el3d.addEventListener("click", (e) => {
+    if (downType === "mouse" && e.detail === 1) pickAt(e, false);
   });
 
   let sized = [0, 0];
+  let looping = false;
   const size = () => {
     const { clientWidth: w, clientHeight: h } = host;
     const changed = sized[0] > 0 && (w !== sized[0] || h !== sized[1]);
@@ -972,9 +1072,12 @@ export async function build(
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    dirty = true;
     // A new shape (full screen, a turned phone) would clip what was in view.
     if (changed && framed) frame(framed.spots, framed.tilt, true);
+    // Drawn now: setSize clears the canvas, and waiting for the next frame shows it blank (a flash while dragging the
+    // plate's divider). Not before the loop starts, when the scene is still being built.
+    if (looping) draw();
+    else dirty = true;
   };
   new ResizeObserver(size).observe(host);
   size();
@@ -1042,6 +1145,7 @@ export async function build(
     raisedAreas: () => lives.filter((l) => l.goal === 1).map((l) => l.area.id),
     apply: async (sc, procs, now = false, framing = [], time = 1) => {
       mode = modeOf(sc.chart);
+      keepRaised = sc.keepRaised;
       airways.visible = mode === "ifr";
       for (const l of lives) set(l, sc.raised.has(l.area.id));
       world.scale.y = sc.height;
@@ -1065,18 +1169,23 @@ export async function build(
       for (const t of airportTags) t.el.classList.toggle("hl", hl.some((x) => "airport" in x && x.airport === t.el.textContent));
       // A procedure with draw grows path by path over the timeline; each fix tag shows once its point is drawn.
       const shows = new Map<Fix, number>();
+      // Flown by the airplane, a procedure's route grows under it, by distance, and the paths off the route draw at the end.
+      const flown = sc.airplane && "along" in sc.airplane ? sc.airplane.along : null;
       procs.forEach((a) => {
         const draw = sc.procedures.find((r) => same(r, a))?.draw, n = a.paths.length, o = dim(hlProcs.includes(a));
+        const shares = flown && same(flown, a) ? flightShares(a) : null;
         a.paths.forEach((p, k) => {
+          const [from, to] = shares ? (shares.get(p) ?? [0.999, 1]) : [k / n, (k + 1) / n];
           const pts = p.pts.map(toLocal), run = runOf(pts);
           const main = p.seg === "final" || p.seg === "common";
           const c = curtain(pts, PATH[p.seg], o * (main ? 0.28 : p.seg === "vectors" ? 0.08 : 0.14));
           const lines = path(pts, PATH[p.seg], p.seg === "missed" || p.seg === "vectors", o);
-          if (draw && lines.length) grows.push({ from: k / n, to: (k + 1) / n, pts, run, lines, curtain: c.mesh, quads: c.quads });
+          if (draw && lines.length) grows.push({ from, to, pts, run, lines, curtain: c.mesh, quads: c.quads });
           if (!draw) return;
           for (const f of a.fixes) {
             const j = pts.findIndex((q) => Math.hypot(q.x - X(f.lon), q.z - Z(f.lat)) < 0.05);
-            if (j >= 0 && !shows.has(f)) shows.set(f, (k + run[j] / (run[run.length - 1] || 1)) / n);
+            // The earliest any path reaches it: an off-route transition can list a fix the route reaches sooner.
+            if (j >= 0) shows.set(f, Math.min(shows.get(f) ?? 1, from + (to - from) * (run[j] / (run[run.length - 1] || 1))));
           }
         });
         if (draw) for (const f of a.fixes) if (!shows.has(f)) shows.set(f, 1);
@@ -1096,9 +1205,15 @@ export async function build(
       flight = !plane ? null : "at" in plane ? [plane.at] : file ? flightLine(file) : null;
       if (plane && !flight) console.warn("skycake: the airplane's procedure was not passed to apply");
       planeTag = null;
+      if (flight?.length === 1) {
+        // A parked airplane: a dashed line down to the ground and a ring there, so where it is reads at any angle.
+        const [lat, lon, ft] = flight[0], x = X(lon), z = Z(lat);
+        path([new THREE.Vector3(x, nm(ft), z), new THREE.Vector3(x, groundAt(x, z), z)], 0xffffff, true, 0.9);
+        route.add(loop(circle(x, z, 0.5), 0xffffff, 3));
+      }
       if (flight) {
         // The altitude shows even if the model fails to load: an airplane question is asked about it.
-        addTag(el("div", "tag plane"), planeAt, -1, () => true, approachTags);
+        addTag(el("div", "tag plane"), planeTagAt, -1, () => true, approachTags);
         planeTag = approachTags[approachTags.length - 1];
         void loadCraft();
       }
@@ -1198,6 +1313,10 @@ export async function build(
       });
       placeBadges();
     },
+    preload: (name) => {
+      const over = name === "tac" ? tac : name === "area" ? area : undefined;
+      for (const u of [(name === "area" || name === "low") && low ? low : data.charts.sectional, over?.url]) if (u) texture(u).catch(() => {});
+    },
     hints: (on) => {
       host.classList.toggle("sc-no-hints", !on);
       for (const t of approachTags) t.w = 0; // the altitudes change the tags' widths
@@ -1206,6 +1325,27 @@ export async function build(
   };
 
   frame(whole(), 32, true);
+
+  // The first frame's work, the chart uploads and every shader (hidden things too, for the first raise), done now,
+  // under the page's loading screen, not as a stall once the map is up.
+  await step("prepare");
+  for (const t of [sectional, tacTex]) renderer.initTexture(t);
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((o) => {
+    if (o.visible) return;
+    hidden.push(o);
+    o.visible = true;
+  });
+  await renderer.compileAsync(scene, camera);
+  for (const o of hidden) o.visible = false;
+  const draw = () => {
+    dirty = false;
+    renderer.render(scene, camera);
+    place();
+    placeBadges();
+  };
+  draw();
+  looping = true;
 
   let last = performance.now();
   renderer.setAnimationLoop((now) => {
@@ -1236,11 +1376,7 @@ export async function build(
     }
     if (free) keepOnChart();
     controls.update();
-    if (!dirty) return;
-    dirty = false;
-    renderer.render(scene, camera);
-    place();
-    placeBadges();
+    if (dirty) draw();
   });
 
   return view;

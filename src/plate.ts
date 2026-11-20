@@ -38,6 +38,8 @@ export function plateView(c: Context, on: {
   back?: () => HTMLElement;
   /** The map's room on an upright phone, for the divider. Default: the figure's box. */
   room?: () => { top: number; bottom: number };
+  /** A quiz locks the chart and receives taps in normalized image coordinates. */
+  pick?: (at: Pt) => void;
 }): Plates {
   if (!c.data.plates) {
     let told = false;
@@ -95,7 +97,7 @@ export function plateView(c: Context, on: {
   let fit: PanZoom = { x: 0, y: 0, s: 1 };
   let t = fit;
   const place = (to: PanZoom) => {
-    t = to;
+    t = img?.naturalWidth && body.clientWidth ? keepIn(to, { w: img.naturalWidth, h: img.naturalHeight }, { w: body.clientWidth, h: body.clientHeight }) : to;
     if (img) img.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.s})`;
   };
   const fitNow = () => {
@@ -200,7 +202,6 @@ export function plateView(c: Context, on: {
 
   // Pan and zoom: one pointer drags, two pinch (twoFingers: shape zooms and follows the fingers, tilt pans), the wheel
   // zooms about the cursor, a double tap or click fits.
-  // shortcut: no pan limit, Fit brings the chart back; clamp if students lose it
   const at = (e: { clientX: number; clientY: number }): Pt => {
     const b = body.getBoundingClientRect();
     return [e.clientX - b.left, e.clientY - b.top];
@@ -241,6 +242,11 @@ export function plateView(c: Context, on: {
     if (two) mid = middle(pair());
     if (down.size) return;
     const tapped = e.type === "pointerup" && isTap({ fingers: tap.fingers, moved: tap.moved, ms: e.timeStamp - tap.start }, c.a11y);
+    if (tapped && img?.naturalWidth && fig.classList.contains("sc-plate-question") && on.pick) {
+      const r = img.getBoundingClientRect();
+      on.pick([(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]);
+      return;
+    }
     if (tapped && tap.start - lastTap < 300) {
       fitNow();
       lastTap = -Infinity;
@@ -291,6 +297,7 @@ export function plateView(c: Context, on: {
   };
   const away = () => (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
   const shut = () => {
+    if (fig.classList.contains("sc-plate-question")) return;
     set(null);
     away();
   };
@@ -364,13 +371,17 @@ export function plateView(c: Context, on: {
         n = 1;
       }
       // Already on screen (a quiz's reveal repeats its question's chart): left as the student has it.
-      if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) return;
+      const mode = fig.classList.contains("sc-plate-question") ? "full" : "split";
+      if (now !== null && shown?.airport === p.airport && shown.entry === entry && page === n) {
+        if (mode === "full" && now !== mode) set(mode);
+        return;
+      }
       want = null;
       sceneAt = p.airport;
       show({ airport: p.airport, entry }, n);
       // Opening redraws the picker; an open panel needs it redrawn too.
       if (now !== null) void sync();
-      set("split");
+      set(mode);
     },
     destroy: () => {
       ticket++;
@@ -424,6 +435,14 @@ export type PanZoom = { x: number; y: number; s: number };
 export function fitChart(img: { w: number; h: number }, box: { w: number; h: number }): PanZoom {
   const s = Math.min(box.w / img.w, box.h / img.h);
   return { x: (box.w - img.w * s) / 2, y: (box.h - img.h * s) / 2, s };
+}
+
+/** Keeps the chart in the box: smaller than the box on an axis, it stays wholly inside; larger, it covers the box. */
+export function keepIn(t: PanZoom, img: { w: number; h: number }, box: { w: number; h: number }): PanZoom {
+  const axis = (at: number, size: number, room: number) => Math.min(Math.max(at, Math.min(0, room - size)), Math.max(0, room - size));
+  const x = axis(t.x, img.w * t.s, box.w), y = axis(t.y, img.h * t.s, box.h);
+  // The same object when nothing moved: a fitted chart stays the fit (plateView compares them).
+  return x === t.x && y === t.y ? t : { x, y, s: t.s };
 }
 
 /** Zooms by `factor`, the scale clamped to min..max, keeping the chart point under `at` where it is. */

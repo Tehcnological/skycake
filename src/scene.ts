@@ -1,6 +1,6 @@
 // A scene: everything the view shows at one moment. Free roam starts from one; walkthrough steps and quiz questions
 // each set one. resolve() fills in the defaults and checks every name against the area's data.
-import { KINDS, pickChart, type AirspaceFile, type ChartName, type Kind } from "./airspace.js";
+import { KINDS, chartsIn, modeOf, pickChart, type AirspaceFile, type ChartName, type Kind } from "./airspace.js";
 
 export type ProcedureRef = { airport: string; name: string };
 export type AreaRef = { area: string };
@@ -16,7 +16,7 @@ export type Scene = {
   raise?: (Kind | AreaRef)[];
   /** Any number at once. draw (leg by leg) plays in walkthroughs. */
   procedures?: (ProcedureRef & { draw?: boolean })[];
-  /** Drawn emphasised. */
+  /** Drawn emphasised; a highlighted area is raised too. */
   highlight?: Target[];
   /** A fixed spot, or flying a procedure for `seconds`. */
   airplane?: { at: [lat: number, lon: number, ft: number] } | { along: ProcedureRef; seconds: number };
@@ -29,8 +29,9 @@ export type Scene = {
   /** Opens the plate panel to this chart in split; null closes it; left out, the panel stays as it is. */
   plate?: PlateRef | null;
 };
-/** What the viewer applies: every field filled in, names checked. raised holds area ids. */
-export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: (ProcedureRef & { draw: boolean })[]; highlight: Target[]; airplane: Scene["airplane"] | null; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName };
+/** What the viewer applies: every field filled in, names checked. raised holds area ids. keepRaised: the raised areas show
+ * though the chart's rules would hide their kind (a lesson's Class B over the IFR chart its procedure picked). */
+export type Resolved = { camera: Camera | null; raised: Set<string>; procedures: (ProcedureRef & { draw: boolean })[]; highlight: Target[]; airplane: Scene["airplane"] | null; diagram: string | null; height: 1 | 4; tags: boolean; chart: ChartName; keepRaised: boolean };
 
 export class SceneError extends Error {}
 
@@ -50,6 +51,8 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   });
   const highlight = scene.highlight ?? [];
   for (const t of highlight) target(t, data);
+  // A highlighted area stands up out of the chart: what a lesson or question is about is in 3D.
+  for (const t of highlight) if ("area" in t) raised.add(t.area);
   const airplane = scene.airplane ?? null;
   if (airplane && "along" in airplane) procedureOf(airplane.along, data);
   if (airplane && "at" in airplane) {
@@ -66,7 +69,10 @@ export function resolve(scene: Scene, data: AirspaceFile): Resolved {
   }
   const camera = scene.camera;
   if (camera && typeof camera === "object" && "frame" in camera) for (const t of camera.frame) target(t, data);
-  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart: pickChart(data.charts, scene.chart) };
+  // A scene that shows or flies a procedure and names no chart is on an IFR chart, with what it raises still shown.
+  const ifr = scene.chart === undefined && (procedures.length > 0 || !!(airplane && "along" in airplane)) ? chartsIn(data.charts, "ifr")[0] : undefined;
+  const chart = pickChart(data.charts, scene.chart ?? ifr);
+  return { camera: scene.camera === undefined ? "fit" : scene.camera, raised, procedures, highlight, airplane, diagram, height: scene.height ?? 1, tags: scene.tags ?? true, chart, keepRaised: !!ifr && modeOf(chart) === "ifr" };
 }
 
 function procedureOf({ airport, name }: ProcedureRef, data: AirspaceFile) {

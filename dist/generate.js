@@ -42,6 +42,12 @@ function find(g, rng) {
     const ps = procs(g).filter((p) => p.fixes.some((f) => p.fixes.filter((o) => o.name === f.name).length === 1));
     if (ps.length && (!areas.length || rng() < 0.5)) {
         const p = ps[Math.floor(rng() * ps.length)];
+        // By role about half the time, where the procedure has one: the student finds the FAF or MAP from the picture.
+        const roles = ["FAF", "MAP"].flatMap((role) => p.fixes.filter((f) => f.role === role).slice(0, 1).map((f) => ({ role, fix: f.name })));
+        if (roles.length && rng() < 0.5) {
+            const { role, fix } = roles[Math.floor(rng() * roles.length)];
+            return { type: "find", prompt: (role === "FAF" ? g.ask.findFaf : g.ask.findMap)(p.name), answer: { fix }, scene: { ...sceneOf(p), tags: true }, facts: null };
+        }
         const ones = p.fixes.filter((f) => p.fixes.filter((o) => o.name === f.name).length === 1);
         const fix = ones[Math.floor(rng() * ones.length)].name;
         return { type: "find", prompt: g.ask.findFix(fix), answer: { fix }, scene: { ...sceneOf(p), tags: true }, facts: null };

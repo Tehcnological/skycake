@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>skycake modes</title>
+<style>
+  body { margin: 0 auto; max-width: 760px; padding: 24px 16px; background: #17191c; color: #d9dadc; font: 15px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 24px 0 6px; color: #9aa0a6; text-transform: uppercase; letter-spacing: .04em; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { padding: 6px 0; border-bottom: 1px solid #2a2d31; }
+  a { color: #6fa8ff; }
+  small { color: #9aa0a6; }
+</style>
+</head>
+<body>
+<!-- Every mode and quiz type in the demo (index.html), for checking them all locally. Dev-only page: not shipped. -->
+<h1>skycake: every mode</h1>
+<small>The Phoenix area. Quiz results go to the console. Each link opens demo/index.html with its settings.</small>
+
+<h2>Free roam</h2>
+<ul>
+  <li><a href="./">Explore</a> <small>tags, procedures, plates, IFR/VFR, diagrams</small></li>
+  <li><a href="./?scene=%7B%22procedures%22%3A%5B%7B%22airport%22%3A%22KPHX%22%2C%22name%22%3A%22ILS%20RWY%2007L%22%7D%5D%2C%22plate%22%3A%7B%22airport%22%3A%22KPHX%22%2C%22chart%22%3A%22ILS%20OR%20LOC%2FDME%20RWY%2007L%22%7D%7D">A first scene</a> <small>KPHX ILS 07L with its plate</small></li>
+  <li><a href="./?a11y=1">Explore, accessibility mode</a></li>
+</ul>
+
+<h2>Walkthrough</h2>
+<ul>
+  <li><a href="./?walkthrough=class-b">The Phoenix Class B</a> <small>6 steps, a quick check at the end, then a link to the quiz</small></li>
+  <li><a href="./?walkthrough=class-b&amp;a11y=1">The same, accessibility mode</a></li>
+</ul>
+
+<h2>Written quiz</h2>
+<ul>
+  <li><a href="./?quiz=vfr">VFR practice around Phoenix</a> <small>read Class B and D limits, locate Chandler, identify the airplane's airspace</small></li>
+  <li><a href="./?quiz=ifr">IFR practice on the Phoenix ILS 07L</a> <small>select a symbol on the plate, read its profile, and follow the 3D route</small></li>
+  <li><a href="./?quiz=class-b">The Class B quiz</a> <small>find a fix, find an area, read a floor, read a number, airplane, procedure, plus generated questions</small></li>
+  <li><a href="./?quiz=class-b&amp;a11y=1">The same, accessibility mode</a> <small>numbered picks instead of taps</small></li>
+</ul>
+
+<h2>Practice: one question type</h2>
+<ul>
+  <li><a href="./?quiz=practice">Every type</a></li>
+  <li><a href="./?quiz=practice&amp;types=find">Find</a> <small>tap an area or fix</small></li>
+  <li><a href="./?quiz=practice&amp;types=read">Read</a> <small>a floor or ceiling off the chart</small></li>
+  <li><a href="./?quiz=practice&amp;types=airplane">Airplane</a> <small>which airspace the airplane is in</small></li>
+  <li><a href="./?quiz=practice&amp;types=procedure">Procedure</a> <small>fixes and altitudes on an approach</small></li>
+  <li><a href="./?quiz=practice&amp;a11y=1">Every type, accessibility mode</a></li>
+</ul>
+
+<h2>Practice: filters</h2>
+<ul>
+  <li><a href="./?quiz=practice&amp;kinds=B">Class B only</a></li>
+  <li><a href="./?quiz=practice&amp;kinds=B,C,D">Classes B, C and D</a></li>
+  <li><a href="./?quiz=practice&amp;kinds=R,MOA">Restricted areas and MOAs</a></li>
+  <li><a href="./?quiz=practice&amp;airports=KPHX">KPHX procedures only</a></li>
+  <li><a href="./?quiz=practice&amp;airports=KCGZ,KBXK">KCGZ and KBXK procedures</a></li>
+  <li><a href="./?quiz=practice&amp;types=airplane&amp;kinds=R">Nothing to ask</a> <small>the filters leave no question: it says so and offers Explore</small></li>
+</ul>
+
+<h2>SkyCake Viewer</h2>
+<ul>
+  <li><a href="../www/">The app</a> <small>after npm run app</small></li>
+</ul>
+</body>
+</html>

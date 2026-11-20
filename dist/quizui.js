@@ -5,28 +5,58 @@ import { card } from "./card.js";
 import { h, wakeOnTap } from "./freeroam.js";
 import { classAt } from "./airclass.js";
 import { areaFacts } from "./generate.js";
-import { locator, questionScene, revealScene, score } from "./question.js";
+import { locator, plateChoice, questionScene, revealScene, score } from "./question.js";
 import { advance, answer, attempt, maker, practice, progress, skip } from "./quiz.js";
 import { inheritedPlate, stripPlayback } from "./scene.js";
 import { scenes } from "./scenes.js";
 import { pad } from "./pad.js";
 import { plateView } from "./plate.js";
 const TYPES = ["find", "read", "airplane", "procedure"];
-/** Resolves once the first question shows. explore: leave into free roam from the scene on screen; the quiz's DOM is gone by then. */
-export async function quiz(c, mode, onResult, explore) {
+/**
+ * Resolves once the first question shows. explore: leave into free roam from the scene on screen; the quiz's DOM is gone
+ * by then, and back (while the quiz is unfinished) returns to it. resume: the attempt to carry on with, and whether its
+ * current question was already answered.
+ */
+export async function quiz(c, mode, onResult, explore, resume) {
     const { fig, view: v, data, labels: L } = c;
     const id = mode.quiz === "practice" ? "practice" : mode.quiz.id;
     const viewEl = fig.querySelector(".view");
     const count = h("p", { class: "sc-title sc-score" });
     const exploreTop = h("button", { type: "button", class: "sc-pill" }, L.explore);
-    const top = h("div", { class: "sc-wtop" }, count, exploreTop);
+    // The height scale, 1x or 4x: once picked it holds for every question after, over what each question asks for.
+    let height = resume?.height;
+    let onScreenHeight = 1;
+    const heightButton = h("button", { type: "button", class: "sc-pill sc-height" });
+    const drawHeight = () => {
+        heightButton.textContent = `${onScreenHeight}×`;
+        heightButton.setAttribute("aria-label", L.heightScale(onScreenHeight));
+    };
+    heightButton.addEventListener("click", () => {
+        height = onScreenHeight = onScreenHeight === 1 ? 4 : 1;
+        drawHeight();
+        v.exaggerate(height);
+    });
+    const withHeight = (s) => {
+        onScreenHeight = height ?? s.height ?? 1;
+        drawHeight();
+        return height ? { ...s, height } : s;
+    };
+    const top = h("div", { class: "sc-wtop" }, count, h("div", { class: "sc-wtools" }, heightButton, exploreTop));
     // One live region for the whole quiz, on the page before any text goes in, so each question and result is announced.
     const live = h("p", { class: "sc-hidden", "aria-live": "polite" });
     const say = (text) => live.replaceChildren(text);
     const box = h("div", { class: "sc-quiz" }, live);
     // The plate panel: a question's scene opens its chart; picking another leaves the question's scene as it is. On an
     // upright phone its room is between the count's row and the map's foot.
-    const plates = plateView(c, { show: () => { }, room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }) });
+    let regions;
+    const plates = plateView(c, {
+        show: () => { },
+        room: () => ({ top: top.getBoundingClientRect().bottom, bottom: viewEl.getBoundingClientRect().bottom }),
+        pick: (at) => {
+            if (regions)
+                open?.selectChoice(plateChoice(regions, at));
+        },
+    });
     viewEl.after(top, ...(plates.el ? [plates.el] : []));
     // Find questions need the map moved to bring the answer into view; the pad is shown in accessibility mode.
     const camera = pad(c);
@@ -84,7 +114,9 @@ export async function quiz(c, mode, onResult, explore) {
         const area = classAt(data, v.dem(), ...plane.at).area;
         return area ? { ...q, answerArea: area } : q;
     };
-    let a = start();
+    let a = resume?.a ?? start();
+    // The open question's answer is in: leaving and coming back moves on rather than ask it again.
+    let answered = false;
     const drawCount = () => {
         count.hidden = !a;
         if (!a)
@@ -109,9 +141,14 @@ export async function quiz(c, mode, onResult, explore) {
             return Promise.resolve();
         }
         const it = a.items[a.i];
+        const picking = it.q.scene?.plate && "plateRegions" in it.q ? it.q.plateRegions : undefined;
+        if (fig.classList.toggle("sc-plate-question", !!picking) === false && regions)
+            plates.set("split");
+        regions = picking;
+        answered = false;
         let shownAt = 0;
         // Its chart, its own or the nearest earlier item's; plates.open leaves a chart already shown as it is.
-        const scene = { ...questionScene(it.q), plate: inheritedPlate(a.items.map((x) => x.q.scene), a.i) };
+        const scene = withHeight({ ...questionScene(it.q), plate: inheritedPlate(a.items.map((x) => x.q.scene), a.i) });
         const files = stage.filesOf(scene);
         // Skip (accessibility mode, find questions): moves on without scoring; a fixed quiz's total drops by one.
         const onSkip = () => {
@@ -122,17 +159,24 @@ export async function quiz(c, mode, onResult, explore) {
             next();
         };
         const find = !("choices" in it.q) && !("number" in it.q);
+        // Only the first answer scores; a wrong one gets a second try (with the hint) before the reveal.
+        let tries = 0;
         const k = card(it.q, L, v, say, async (ans) => {
             const loaded = await files;
             if (!a || a.done || open !== k)
                 return;
             const right = score(it.q, ans, locator(data, loaded));
-            a = answer(a, right);
-            drawCount();
-            report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
-            void show(revealScene(withArea(it.q)));
-            k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next());
-        }, { a11y: c.a11y, ...(find && { onSkip }) });
+            if (tries++ === 0) {
+                a = answer(a, right);
+                answered = true;
+                drawCount();
+                report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
+                if (!right)
+                    return k.retry();
+            }
+            void show(withHeight(revealScene(withArea(it.q))));
+            k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next(), tries > 1);
+        }, { a11y: c.a11y, platePick: !!picking, ...(find && { onSkip }) });
         const had = put(k.el) || (c.a11y && asked > 0);
         asked++;
         open = k;
@@ -150,6 +194,11 @@ export async function quiz(c, mode, onResult, explore) {
         a = advance(a, make, rng);
         if (!a.done)
             return void ask(); // practice is done only when nothing more can be made; it ends with its score too
+        if (fig.classList.contains("sc-plate-question")) {
+            fig.classList.remove("sc-plate-question");
+            plates.set("split");
+            regions = undefined;
+        }
         const { total } = progress(a);
         report({ quiz: id, end: true, right: a.right, total });
         note(L.result(a.right, total), pill(L.again, () => {
@@ -166,10 +215,15 @@ export async function quiz(c, mode, onResult, explore) {
         top.remove();
         box.remove();
         camera.remove();
-        fig.classList.remove("sc-quizzing");
+        fig.classList.remove("sc-quizzing", "sc-plate-question");
         viewEl.focus();
-        explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }));
+        const left = a && !a.done ? { a, answered, height } : undefined;
+        explore(stripPlayback({ ...stage.onScreen(), camera: v.camera() }), left && (() => void quiz(c, mode, onResult, explore, left)));
     }
     exploreTop.addEventListener("click", leave);
+    if (resume?.answered) {
+        next();
+        return Promise.resolve();
+    }
     return ask(true);
 }

@@ -74,6 +74,8 @@ export function questionProblems(q, data, hasFix, loaded) {
         out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
     if (typeof q.prompt !== "string" || !q.prompt.trim())
         out.push("prompt is empty");
+    if (q.hint !== undefined && (typeof q.hint !== "string" || !q.hint.trim()))
+        out.push("hint is empty");
     if ("choices" in q) {
         if (!Array.isArray(q.choices) || q.choices.length < 2 || q.choices.length > 4)
             out.push("choices must be 2 to 4");
@@ -82,6 +84,15 @@ export function questionProblems(q, data, hasFix, loaded) {
                 out.push(`answer ${q.answer} is not a choice`);
             if (new Set(q.choices).size < q.choices.length)
                 out.push("choices repeat");
+        }
+        if (q.plateRegions !== undefined) {
+            if (!q.scene?.plate)
+                out.push("plate regions require a plate in the question's scene");
+            if (!Array.isArray(q.plateRegions) || q.plateRegions.length !== q.choices?.length ||
+                q.plateRegions.some((region) => !Array.isArray(region) || region.length !== 4 ||
+                    !region.every((n) => Number.isFinite(n) && n >= 0 && n <= 1) ||
+                    region[0] >= region[2] || region[1] >= region[3]))
+                out.push("plate regions must give one normalized rectangle per choice");
         }
     }
     if ("number" in q && !(q.number.tolerance >= 0))
@@ -114,6 +125,8 @@ export async function validateWalkthrough(w, data, procedures, area, charts) {
             if (s.seconds !== undefined && !(s.seconds > 0))
                 problems.push("seconds must be above 0");
             problems.push(...sceneProblems(s.scene, data, fixesIn(data, loaded, s.scene ?? {})), ...(s.check ? questionProblems(s.check, data, hasFix, loaded) : []));
+            if (s.check && "plateRegions" in s.check && s.check.plateRegions)
+                problems.push("plate regions require a quiz");
             problems.push(...(await plateProblems(s.scene, data, charts)), ...(await plateProblems(s.check?.scene, data, charts)));
             out.push(...problems.map((p) => at + p));
         }

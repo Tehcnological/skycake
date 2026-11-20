@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { Point, Procedure } from "./procedure.js";
-import { along, flightLine } from "./fly.js";
+import { along, flightLine, flightShares } from "./fly.js";
 
 const missed: Point[] = [[33, -111.8, 1500], [33, -111.7, 5000]];
 const proc: Procedure = {
@@ -36,4 +36,11 @@ test("a real SID flies runway leg, common route, then its enroute transition", (
   assert.deepEqual(line[0].slice(0, 2), [33.62288, -111.91053]);
   assert.deepEqual(line.at(-1), [32.0952, -110.91486, 4510]);
   assert.ok(line.findIndex((p) => p[0] === 32.88586) < line.length - 1); // the common route's end comes before the transition's end
+});
+test("each flown path draws over its share of the distance, in order; the missed approach is off the route", () => {
+  const shares = flightShares(proc);
+  const [t, c, f] = proc.paths.map((p) => shares.get(p));
+  assert.deepEqual([t![0], f![1]], [0, 1]);
+  assert.ok(Math.abs(t![1] - 0.25) < 1e-6 && Math.abs(c![1] - 0.5) < 1e-6); // 0.05, 0.05 and 0.1 degrees of longitude
+  assert.equal(shares.get(proc.paths[3]), undefined);
 });

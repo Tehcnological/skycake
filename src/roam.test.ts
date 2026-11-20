@@ -55,12 +55,12 @@ test("the first scene's procedures and diagram are part of the state, with their
   assert.equal(sceneOf(r).diagram, undefined);
 });
 
-test("camera: an airport pick keeps it, the diagram frames itself, removing the last procedure goes back to the first view", () => {
+test("camera: an airport pick keeps it, the diagram keeps it, removing the last procedure goes back to the first view", () => {
   const has = (a: string) => a === "KPHX";
   let r = pickAirport(start(first), "KSDL", has);
   assert.equal(sceneOf(r).camera, null);
   r = toggleDiagram(pickAirport(r, "KPHX", has), has);
-  assert.deepEqual(sceneOf(r).camera, { frame: [{ diagram: "KPHX" }] });
+  assert.equal(sceneOf(r).camera, null);
   r = remove(add(r, ils), ils);
   assert.deepEqual(sceneOf(r).camera, "fit");
 });
@@ -81,9 +81,27 @@ test("adding a procedure frames it, and turns off a diagram its airport does not
   assert.equal(r.diagram, false);
 });
 
-test("turning the diagram on frames the airport even with procedures shown", () => {
-  const r = toggleDiagram(add(start(first), ils), () => true);
-  assert.deepEqual(sceneOf(r).camera, { frame: [{ diagram: "KPHX" }] });
+test("turning the diagram on or off leaves the camera, even with procedures shown, while adding one still frames it", () => {
+  let r = toggleDiagram(add(start(first), ils), () => true);
+  assert.equal(r.diagram, true);
+  assert.equal(sceneOf(r).camera, null);
+  r = toggleDiagram(r, () => true);
+  assert.equal(sceneOf(r).camera, null);
+  assert.deepEqual(sceneOf(add(r, rnp)).camera, { frame: [{ procedure: ils }, { procedure: rnp }] });
+});
+
+test("a departure and an approach are never shown together; arrivals go with either", () => {
+  const types: Record<string, "IAP" | "SID" | "STAR"> = { EAGUL6: "STAR", "ILS RWY 25L": "IAP", "RNAV (RNP) Z RWY 03": "IAP", BXK4: "SID" };
+  const typeOf = (p: { name: string }) => types[p.name];
+  const bxk = { airport: "KPHX", name: "BXK4" };
+  let r = add(add(add(start(first), eagul, undefined, typeOf), ils, undefined, typeOf), rnp, undefined, typeOf);
+  assert.deepEqual(r.procedures, [eagul, ils, rnp]);
+  r = add(r, bxk, undefined, typeOf);
+  assert.deepEqual(r.procedures, [eagul, bxk]);
+  r = add(r, ils, undefined, typeOf);
+  assert.deepEqual(r.procedures, [eagul, ils]);
+  // Without types (a site's own scene), nothing is taken away.
+  assert.deepEqual(add(r, bxk).procedures, [eagul, ils, bxk]);
 });
 
 test("the raise to use: the first scene's at first, then whatever is raised on screen", () => {

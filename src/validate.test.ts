@@ -45,6 +45,18 @@ const goodQuiz: Quiz = { id: "q", title: "Q", area: "phoenix", items: [
   { generate: "read", count: 2 },
 ] };
 test("a good quiz has no problems", async () => assert.deepEqual(await validateQuiz(goodQuiz, data, files, "phoenix"), []));
+test("VFR and IFR examples reference the bundled Phoenix charts and procedures", async () => {
+  const charts = async (airport: string): Promise<ChartEntry[]> =>
+    JSON.parse(readFileSync(`data/phoenix/charts/${airport}.json`, "utf8"));
+  for (const id of ["vfr", "ifr"]) {
+    const quiz = JSON.parse(readFileSync(`demo/${id}-quiz.json`, "utf8")) as Quiz;
+    assert.deepEqual(await validateQuiz(quiz, data, files, "phoenix", charts), []);
+    // No airport diagram laid over the map; VFR reads the TAC and IFR the area chart.
+    const scenes = quiz.items.map((it) => ("scene" in it ? it.scene : undefined));
+    assert.ok(scenes.every((s) => !s?.diagram));
+    assert.ok(scenes.every((s) => s?.chart === (id === "vfr" ? "tac" : "area")));
+  }
+});
 test("catches bad written items and impossible generate items", async () => {
   const bad = { ...goodQuiz, items: [
     { type: "find", prompt: "?", answer: { area: "nope" } },

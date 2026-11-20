@@ -48,6 +48,10 @@ export type Labels = {
   /** The question card: the result words, the number question's button, the next button, and a revealed area's name and altitudes. */
   right: string;
   wrong: string;
+  /** A first wrong answer: the card asks again (with the question's hint under it); the second answer reveals. */
+  tryAgain: string;
+  /** Right on the second try, which the score counts as wrong. */
+  rightSecondTry: string;
   submit: string;
   continue: string;
   facts: (name: string, floor: string, ceiling: string) => string;
@@ -59,6 +63,8 @@ export type Labels = {
   back: string;
   next: string;
   explore: string;
+  /** Free roam entered from a quiz: the button back to the question it left. */
+  backToQuiz: string;
   stepOf: (n: number, total: number) => string;
   /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
    * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
@@ -104,6 +110,9 @@ export type Labels = {
     /** One piece of an area in many pieces, by the altitudes the chart prints (SFC, 5,000). */
     findPiece: (name: string, floor: string, ceiling: string) => string;
     findFix: (fix: string) => string;
+    /** Tap a procedure's final approach fix, or its missed approach point, by role: the tags name the fixes only. */
+    findFaf: (procedure: string) => string;
+    findMap: (procedure: string) => string;
     floor: string;
     ceiling: string;
     cls: string;
@@ -153,6 +162,8 @@ export const LABELS: Labels = {
   // defaults say Placeholder so any the site leaves out stand out on screen. Words free roam shows too are real.
   right: "Placeholder: Right",
   wrong: "Placeholder: Wrong",
+  tryAgain: "Placeholder: Not quite. Try again.",
+  rightSecondTry: "Placeholder: Right on the second try",
   submit: "Placeholder: Check",
   continue: "Placeholder: Continue",
   facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
@@ -162,6 +173,7 @@ export const LABELS: Labels = {
   back: "Placeholder: Back",
   next: "Placeholder: Next",
   explore: "Placeholder: Explore",
+  backToQuiz: "Placeholder: Back to quiz",
   stepOf: (n, total) => `Placeholder: ${n}/${total}`,
   count: (n, total, right) => `Placeholder: ${n}/${total} · ${right}`,
   practiceCount: (right, answered) => `Placeholder: ${right}/${answered}`,
@@ -207,6 +219,8 @@ export const LABELS: Labels = {
     findArea: (name) => `Placeholder: Tap the ${name}`,
     findPiece: (name, floor, ceiling) => `Placeholder: Tap the ${name} from ${floor} to ${ceiling}`,
     findFix: (fix) => `Placeholder: Tap ${fix}`,
+    findFaf: (procedure) => `Placeholder: Tap the final approach fix of the ${procedure}`,
+    findMap: (procedure) => `Placeholder: Tap the missed approach point of the ${procedure}`,
     floor: "Placeholder: What is the floor of the highlighted airspace?",
     ceiling: "Placeholder: What is its ceiling?",
     cls: "Placeholder: What class is the highlighted airspace?",
@@ -362,7 +376,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     };
   const mode = o.mode ?? "explore";
   if (mode === "explore") return freeRoam(context);
-  const explore = (from: Scene) => void freeRoam({ ...context, first: from });
+  const explore = (from: Scene, back?: () => void) => void freeRoam({ ...context, first: from, back });
   if ("quiz" in mode) {
     const { quiz } = await import("./quizui.js");
     return quiz(context, mode, o.onResult ?? (() => {}), explore);

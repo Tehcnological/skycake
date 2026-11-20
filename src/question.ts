@@ -6,14 +6,21 @@ import type { AreaRef, Scene, Target } from "./scene.js";
 
 /** answerArea: an area the reveal raises though the question never names it (a generated airplane point's class area).
  * also: on a find question for an area, other areas that are right too (every piece of the Phoenix Class B). */
-export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; answerArea?: string } & (
+/** Plate choice regions in image coordinates, normalized to 0–1, in the same order as choices. */
+export type PlateRegion = [left: number, top: number, right: number, bottom: number];
+
+export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; hint?: string; answerArea?: string } & (
   | { type: "find"; answer: Target; also?: string[] }
-  | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number }
+  | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number; plateRegions?: PlateRegion[] }
   | { type: "read"; number: { answer: number; tolerance: number; unit?: string } }
 );
 export type Answer = { choice: number } | { number: number } | { area: string | null; at: [lat: number, lon: number] | null };
 /** A fix or airport's position; the caller builds it from the area's airports, waypoints and loaded procedure fixes. */
 export type Locate = (t: Target) => [lat: number, lon: number] | null;
+
+export function plateChoice(regions: PlateRegion[], [x, y]: [number, number]): number {
+  return regions.findIndex(([left, top, right, bottom]) => x >= left && x <= right && y >= top && y <= bottom);
+}
 
 /** Locate from the area: a fix in the loaded procedures or the area's waypoints, an airport, a point. */
 export const locator = (data: Pick<AirspaceFile, "airports" | "waypoints">, procedures: Procedure[]): Locate => (t) => {
@@ -56,11 +63,17 @@ function defaults(q: Question): Scene {
   const flat = { raise: [], tags: false };
   const top = { camera: "top" as const, ...flat };
   // Fix tags on for a fix answer: the keyboard list only offers fixes whose tags show.
-  if (q.type === "find") return q.answer && "fix" in q.answer ? { ...top, tags: true } : top;
+  // A fix is looked for on its procedure, framed from above; an area on the whole chart.
+  const procs = q.scene?.procedures ?? [];
+  if (q.type === "find" && q.answer && "fix" in q.answer) return { ...top, ...(procs.length && { camera: { frame: procs.map(({ airport, name }) => ({ procedure: { airport, name } })), tilt: 90 } }), tags: true };
+  if (q.type === "find") return top;
   if (q.type === "procedure") return q.scene?.procedures?.length ? { camera: { frame: q.scene.procedures.map((procedure) => ({ procedure: { airport: procedure.airport, name: procedure.name } })) } } : {};
   const plane = q.scene?.airplane;
-  if (plane && "at" in plane) return { camera: { frame: around(plane.at[0], plane.at[1]), tilt: 90 }, ...flat };
-  if (q.type === "read" && q.scene?.highlight?.length) return { camera: { frame: q.scene.highlight, tilt: 90 }, ...flat };
+  // At an angle, so the airplane's height above the ground shows.
+  if (plane && "at" in plane) return { camera: { frame: around(plane.at[0], plane.at[1]), tilt: 50 }, ...flat };
+  // The area asked about stands up out of the chart, four times as tall, seen at an angle; its tags stay off, so the
+  // chart is read.
+  if (q.type === "read" && q.scene?.highlight?.length) return { camera: { frame: q.scene.highlight, tilt: 40 }, raise: q.scene.highlight.filter((t): t is AreaRef => "area" in t), height: 4, tags: false };
   return top;
 }
 

@@ -217,3 +217,19 @@ test("the missed approach question leaves the MAP out of the wrong choices", () 
   }
   assert.ok(asked > 0);
 });
+
+test("find asks for a procedure's FAF and MAP by role, and the answer is the fix with that role", () => {
+  const rng = seeded(3);
+  const seen = new Set<string>();
+  for (let i = 0; i < 400; i++) {
+    const q = generate("find", { ...g, kinds: [] }, rng)!;
+    const role = q.prompt.includes("final approach fix") ? "FAF" : q.prompt.includes("missed approach point") ? "MAP" : null;
+    if (!role) continue;
+    seen.add(role);
+    const r = q.scene!.procedures![0];
+    const p = g.procedures.find((x) => x.airport === r.airport && x.name === r.name)!;
+    assert.equal(((q as { answer: unknown }).answer as { fix: string }).fix, p.fixes.find((f) => f.role === role)!.name);
+    assert.ok(q.prompt.includes(p.name));
+  }
+  assert.deepEqual([...seen].sort(), ["FAF", "MAP"]);
+});
