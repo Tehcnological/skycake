@@ -45,6 +45,7 @@ export const LABELS = {
     back: "Placeholder: Back",
     next: "Placeholder: Next",
     explore: "Placeholder: Explore",
+    backToQuiz: "Placeholder: Back to quiz",
     stepOf: (n, total) => `Placeholder: ${n}/${total}`,
     count: (n, total, right) => `Placeholder: ${n}/${total} · ${right}`,
     practiceCount: (right, answered) => `Placeholder: ${right}/${answered}`,
@@ -217,7 +218,7 @@ export async function mount(host, o) {
     const mode = o.mode ?? "explore";
     if (mode === "explore")
         return freeRoam(context);
-    const explore = (from) => void freeRoam({ ...context, first: from });
+    const explore = (from, back) => void freeRoam({ ...context, first: from, back });
     if ("quiz" in mode) {
         const { quiz } = await import("./quizui.js");
         return quiz(context, mode, o.onResult ?? (() => { }), explore);

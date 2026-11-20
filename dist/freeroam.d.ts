@@ -26,6 +26,8 @@ export type Context = {
         name: string;
         note?: string;
     };
+    /** Free roam entered from a quiz: a button that leaves free roam and goes back to it. */
+    back?: () => void;
 };
 export declare function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs?: Record<string, string | boolean | undefined>, ...kids: (Node | string)[]): HTMLElementTagNameMap[K];
 /** An inline stroke icon built as elements, so strict CSPs allow it. */

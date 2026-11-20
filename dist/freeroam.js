@@ -85,6 +85,9 @@ export function freeRoam(c) {
     const findButton = h("button", { type: "button", class: "sc-find", "aria-label": L.search, "aria-expanded": "false", "aria-controls": `sc-tr-${uid}` }, icon(ICONS.search));
     const where = c.title ? [h("div", { class: "sc-where" }, h("b", {}, c.title.name), ...(c.title.note ? [h("span", {}, c.title.note)] : []))] : [];
     const head = h("header", { class: "sc-head" }, ...where, findButton);
+    // Everything free roam hangs on the page outside its own elements, undone in one go when it is left for the quiz.
+    const off = new AbortController();
+    const signal = off.signal;
     // Search, the plate panel's button, results and the shown procedures (top right; phone: under the header, search
     // only once opened).
     const input = h("input", { type: "search", "aria-label": L.search, placeholder: L.search, autocomplete: "off", spellcheck: "false" });
@@ -212,11 +215,12 @@ export function freeRoam(c) {
         }, L);
     };
     writeSummary();
-    viewEl.addEventListener("focus", writeSummary);
+    viewEl.addEventListener("focus", writeSummary, { signal });
     // On a phone the map in the page is a preview the page scrolls past; a tap opens it, and only then does it take touches.
     const openButton = h("button", { type: "button", class: "sc-open" }, h("span", { class: "sc-pill" }, icon(ICONS.full, "0 0 12 12"), L.open));
     fig.querySelector(".view").after(openButton, head, topLeft, topRight, bottomRight, viewSheet, ...(plates.el ? [plates.el] : []));
-    fig.querySelector(".view").append(pad(c));
+    const padEl = pad(c);
+    fig.querySelector(".view").append(padEl);
     fig.append(tabBar);
     let inView = null;
     const sheet = (name) => {
@@ -278,7 +282,7 @@ export function freeRoam(c) {
         else
             return;
         sheet(null);
-    });
+    }, { signal });
     inViewButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
     tabs.inView.addEventListener("click", () => sheet(fig.classList.contains("sc-open-inview") ? null : "inview"));
     kindButton.addEventListener("click", () => sheet(fig.classList.contains("sc-open-kinds") ? null : "kinds"));
@@ -439,7 +443,7 @@ export function freeRoam(c) {
     fig.addEventListener("pointerdown", (e) => {
         if (!topRight.contains(e.target))
             results.hidden = true;
-    });
+    }, { signal });
     const toggleDiagramNow = () => {
         r = toggleDiagram(r, has);
         refresh();
@@ -547,7 +551,7 @@ export function freeRoam(c) {
         else
             goFull(false);
     });
-    phone.addEventListener("change", drawPhone);
+    phone.addEventListener("change", drawPhone, { signal });
     // A standalone app: the view fills the window from the start and only close leaves it.
     if (c.close) {
         fig.classList.add("full");
@@ -558,12 +562,12 @@ export function freeRoam(c) {
     document.addEventListener("fullscreenchange", () => {
         if (!document.fullscreenElement)
             setFull(false);
-    });
+    }, { signal });
     // A tap on an airport's tag on the chart lists its procedures.
     c.fig.addEventListener("skycake-airport", (e) => {
         sheet(null);
         showAirport(e.detail.airport);
-    });
+    }, { signal });
     // The chip and type list state follows the viewer, including areas raised by tapping the chart.
     const onRaised = (kind, on) => {
         const x = rows.get(kind);
@@ -572,7 +576,25 @@ export function freeRoam(c) {
         x.box.checked = on;
         x.row.classList.toggle("on", on);
     };
-    c.fig.addEventListener("skycake-raised", (e) => onRaised(e.detail.kind, e.detail.on));
+    c.fig.addEventListener("skycake-raised", (e) => onRaised(e.detail.kind, e.detail.on), { signal });
+    // Back to the quiz: free roam takes itself off the page first.
+    if (c.back) {
+        const back = c.back;
+        const backButton = h("button", { type: "button", class: "sc-pill sc-back" }, L.backToQuiz);
+        head.prepend(backButton);
+        backButton.addEventListener("click", () => {
+            ticket++;
+            sheet(null);
+            setFind(false, false);
+            off.abort();
+            plates.destroy();
+            for (const x of [openButton, head, topLeft, topRight, bottomRight, viewSheet, padEl, tabBar, summary])
+                x.remove();
+            viewEl.removeAttribute("aria-describedby");
+            fig.classList.remove("sc-plate", "sc-plate-full");
+            back();
+        });
+    }
     sheet(null);
     return refresh(true);
 }

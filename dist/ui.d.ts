@@ -54,6 +54,8 @@ export type Labels = {
     back: string;
     next: string;
     explore: string;
+    /** Free roam entered from a quiz: the button back to the question it left. */
+    backToQuiz: string;
     stepOf: (n: number, total: number) => string;
     /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
      * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */

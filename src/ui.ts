@@ -59,6 +59,8 @@ export type Labels = {
   back: string;
   next: string;
   explore: string;
+  /** Free roam entered from a quiz: the button back to the question it left. */
+  backToQuiz: string;
   stepOf: (n: number, total: number) => string;
   /** The quiz: the count (question n of total, right so far; practice: right of answered), the card's next button,
    * the end's score and its button for a new attempt, and what practice says when its filters leave nothing to ask. */
@@ -165,6 +167,7 @@ export const LABELS: Labels = {
   back: "Placeholder: Back",
   next: "Placeholder: Next",
   explore: "Placeholder: Explore",
+  backToQuiz: "Placeholder: Back to quiz",
   stepOf: (n, total) => `Placeholder: ${n}/${total}`,
   count: (n, total, right) => `Placeholder: ${n}/${total} · ${right}`,
   practiceCount: (right, answered) => `Placeholder: ${right}/${answered}`,
@@ -367,7 +370,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     };
   const mode = o.mode ?? "explore";
   if (mode === "explore") return freeRoam(context);
-  const explore = (from: Scene) => void freeRoam({ ...context, first: from });
+  const explore = (from: Scene, back?: () => void) => void freeRoam({ ...context, first: from, back });
   if ("quiz" in mode) {
     const { quiz } = await import("./quizui.js");
     return quiz(context, mode, o.onResult ?? (() => {}), explore);
