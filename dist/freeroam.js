@@ -586,6 +586,9 @@ export function freeRoam(c) {
             ticket++;
             sheet(null);
             setFind(false, false);
+            // The quiz has no full screen of its own: back in the page, unless the view is always full (a site's close).
+            if (!c.close)
+                goFull(false);
             off.abort();
             plates.destroy();
             for (const x of [openButton, head, topLeft, topRight, bottomRight, viewSheet, padEl, tabBar, summary])

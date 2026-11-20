@@ -214,6 +214,8 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
         // A first wrong answer: the card stays open for another, the wrong choice struck out, with the hint.
         retry() {
             answered = false;
+            // The first answer is scored already: Skip would count the question a second time.
+            el.querySelector(".sc-skip")?.remove();
             chosen = null;
             check.disabled = true;
             const b = choiceButtons[lastChoice];
