@@ -153,7 +153,7 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
     const files = stage.filesOf(scene);
     // Skip (accessibility mode, find questions): moves on without scoring; a fixed quiz's total drops by one.
     const onSkip = () => {
-      if (!a || a.done || open !== k) return;
+      if (!a || a.done || open !== k || tries > 0) return;
       a = skip(a);
       report({ quiz: id, item: it.key, right: false, ms: Math.round(performance.now() - shownAt), skipped: true });
       next();
