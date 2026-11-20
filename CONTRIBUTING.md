@@ -38,7 +38,3 @@ npm run demo    # http://localhost:5179/demo/, and /www/ after npm run app
 ## Pull requests
 
 One change per pull request, against `main`. CI (`build-and-test`) must pass; a first-time contributor's run starts after a maintainer approves it. The PR template lists the checks.
-
-## Code of Conduct
-
-Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).

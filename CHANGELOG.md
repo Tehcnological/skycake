@@ -34,7 +34,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 - `area.json` records its 28-day procedure `cycle`. `npm run data -- --cycle` prints the cycle in effect.
 - Data cycle workflow: a PR with new FAA data every 28 days.
 - GitHub Actions CI: type check, unit tests, stale `dist/` check, data file sizes, app build, install from git.
-- Community docs: CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, issue and PR templates, Dependabot for the workflow actions.
+- Community docs: CONTRIBUTING, SECURITY, CHANGELOG, issue and PR templates, Dependabot for the workflow actions.
 
 ## 0.7.3 (2026-11-05)
 
