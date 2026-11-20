@@ -4,6 +4,15 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- Quizzes: a wrong first answer gets a second try with the question's optional `hint`, the wrong choice struck out; only the first answer scores and `onResult` reports it once. Labels add `tryAgain` and `rightSecondTry`.
+- Quizzes: a 1x/4x height button in the top bar, kept for every question once picked. Explore before the end puts **Back to quiz** in free roam (label `backToQuiz`), back to the same question, or the next if it was answered.
+- Quizzes: an area a question asks about stands up in 3D, four times as tall and seen at an angle; procedure scenes open on the IFR chart and keep raised areas; the airplane is drawn larger with a dashed line to a ring on the ground; a flown route grows in step with the airplane. Generated questions ask for the FAF or MAP by role.
+- Plate questions: `plateRegions` on a choice question marks one box per choice on the plate, and a tap inside one picks it (the buttons stay for the keyboard). The plate can no longer be dragged off its panel.
+- Class B, C and D ceilings charted "up to but not including" (the FAA's `TNI`) are stored one foot lower and shown as on the chart: 2,999 ft, charted -30.
+- Pointer: the left mouse button pans and the right turns, as on a map app; double-click zooms in; a pen double-tap (or a pen button that sends a double-click) and drag zooms, and the pen keeps working after it.
+- Demo: VFR and IFR example quizzes (`?quiz=vfr` on the TAC, `?quiz=ifr` on the IFR area chart, no airport diagram questions) and `demo/all.html`, a page of every mode and quiz type. Their words are drafts.
+- The view loads under a progress screen, the first approach shown switches to IFR once, and the diagram button no longer zooms.
+
 - SkyCake Viewer's start screen has faint contour lines at the top right of the window and of each card, with a slow ripple. The build draws them (`scripts/contours.mjs`); they hold still under reduced motion and in accessibility mode, and are off when more contrast is asked for.
 - New look, from Chris's mockups and token sheet: a cooler dark palette, a header with the area's name (`mount({ title })`), a tool rail with each setting's value (Diagram, Tags, Height, Rules, Chart), a phone View sheet with switches and segmented picks, a phone search behind the header's search button, and restyled cards, player and quiz. SkyCake Viewer's start screen has area cards with Open area and a Save button that counts its progress. Both sites get it, through `style.css`. Labels add `on`, `off`, `plate`, `plateOpen`, `split` and `resize`; `height` reads Height and `mode` reads Rules.
 - The procedure plate panel (`src/plate.ts`): beside the map on desktop and in phone landscape, over it in portrait, with a divider (drag or arrow keys), Full screen and Close.

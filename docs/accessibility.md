@@ -49,6 +49,9 @@ Every change skycake makes in accessibility mode, for sites that embed it. The m
 | Choices: choose, then Check (full width under the choices). Nothing is scored until Check | 3.2.2 |
 | Find questions: the numbered picker shows numbers only (it still asks the student to find the thing on the chart), a number field takes the badge's number, then Check | 2.1.1, 2.5.7 |
 | Skip on find questions: moves on, and the quiz's total drops by one | 2.1.1 |
+| A wrong first answer: the card announces Try again and the hint through the live region, the wrong choice is disabled and struck out with a cross (never color alone), and focus moves to the first choice left or the number field | 4.1.3, 1.4.1, 2.4.3 |
+| Plate questions keep their choice buttons, so they are answered without tapping the plate | 2.1.1, 2.5.7 |
+| The height button and Back to quiz are ordinary buttons; the height button's name says the scale | 2.1.1, 4.1.2 |
 | The camera pad, as in free roam. It sits inside the map, so Tab reaches it with the map, after the count and Explore | 2.5.1, 2.5.7, 2.4.3 |
 | No time limit: `ms` is reported, never enforced | 2.2.1 |
 
@@ -58,5 +61,6 @@ The chart reading hunt, once built, uses the same picker and Skip.
 
 - Pass `a11y` from its own toggle, if it has one, so the two never disagree.
 - Never turn `onResult`'s `ms` into a time limit or a score.
+- Count a question right only when `onResult` says so: it reports the first answer, and a right second try is not reported again.
 - Treat a result with `skipped: true` as not asked: it is not wrong, and the end result's total already leaves it out. A quiz with every question skipped ends with `total: 0`, so never divide by it unchecked.
 - Keep the site's own focus ring and contrast at least this high around the map.
