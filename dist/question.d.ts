@@ -10,6 +10,7 @@ export type Question = {
     prompt: string;
     scene?: Scene;
     explanation?: string;
+    hint?: string;
     answerArea?: string;
 } & ({
     type: "find";

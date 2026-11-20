@@ -7,6 +7,7 @@
       "id": "profile-faf-symbol",
       "type": "read",
       "prompt": "In the plate’s profile view, select the symbol that marks the final approach fix for the localizer approach.",
+      "hint": "For the localizer approach, the FAF is marked with a symbol, not a step in the line.",
       "choices": [
         "Start of the 4,000 ft segment",
         "Maltese cross at ZINGA",
@@ -31,6 +32,7 @@
       "id": "read-profile",
       "type": "read",
       "prompt": "Read the plate's profile view. What altitude is printed at ZINGA?",
+      "hint": "In the profile view, each fix has its altitude printed just below or beside it.",
       "number": {
         "answer": 2600,
         "tolerance": 0,
@@ -63,6 +65,7 @@
       "id": "missed-fix",
       "type": "procedure",
       "prompt": "Follow the published missed approach on the plate. Which fix is named for the hold?",
+      "hint": "The missed approach instructions end at a fix where a holding pattern is drawn.",
       "choices": [
         "FOWLE",
         "ZINGA",
@@ -93,6 +96,7 @@
       "id": "inbound-course",
       "type": "read",
       "prompt": "Read the plate's plan view. What inbound course is published for the final approach to Runway 07L?",
+      "hint": "The course is printed along the localizer arrow in the plan view, pointing toward the runway.",
       "choices": [
         "078°",
         "258°",

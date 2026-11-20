@@ -71,5 +71,13 @@ export declare function fitChart(img: {
     w: number;
     h: number;
 }): PanZoom;
+/** Keeps the chart in the box: smaller than the box on an axis, it stays wholly inside; larger, it covers the box. */
+export declare function keepIn(t: PanZoom, img: {
+    w: number;
+    h: number;
+}, box: {
+    w: number;
+    h: number;
+}): PanZoom;
 /** Zooms by `factor`, the scale clamped to min..max, keeping the chart point under `at` where it is. */
 export declare function zoomAbout(t: PanZoom, factor: number, at: [x: number, y: number], min: number, max: number): PanZoom;

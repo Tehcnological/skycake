@@ -97,7 +97,7 @@ export function plateView(c: Context, on: {
   let fit: PanZoom = { x: 0, y: 0, s: 1 };
   let t = fit;
   const place = (to: PanZoom) => {
-    t = to;
+    t = img?.naturalWidth && body.clientWidth ? keepIn(to, { w: img.naturalWidth, h: img.naturalHeight }, { w: body.clientWidth, h: body.clientHeight }) : to;
     if (img) img.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.s})`;
   };
   const fitNow = () => {
@@ -202,7 +202,6 @@ export function plateView(c: Context, on: {
 
   // Pan and zoom: one pointer drags, two pinch (twoFingers: shape zooms and follows the fingers, tilt pans), the wheel
   // zooms about the cursor, a double tap or click fits.
-  // shortcut: no pan limit, Fit brings the chart back; clamp if students lose it
   const at = (e: { clientX: number; clientY: number }): Pt => {
     const b = body.getBoundingClientRect();
     return [e.clientX - b.left, e.clientY - b.top];
@@ -436,6 +435,14 @@ export type PanZoom = { x: number; y: number; s: number };
 export function fitChart(img: { w: number; h: number }, box: { w: number; h: number }): PanZoom {
   const s = Math.min(box.w / img.w, box.h / img.h);
   return { x: (box.w - img.w * s) / 2, y: (box.h - img.h * s) / 2, s };
+}
+
+/** Keeps the chart in the box: smaller than the box on an axis, it stays wholly inside; larger, it covers the box. */
+export function keepIn(t: PanZoom, img: { w: number; h: number }, box: { w: number; h: number }): PanZoom {
+  const axis = (at: number, size: number, room: number) => Math.min(Math.max(at, Math.min(0, room - size)), Math.max(0, room - size));
+  const x = axis(t.x, img.w * t.s, box.w), y = axis(t.y, img.h * t.s, box.h);
+  // The same object when nothing moved: a fitted chart stays the fit (plateView compares them).
+  return x === t.x && y === t.y ? t : { x, y, s: t.s };
 }
 
 /** Zooms by `factor`, the scale clamped to min..max, keeping the chart point under `at` where it is. */

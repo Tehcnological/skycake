@@ -9,7 +9,7 @@ import type { AreaRef, Scene, Target } from "./scene.js";
 /** Plate choice regions in image coordinates, normalized to 0–1, in the same order as choices. */
 export type PlateRegion = [left: number, top: number, right: number, bottom: number];
 
-export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; answerArea?: string } & (
+export type Question = { id?: string; prompt: string; scene?: Scene; explanation?: string; hint?: string; answerArea?: string } & (
   | { type: "find"; answer: Target; also?: string[] }
   | { type: "read" | "airplane" | "procedure"; choices: string[]; answer: number; plateRegions?: PlateRegion[] }
   | { type: "read"; number: { answer: number; tolerance: number; unit?: string } }

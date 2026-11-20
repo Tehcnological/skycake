@@ -72,6 +72,7 @@ export function questionProblems(q: Question, data: AirspaceFile, hasFix: (name:
   else if (!("choices" in q) && !("number" in q)) out.push("no choices or number");
   if (q.answerArea !== undefined) out.push(...sceneProblems({ highlight: [{ area: q.answerArea }] }, data, hasFix));
   if (typeof q.prompt !== "string" || !q.prompt.trim()) out.push("prompt is empty");
+  if (q.hint !== undefined && (typeof q.hint !== "string" || !q.hint.trim())) out.push("hint is empty");
   if ("choices" in q) {
     if (!Array.isArray(q.choices) || q.choices.length < 2 || q.choices.length > 4) out.push("choices must be 2 to 4");
     else {

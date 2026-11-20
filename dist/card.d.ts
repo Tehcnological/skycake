@@ -15,6 +15,7 @@ export declare function card(q: Question, L: Labels, view: View, say: (text: str
 }): {
     el: HTMLElement;
     selectChoice(index: number): void;
-    reveal(right: boolean, facts: string | null, button: string, onNext: () => void): void;
+    retry(): void;
+    reveal(right: boolean, facts: string | null, button: string, onNext: () => void, second?: boolean): void;
     remove(): void;
 };

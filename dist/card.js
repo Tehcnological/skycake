@@ -42,6 +42,7 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
     const controls = [];
     const choiceButtons = [];
     let answered = false;
+    let lastChoice = -1;
     // The card opens where the last one's Next or the end's Again was: a double click, a quick second Enter or a held
     // key would answer for the student. Nothing counts in its first moments.
     const born = performance.now();
@@ -49,6 +50,8 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
         if (answered || performance.now() - born < SETTLE_MS)
             return false;
         answered = true;
+        if ("choice" in a)
+            lastChoice = a.choice;
         onAnswer(a);
         return true;
     };
@@ -208,11 +211,38 @@ export function card(q, L, view, say, onAnswer, o = { a11y: false }) {
     return {
         el,
         selectChoice: (index) => choiceButtons[index]?.click(),
-        reveal(right, facts, label, onNext) {
+        // A first wrong answer: the card stays open for another, the wrong choice struck out, with the hint.
+        retry() {
+            answered = false;
+            chosen = null;
+            check.disabled = true;
+            const b = choiceButtons[lastChoice];
+            if (b) {
+                b.disabled = true;
+                b.classList.add("sc-tried");
+                b.prepend(icon(false));
+                controls.splice(controls.indexOf(b), 1);
+            }
+            for (const x of choiceButtons)
+                x.setAttribute("aria-pressed", "false");
+            const input = el.querySelector(".sc-numform .sc-number");
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
+            else
+                choiceButtons.find((x) => !x.disabled)?.focus();
+            el.querySelector(".sc-hint")?.remove();
+            const hint = h("div", "sc-hint", h("p", "sc-result wrong", icon(false), L.tryAgain), ...(q.hint ? [h("p", "sc-explain", q.hint)] : []));
+            text.append(hint);
+            say(hint.textContent ?? "");
+        },
+        reveal(right, facts, label, onNext, second = false) {
+            el.querySelector(".sc-hint")?.remove();
             for (const c of controls)
                 c.disabled = true;
             done();
-            const said = [h("p", `sc-result ${right ? "right" : "wrong"}`, icon(right), right ? L.right : L.wrong)];
+            const said = [h("p", `sc-result ${right ? "right" : "wrong"}`, icon(right), right ? (second ? L.rightSecondTry : L.right) : L.wrong)];
             // A wrong answer still teaches the right one: in words, and marked with the check on its choice.
             const shown = "choices" in q ? q.choices[q.answer] : "number" in q ? `${q.number.answer.toLocaleString("en-US")}${q.number.unit ? ` ${q.number.unit}` : ""}` : null;
             if (!right && shown !== null) {

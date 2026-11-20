@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { AirspaceFile } from "./airspace.js";
 import type { Context } from "./freeroam.js";
-import { chartFor, fitChart, pageArrows, pickOrder, pickRefs, plateView, zoomAbout } from "./plate.js";
+import { chartFor, fitChart, keepIn, pageArrows, pickOrder, pickRefs, plateView, zoomAbout } from "./plate.js";
 import type { ProcedureRef } from "./scene.js";
 import type { ChartEntry } from "./tpp.js";
 
@@ -39,6 +39,9 @@ test("fit and zoom", () => {
   assert.deepEqual(zoomAbout({ x: 0, y: 0, s: 1 }, 2, [100, 50], 0.5, 3), { x: -100, y: -50, s: 2 });
   assert.deepEqual(zoomAbout({ x: 0, y: 0, s: 2 }, 4, [0, 0], 0.5, 3), { x: 0, y: 0, s: 3 });
   assert.equal(zoomAbout({ x: 0, y: 0, s: 1 }, 0.1, [0, 0], 0.5, 3).s, 0.5);
+  // A chart can't be dragged away: zoomed in it covers the box, fitted it stays inside it.
+  assert.deepEqual(keepIn({ x: 500, y: -5000, s: 1 }, { w: 1000, h: 1000 }, { w: 400, h: 600 }), { x: 0, y: -400, s: 1 });
+  assert.deepEqual(keepIn({ x: -50, y: 900, s: 0.4 }, { w: 1000, h: 1000 }, { w: 400, h: 600 }), { x: 0, y: 200, s: 0.4 });
 });
 
 const data: AirspaceFile = JSON.parse(readFileSync(new URL("../data/phoenix/area.json", import.meta.url), "utf8"));

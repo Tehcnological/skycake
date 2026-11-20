@@ -341,7 +341,10 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-card .sc-result { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 16px var(--sc-head); }
 /* The right choice, marked after a wrong answer: the check and an outline, not color alone. */
 .skycake .sc-card .sc-choice.sc-answer { border-color: var(--sc-ink); opacity: 1; }
-.skycake .sc-card .sc-choice.sc-answer svg { width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+/* A choice already tried and wrong: struck out with the cross, so it does not rest on color. */
+.skycake .sc-card .sc-choice.sc-tried { text-decoration: line-through; }
+.skycake .sc-card .sc-hint { display: flex; flex-direction: column; gap: 4px; }
+.skycake .sc-card .sc-choice.sc-tried svg, .skycake .sc-card .sc-choice.sc-answer svg { width: 18px; height: 18px; margin-right: 6px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .skycake .sc-card .sc-result svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .skycake .sc-card .sc-facts, .skycake .sc-card .sc-explain { margin: 0; font-size: 14px; line-height: 20px; color: var(--sc-soft); }
 /* Visually hidden, still in the tab order. */

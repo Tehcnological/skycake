@@ -43,6 +43,10 @@ export type Labels = {
     /** The question card: the result words, the number question's button, the next button, and a revealed area's name and altitudes. */
     right: string;
     wrong: string;
+    /** A first wrong answer: the card asks again (with the question's hint under it); the second answer reveals. */
+    tryAgain: string;
+    /** Right on the second try, which the score counts as wrong. */
+    rightSecondTry: string;
     submit: string;
     continue: string;
     facts: (name: string, floor: string, ceiling: string) => string;

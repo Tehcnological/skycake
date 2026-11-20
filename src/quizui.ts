@@ -159,16 +159,21 @@ export async function quiz(c: Context, mode: QuizMode, onResult: (r: QuizResult)
       next();
     };
     const find = !("choices" in it.q) && !("number" in it.q);
+    // Only the first answer scores; a wrong one gets a second try (with the hint) before the reveal.
+    let tries = 0;
     const k = card(it.q, L, v, say, async (ans) => {
       const loaded = await files;
       if (!a || a.done || open !== k) return;
       const right = score(it.q, ans, locator(data, loaded));
-      a = answer(a, right);
-      answered = true;
-      drawCount();
-      report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
+      if (tries++ === 0) {
+        a = answer(a, right);
+        answered = true;
+        drawCount();
+        report({ quiz: id, item: it.key, right, ms: Math.round(performance.now() - shownAt) });
+        if (!right) return k.retry();
+      }
       void show(withHeight(revealScene(withArea(it.q))));
-      k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next());
+      k.reveal(right, factsOf(it), L.nextQuestion, () => open === k && next(), tries > 1);
     }, { a11y: c.a11y, platePick: !!picking, ...(find && { onSkip }) });
     const had = put(k.el) || (c.a11y && asked > 0);
     asked++;

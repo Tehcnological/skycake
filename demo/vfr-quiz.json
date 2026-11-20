@@ -7,6 +7,7 @@
       "id": "shelf-floor",
       "type": "read",
       "prompt": "Read the blue fraction on the chart. What is the floor of the highlighted Class B shelf?",
+      "hint": "The fraction reads ceiling over floor, in hundreds of feet MSL.",
       "choices": [
         "4,000 ft MSL",
         "5,000 ft MSL",
@@ -28,6 +29,7 @@
       "id": "chandler-ceiling",
       "type": "read",
       "prompt": "Chandler's Class D ceiling is marked −30. What is the highest whole-foot altitude inside it, in feet MSL?",
+      "hint": "The minus sign means up to but not including that altitude.",
       "number": {
         "answer": 2999,
         "tolerance": 0,
@@ -46,7 +48,8 @@
     {
       "id": "chandler-airport",
       "type": "find",
-      "prompt": "On the VFR chart, select the towered airport inside the dashed blue Class D boundary southeast of Stellar Airpark (P19).",
+      "prompt": "Find Chandler Municipal (CHD) on the VFR chart and select it.",
+      "hint": "It is about 5 NM east of Stellar Airpark (P19), inside the dashed blue Class D ring whose ceiling is marked -30.",
       "answer": {
         "airport": "KCHD"
       },
@@ -70,12 +73,13 @@
           "tilt": 90
         }
       },
-      "explanation": "That dashed blue boundary surrounds Chandler Municipal (CHD), southeast of Stellar Airpark."
+      "explanation": "Chandler Municipal sits inside its own dashed blue Class D ring, about 5 NM east of Stellar Airpark (P19)."
     },
     {
       "id": "class-at-airplane",
       "type": "airplane",
       "prompt": "The airplane is at 4,500 ft MSL. Use the ground marker to find its position on the chart. Which class of airspace is it in?",
+      "hint": "Find the shelf over the ring on the ground, then compare 4,500 ft to its floor and ceiling.",
       "choices": [
         "Class B",
         "Class C",

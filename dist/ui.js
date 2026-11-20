@@ -36,6 +36,8 @@ export const LABELS = {
     // defaults say Placeholder so any the site leaves out stand out on screen. Words free roam shows too are real.
     right: "Placeholder: Right",
     wrong: "Placeholder: Wrong",
+    tryAgain: "Placeholder: Not quite. Try again.",
+    rightSecondTry: "Placeholder: Right on the second try",
     submit: "Placeholder: Check",
     continue: "Placeholder: Continue",
     facts: (name, floor, ceiling) => `${name} · ${floor} to ${ceiling}`,
