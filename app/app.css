@@ -1,48 +1,58 @@
-/* SkyCake Viewer only. The same tokens as the map's (style.css); --fill is the primary
-   button (dark enough for white text at 4.5:1), --sel and --mark a selected control and its marker. */
+/* SkyCake Viewer only. Matches style.css's quiet flat dark tokens and blue tile accent. */
 :root {
   color-scheme: dark;
-  --canvas: #11161c; --surface: #1b232d; --raised: #24303d; --divider: #354353; --edge: #7d8fa5;
-  --ink: #f2f5f8; --ink2: #aab9c9; --ink3: #8d9db0; --link: #7eb4f4;
-  --fill: #28598f; --fill-hover: #3068a6; --fill-down: #214b7a; --hover: #2c3a4a;
-  --sel: #244568; --mark: #7eb4f4; --focus: #91c5ff; --warn: #f2d28b;
+  --canvas: #0c0c0c; --surface: #161616; --bar: #141414; --divider: #262626; --edge: #484848;
+  --ink: #f4f4f4; --ink2: #c8c8c8; --ink3: #8c8c8c; --link: #52a4ff;
+  --fill: #185da8; --fill-hover: #144d8c; --fill-down: #103e73; --tile-ink: #ffffff;
+  --hover: #222222; --mark: #52a4ff; --focus: #91c5ff; --warn: #f2d28b;
+  --sans: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --head: var(--sans);
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-std: cubic-bezier(0.22, 1, 0.36, 1);
 }
-html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/24px system-ui, -apple-system, "Segoe UI", sans-serif; }
+html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-/* The start screen: a card per area, the accessibility switch, the footer. */
-.areas { box-sizing: border-box; max-width: 480px; margin: 0 auto; padding: 24px 16px 16px; }
-.areas h1 { display: flex; align-items: center; gap: 12px; margin: 0; font: 700 24px/32px system-ui, sans-serif; }
-.areas h1 img { width: 44px; height: 44px; }
-.areas h2 { margin: 24px 0 12px; padding-top: 20px; border-top: 1px solid var(--divider); font: 600 20px/28px system-ui, sans-serif; }
+@keyframes sc-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* The start screen and info pages: clean flat layout on the bare canvas. */
+.areas { box-sizing: border-box; max-width: 640px; margin: 0 auto; padding: clamp(16px, 4vw, 36px) clamp(14px, 3vw, 24px) 24px; animation: sc-page-in 0.24s var(--ease) both; }
+.areas h1 { display: flex; align-items: center; gap: 10px; margin: 0; font: 300 clamp(26px, 4.5vw, 36px)/1.1 var(--head); letter-spacing: -0.025em; }
+.areas h1 img { width: 32px; height: 32px; }
+.areas h2 { margin: 22px 0 8px; padding-top: 16px; border-top: 1px solid var(--divider); font: 400 20px/1.2 var(--head); }
 .areas ul { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.areas li { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--divider); border-radius: 12px; background: var(--surface); }
+.areas li { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 0; border-radius: 0; background: var(--surface); }
 .areas .info { display: flex; flex-direction: column; gap: 2px; }
-.areas .info b { font: 600 16px/22px system-ui, sans-serif; }
-.areas .info span { font-size: 14px; line-height: 20px; color: var(--ink2); }
+.areas .info b { font: 300 22px/26px var(--head); }
+.areas .info span { font-size: 12.5px; line-height: 17px; color: var(--ink3); }
 .areas .old .info span { color: var(--warn); }
 .areas .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.areas .actions > * { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 8px; font: 600 14px/20px system-ui, sans-serif; text-decoration: none; cursor: pointer; transition: background-color 0.12s; }
-/* Open area: the primary action. */
-.areas .go { flex: 1 1 auto; border: 1px solid transparent; background: var(--fill); color: #fff; }
+.areas .actions > * { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 0; font: 600 14px/1 var(--head); text-decoration: none; cursor: pointer; transform-origin: left center; }
+/* Open area: the primary solid tile action. */
+.areas .go { flex: 1 1 auto; border: 0; background: var(--fill); color: var(--tile-ink); transition: background-color 0.16s, transform 0.14s var(--ease); }
 .areas .go:hover { background: var(--fill-hover); }
-.areas .go:active { background: var(--fill-down); }
-/* The offline copy: Save, Saving n% (its width steady as it counts), Saved, Update, Retry. */
-.areas button { min-width: 128px; border: 1px solid var(--edge); background: none; color: var(--ink); font-variant-numeric: tabular-nums; }
-.areas button:hover:not(:disabled) { background: var(--hover); }
-.areas button[data-state="saved"] { border-color: var(--mark); background: var(--sel); color: #d7e9ff; }
+.areas .go:active { background: var(--fill-down); transform: perspective(500px) rotateY(-2deg) scale(0.985); }
+/* The offline copy: quiet flat button with underline-to-fill hover. */
+.areas button { position: relative; isolation: isolate; min-width: 128px; border: 0; background: var(--canvas); color: var(--ink2); font-weight: 400; font-variant-numeric: tabular-nums; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
+.areas button::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--fill); opacity: 0.45; transition: height 0.26s var(--ease-std), opacity 0.18s; }
+.areas button:hover:not(:disabled), .areas button:focus-visible:not(:disabled) { color: var(--tile-ink); }
+.areas button:hover:not(:disabled)::before, .areas button:focus-visible:not(:disabled)::before { height: 100%; opacity: 1; }
+.areas button:active:not(:disabled) { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
+.areas button[data-state="saved"] { color: var(--mark); font-weight: 600; }
+.areas button[data-state="saved"]::before, .areas button[data-state="saving"]::before { opacity: 0; }
 .areas button:disabled { cursor: default; }
-.areas button[data-state="saving"] { color: var(--ink2); }
+.areas button[data-state="saving"] { color: var(--ink3); }
 
-/* Accessibility mode's switch: a row with its name and what it does. */
-.areas .a11y { display: flex; align-items: center; gap: 16px; min-height: 44px; margin-top: 12px; padding: 12px 14px; border: 1px solid var(--divider); border-radius: 12px; background: var(--surface); cursor: pointer; }
-.areas .a11y span { flex: 1; display: flex; flex-direction: column; }
-.areas .a11y b { font: 600 16px/22px system-ui, sans-serif; }
-.areas .a11y small { font-size: 14px; line-height: 20px; color: var(--ink2); }
-.areas .a11y input { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 44px; height: 26px; margin: 0; border: 1px solid var(--edge); border-radius: 13px; background: var(--canvas); cursor: pointer; transition: background-color 0.12s; }
-.areas .a11y input::before { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--ink2); transition: transform 0.12s; }
-.areas .a11y input:checked { border-color: var(--mark); background: var(--fill); }
-.areas .a11y input:checked::before { transform: translateX(18px); background: #fff; }
+/* Accessibility mode's switch: clean borderless row with flat rectangular switch. */
+.areas .a11y { display: flex; align-items: center; gap: 14px; min-height: 44px; margin-top: 16px; padding: 12px 0; border-top: 1px solid var(--divider); border-radius: 0; background: transparent; cursor: pointer; }
+.areas .a11y span { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.areas .a11y b { font: 400 15px/20px var(--head); }
+.areas .a11y small { font-size: 12.5px; line-height: 17px; color: var(--ink3); }
+.areas .a11y input { -webkit-appearance: none; appearance: none; position: relative; flex: none; width: 42px; height: 22px; margin: 0; border: 2px solid var(--edge); border-radius: 0; background: transparent; cursor: pointer; transition: background-color 0.18s var(--ease), border-color 0.18s var(--ease); }
+.areas .a11y input::before { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 0; background: var(--ink3); transition: transform 0.18s var(--ease), background-color 0.18s; }
+.areas .a11y input:checked { border-color: var(--fill); background: var(--fill); }
+.areas .a11y input:checked::before { transform: translateX(20px); background: var(--tile-ink); }
 /* Windows contrast themes paint over backgrounds: the switch keeps its thumb and its state in the theme's own colors. */
 @media (forced-colors: active) {
   .areas .a11y input { forced-color-adjust: none; border-color: ButtonText; background: Canvas; }
@@ -52,9 +62,10 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
   .areas .a11y input:focus-visible { outline-color: Highlight; }
 }
 
-.areas p { margin: 20px 0 0; padding-top: 12px; border-top: 1px solid var(--divider); font-size: 14px; line-height: 20px; color: var(--ink2); }
-.areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--link); text-decoration: underline; }
-.areas p.notice { border: 0; font-size: 16px; line-height: 24px; color: var(--ink); }
+.areas p { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--divider); font-size: 13px; line-height: 18px; color: var(--ink3); }
+.areas p a { display: inline-block; min-height: 44px; line-height: 44px; color: var(--link); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.16s; }
+.areas p a:hover { border-bottom-color: var(--link); }
+.areas p.notice { border: 0; padding-top: 0; font-size: 15px; line-height: 23px; color: var(--ink2); }
 
 /* Faint contour lines at the top right of the start screen's window and of each card, drawn by scripts/contours.mjs.
    Decoration only: they end before any button, hold still where motion is unwelcome, and go when more contrast is asked
@@ -71,47 +82,48 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 }
 
 /* Accessibility mode (and more contrast asked by the system): raised contrast, 48px targets, larger text, no motion. */
-:root[data-a11y] { --divider: #7d8fa5; --ink2: #c5d0dc; --edge: #aab9c9; }
+:root[data-a11y] { --divider: #8a8a8a; --ink2: #dedede; --ink3: #c0c0c0; --edge: #8a8a8a; }
+:root[data-a11y] .areas li { border: 1px solid var(--edge); }
+:root[data-a11y] .areas button { border: 1px solid var(--edge); }
 :root[data-a11y] .areas .actions > *, :root[data-a11y] .areas .a11y { min-height: 48px; font-size: 16px; }
-:root[data-a11y] .areas .info span, :root[data-a11y] .areas .a11y small, :root[data-a11y] .areas p { font-size: 16px; line-height: 24px; }
+:root[data-a11y] .areas .info span, :root[data-a11y] .areas .a11y small, :root[data-a11y] .areas p { font-size: 15px; line-height: 22px; }
+:root[data-a11y] .areas p a { text-decoration: underline; }
 :root[data-a11y] :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--canvas); }
-:root[data-a11y] *, :root[data-a11y] *::before { transition: none !important; }
+:root[data-a11y] *:not(.spinner), :root[data-a11y] *::before, :root[data-a11y] *::after { transition: none !important; animation: none !important; }
 @media (prefers-contrast: more) {
-  :root { --divider: #7d8fa5; --ink2: #c5d0dc; --edge: #aab9c9; }
+  :root { --divider: #8a8a8a; --ink2: #dedede; --ink3: #c0c0c0; --edge: #8a8a8a; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before { transition: none !important; }
+  *:not(.spinner), *::before, *::after { transition: none !important; animation: none !important; }
 }
 
-/* The area library uses small local crops of the same charts as the viewer. */
-#app > .areas { max-width: 900px; padding: clamp(20px, 5vw, 56px) clamp(16px, 4vw, 40px); }
-.areas .brand { display: flex; align-items: center; gap: 10px; padding-bottom: 18px; border-bottom: 1px solid var(--divider); font-weight: 650; }
-.brand img { width: 32px; height: 32px; }
-#app .areas h1 { display: block; margin: 24px 0 18px; font-size: clamp(28px, 4vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
-#app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 285px), 1fr)); gap: 16px; }
-#app .areas li { gap: 0; padding: 0; border-radius: 6px; }
-.chart-preview { display: block; width: 100%; height: clamp(74px, 10vw, 115px); object-fit: cover; border-radius: 5px 5px 0 0; }
-.areas .info { padding: 16px 16px 12px; }
-.areas .info b { font-size: 22px; line-height: 28px; }
-.areas li .actions { padding: 0 16px 16px; }
-.areas .actions > * { border-radius: 5px; }
-.areas .a11y { margin-top: 22px; padding-inline: 0; border-width: 1px 0 0; border-radius: 0; background: transparent; }
-#app .areas p { margin-top: 8px; }
-/* The loading screen: over the map until it is built and ready to move. The spinner turns on the compositor, so it
-   keeps turning while the page is busy. */
-#load-status { position: fixed; z-index: 110; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 16px; background: var(--canvas); text-align: center; }
-#load-status p { margin: 0; }
-#load-status .spinner { width: 32px; height: 32px; box-sizing: border-box; border: 3px solid var(--divider); border-top-color: var(--mark); border-radius: 50%; animation: spin 0.9s linear infinite; }
+/* The area library uses local crops of the same FAA charts as the viewer. */
+#app > .areas { max-width: 820px; padding: clamp(16px, 4vw, 36px) clamp(14px, 3vw, 28px); }
+.areas .brand { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--divider); font: 600 14.5px var(--head); }
+.brand img { width: 26px; height: 26px; }
+#app .areas h1 { display: block; margin: 18px 0 16px; font: 300 clamp(28px, 4.5vw, 38px)/1.08 var(--head); letter-spacing: -0.025em; }
+#app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+#app .areas li { gap: 0; padding: 0; border-radius: 0; }
+.chart-preview { display: block; width: 100%; height: clamp(78px, 10vw, 108px); object-fit: cover; border-radius: 0; }
+.areas .info { padding: 12px 14px 10px; }
+.areas li .actions { padding: 0 14px 14px; }
+#app .areas p { margin-top: 4px; }
+
+/* The loading screen: over the map until it is built and ready to move. */
+#load-status { position: fixed; z-index: 110; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: var(--canvas); text-align: center; }
+#load-status p { margin: 0; font: 400 14px var(--head); color: var(--ink2); }
+#load-status .spinner { width: 28px; height: 28px; box-sizing: border-box; border: 2px solid var(--divider); border-top-color: var(--mark); border-radius: 50%; animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(1turn); } }
-#load-status progress { width: min(240px, 70vw); height: 4px; border: 0; border-radius: 2px; background: var(--divider); accent-color: var(--mark); appearance: none; }
-#load-status progress::-webkit-progress-bar { border-radius: 2px; background: var(--divider); }
-#load-status progress::-webkit-progress-value { border-radius: 2px; background: var(--mark); transition: width 0.2s; }
-#load-status progress::-moz-progress-bar { border-radius: 2px; background: var(--mark); }
+#load-status progress { width: min(220px, 70vw); height: 3px; border: 0; border-radius: 0; background: var(--divider); accent-color: var(--mark); appearance: none; }
+#load-status progress::-webkit-progress-bar { border-radius: 0; background: var(--divider); }
+#load-status progress::-webkit-progress-value { border-radius: 0; background: var(--mark); transition: width 0.2s var(--ease); }
+#load-status progress::-moz-progress-bar { border-radius: 0; background: var(--mark); }
 @media (prefers-reduced-motion: reduce) { #load-status .spinner { animation-duration: 3s; } }
+:root[data-a11y] #load-status .spinner { animation-duration: 3s; }
 @media (max-width: 480px) {
   .areas li .actions { padding: 0 12px 12px; }
   .areas .actions > * { padding-inline: 10px; }
   .areas .info { padding: 10px 12px; }
-  #app .areas h1 { margin: 18px 0 14px; }
+  #app .areas h1 { margin: 14px 0 12px; }
 }
-.areas .notice + .actions { margin-top: 16px; }
+.areas .notice + .actions { margin-top: 14px; }

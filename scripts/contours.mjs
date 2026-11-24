@@ -13,8 +13,8 @@ const STEP = 3; // px, the grid the lines are traced on
 // edges and before a card's buttons (they start 70px down). The colours are literal because a background picture
 // cannot read the page's variables: each sits just above --divider in app/app.css.
 const SURFACES = {
-  page: { w: 480, h: 360, seed: 111, scale: 0.08, color: "#3f5369", fade: { cx: 480, cy: 0, r: 350 } },
-  card: { w: 200, h: 90, seed: 112, scale: 0.2, color: "#485c75", fade: { cx: 200, cy: 0, r: 68 } },
+  page: { w: 480, h: 360, seed: 111, scale: 0.08, color: "#323232", fade: { cx: 480, cy: 0, r: 350 } },
+  card: { w: 200, h: 90, seed: 112, scale: 0.2, color: "#383838", fade: { cx: 200, cy: 0, r: 68 } },
 };
 
 // mulberry32: the same picture on every build.

@@ -45,6 +45,19 @@ test("airport names in the picker read at the id's size, in the softer text colo
   assert.match(name, /color: var\(--sc-soft\)/);
 });
 
-test("the accent still follows a site's --red", () => {
+test("the accent still follows a site's --red and solid tile follows --tile or --sc-accent", () => {
   assert.match(css, /var\(--red, /);
+  assert.match(css, /--sc-tile:\s*var\(--tile,\s*color-mix\(in srgb,\s*var\(--sc-accent\)/);
+  assert.match(css, /:root\[data-theme="light"\] \.skycake \{ --sc-edge: var\(--sc-frame\); \}/);
+});
+
+test("flat 0px chrome, no CSS case transforms, and motion disabled in a11y and reduced motion", () => {
+  const appCss = readFileSync(new URL("../app/app.css", import.meta.url), "utf8");
+  assert.doesNotMatch(css, /text-transform:\s*(uppercase|lowercase)/);
+  assert.doesNotMatch(appCss, /text-transform:\s*(uppercase|lowercase)/);
+  assert.match(css, /--sc-r-ctl:\s*0px;/);
+  assert.match(css, /--sc-r-panel:\s*0px;/);
+  assert.match(css, /--sc-shadow:\s*none;/);
+  assert.match(css, /\.skycake\[data-a11y\] \*, .*transition: none !important; animation: none !important;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*animation: none !important;/);
 });
