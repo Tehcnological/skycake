@@ -91,6 +91,20 @@ export type Labels = {
     zoomOut: string;
     zoomFit: string;
     plateMissing: string;
+    plateEmpty: string;
+    /** The diagram control: its value with no airport, or one without a diagram; its hints and their notice. */
+    diagramPick: string;
+    diagramNone: string;
+    diagramPickHint: string;
+    diagramNoneHint: (airport: string) => string;
+    diagramShow: (airport: string) => string;
+    diagramHide: (airport: string) => string;
+    /** An embedded view's loading screen: its words while loading, each step, and on failure. */
+    loading: string;
+    loadStep: (step: "terrain" | "chart" | "airspace" | "prepare") => string;
+    powered: string;
+    unavailable: string;
+    retry: string;
     /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
     inView: string;
     /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */
@@ -140,7 +154,7 @@ export declare const LABELS: Labels;
 export type Options = {
     /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
     base: string;
-    /** What the view shows, in its header: the area's name and a note under it (SkyCake Viewer: the current-through date). */
+    /** What the view shows, in its header: the area's name and a note under it (skycake viewer: the current-through date). */
     title?: {
         name: string;
         note?: string;
@@ -149,7 +163,7 @@ export type Options = {
     scene?: Scene;
     /** Shorthand for a first scene: types raised at first. */
     types?: Kind[];
-    /** The airport current at first (search box, diagram). Default: KPHX when the area has it. */
+    /** The airport current at first (search box, diagram). Default: none until an airport or procedure is picked. */
     airport?: string;
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;

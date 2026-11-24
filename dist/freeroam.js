@@ -55,13 +55,17 @@ export const ICONS = {
 export function freeRoam(c) {
     const { fig, view: v, data, labels: L } = c;
     const has = (a) => !!data.airports.find((x) => x.id === a)?.diagram;
+    const anyDiagram = data.airports.some((a) => !!a.diagram);
     let r = start(c.first, c.airport ?? undefined);
     // Once the first scene is showing, every change keeps what is raised on screen.
     let shown = false;
     let tagsOn = c.first.tags ?? true;
     let scale = c.first.height ?? c.startScale;
     // Which chart is under the airspace: VFR or IFR, then one of that mode's charts. Each mode keeps the last one picked.
-    let chart = pickChart(data.charts, c.first.chart);
+    // A first scene with an approach and no explicit chart opens on IFR, matching picking an approach in search.
+    const typeOf = (p) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
+    const startIfr = !c.first.chart && (c.first.procedures ?? []).some((p) => typeOf(p) === "IAP") ? chartsIn(data.charts, "ifr")[0] : undefined;
+    let chart = startIfr ?? pickChart(data.charts, c.first.chart);
     const lastIn = { [modeOf(chart)]: chart };
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
     // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
@@ -151,19 +155,20 @@ export function freeRoam(c) {
         head.append(a11yToggle());
     }
     const caption = fig.querySelector(".sc-caption");
-    // Phone tab bar.
+    // Phone tab bar. Close always lives at the leading edge of the header (never a 6th scrolling tab); embedded narrow
+    // views also get a full-screen button in the header when not full screen.
     const tab = (label, paths) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
-    const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: tab(L.close, ICONS.close) };
+    const closeTab = h("button", { type: "button", class: "sc-area-close" }, icon(ICONS.close), h("span", {}, L.close));
+    const headFull = c.close ? null : h("button", { type: "button", class: "sc-head-full", "aria-label": L.fullScreen, title: L.fullScreen }, icon(ICONS.full, "0 0 12 12"));
+    const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: closeTab };
     tabs.inView.classList.add("sc-inview-tab");
-    const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
-    if (c.close) {
-        tabs.close.className = "sc-area-close";
-        head.prepend(tabs.close);
-    }
+    const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, tabs.airspace, tabs.inView, tabs.procedure, tabs.diagram, tabs.view, tabs.plate);
+    head.prepend(closeTab);
+    if (headFull)
+        findButton.after(headFull);
     // Showing a procedure the viewer picked: a departure takes the approaches away and the reverse (roam.ts), and the
     // first approach in this view switches the chart to IFR, once, so someone who goes back to VFR stays there.
-    const typeOf = (p) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
-    let ifrDone = false;
+    let ifrDone = !!startIfr;
     let toIfr = () => { };
     // While someone is choosing a procedure, the IFR chart that an approach would switch to loads.
     const ifrNext = () => lastIn.ifr ?? chartsIn(data.charts, "ifr")[0];
@@ -343,10 +348,32 @@ export function freeRoam(c) {
         }
         files = loaded.filter((p) => !!p);
         drawChips();
-        const diagram = r.airport !== null && has(r.airport);
-        diagramButton.hidden = tabs.diagram.hidden = !diagram;
+        const canDiagram = r.airport !== null && has(r.airport);
+        diagramButton.hidden = tabs.diagram.hidden = !anyDiagram;
+        diagramButton.setAttribute("aria-disabled", String(!canDiagram));
+        tabs.diagram.setAttribute("aria-disabled", String(!canDiagram));
         diagramButton.setAttribute("aria-pressed", String(r.diagram));
         tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
+        if (!r.airport) {
+            diagramTool.value.textContent = L.diagramPick;
+            diagramButton.title = tabs.diagram.title = L.diagramPickHint;
+            diagramButton.setAttribute("aria-label", `${L.diagram}: ${L.diagramPickHint}`);
+        }
+        else if (!has(r.airport)) {
+            diagramTool.value.textContent = L.diagramNone;
+            diagramButton.title = tabs.diagram.title = L.diagramNoneHint(r.airport);
+            diagramButton.setAttribute("aria-label", `${L.diagram}: ${L.diagramNoneHint(r.airport)}`);
+        }
+        else if (r.diagram) {
+            diagramTool.value.textContent = r.airport;
+            diagramButton.title = tabs.diagram.title = L.diagramHide(r.airport);
+            diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.on}`);
+        }
+        else {
+            diagramTool.value.textContent = L.off;
+            diagramButton.title = tabs.diagram.title = L.diagramShow(r.airport);
+            diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.off}`);
+        }
         plates.procedures(r.procedures, r.airport);
         shown = true;
         await v.apply(resolved, files, now, framing.filter((p) => !!p));
@@ -404,10 +431,12 @@ export function freeRoam(c) {
         showResults();
         refresh();
     };
-    const showResults = () => {
+    const showResults = (notice) => {
         warmIfr();
         const q = input.value;
         results.replaceChildren();
+        if (notice)
+            results.append(h("p", { class: "sc-notice", role: "status" }, notice));
         const at = browse === null ? undefined : data.airports.find((a) => a.id === browse);
         if (q.trim()) {
             const groups = search(q, data.airports);
@@ -430,8 +459,8 @@ export function freeRoam(c) {
         }
         results.hidden = false;
     };
-    input.addEventListener("input", showResults);
-    input.addEventListener("focus", showResults);
+    input.addEventListener("input", () => showResults());
+    input.addEventListener("focus", () => showResults());
     input.addEventListener("keydown", (e) => {
         if (e.key !== "Escape")
             return;
@@ -441,11 +470,29 @@ export function freeRoam(c) {
             shutFind();
     });
     fig.addEventListener("pointerdown", (e) => {
-        if (!topRight.contains(e.target))
+        if (!topRight.contains(e.target) && !diagramButton.contains(e.target) && !tabs.diagram.contains(e.target))
             results.hidden = true;
     }, { signal });
     const toggleDiagramNow = () => {
+        if (r.airport === null || !has(r.airport)) {
+            browse = null;
+            input.value = "";
+            sheet(null);
+            if (findButton.offsetParent)
+                setFind(true, false);
+            else
+                input.focus();
+            showResults(r.airport ? L.diagramNoneHint(r.airport) : L.diagramPickHint);
+            return;
+        }
+        results.hidden = true;
+        if (fig.classList.contains("sc-open-find"))
+            setFind(false, false);
+        const turningOn = !r.diagram;
         r = toggleDiagram(r, has);
+        // Turning the diagram on with no procedure shown glides the camera to the field so the runways are immediately visible.
+        if (turningOn && r.diagram && r.procedures.length === 0)
+            r = { ...r, camera: undefined };
         refresh();
     };
     diagramButton.addEventListener("click", toggleDiagramNow);
@@ -522,6 +569,8 @@ export function freeRoam(c) {
     const drawPhone = () => {
         fig.classList.toggle("sc-preview", phone.matches && !fig.classList.contains("full"));
         tabs.close.hidden = !c.close && !fig.classList.contains("full");
+        if (headFull)
+            headFull.hidden = fig.classList.contains("full");
     };
     const setFull = (on) => {
         fig.classList.toggle("full", on);
@@ -539,9 +588,13 @@ export function freeRoam(c) {
     // The page scrolls again before the site's close runs, in case it stays on this page.
     const leave = (close) => {
         document.documentElement.classList.remove("skycake-full");
+        if (document.fullscreenElement)
+            void document.exitFullscreen().catch(() => { });
         close();
     };
+    fullButton.setAttribute("aria-label", c.close ? L.close : L.fullScreen);
     fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
+    headFull?.addEventListener("click", () => goFull(true));
     openButton.addEventListener("click", () => goFull(true));
     tabs.close.addEventListener("click", () => {
         sheet(null);

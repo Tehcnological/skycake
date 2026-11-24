@@ -59,7 +59,7 @@ export function plateView(c: Context, on: {
   // Map / Plate / Split: map only (the panel closed), chart only (full screen), both.
   const modes = ([[L.plateMap, null], [L.platePlate, "full"], [L.plateSplit, "split"]] as const).map(([label, m]) => ({ m, b: h("button", { type: "button", "aria-pressed": "false" }, label) }));
   const switcher = h("div", { class: "sc-seg sc-plate-switch", role: "group", "aria-label": L.plate }, ...modes.map((x) => x.b));
-  const full = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
+  const full = h("button", { type: "button", class: "sc-x sc-plate-fullbtn", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
   const close = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
   const body = h("div", { class: "sc-plate-body", tabindex: "0", role: "group", "aria-label": L.plateChart, "aria-keyshortcuts": "ArrowLeft ArrowRight ArrowUp ArrowDown + -" });
   const round = (label: string, paths: string[], box?: string) => h("button", { type: "button", class: "sc-round", "aria-label": label }, icon(paths, box));
@@ -127,7 +127,7 @@ export function plateView(c: Context, on: {
     }
     if (!p) {
       img = null;
-      return body.replaceChildren();
+      return body.replaceChildren(h("p", { class: "sc-plate-missing" }, L.plateEmpty));
     }
     // Unfitted until it loads, so a chart that loads while the panel is closed is fitted as it reopens.
     t = fit = { x: 0, y: 0, s: 1 };
@@ -296,19 +296,19 @@ export function plateView(c: Context, on: {
     if (opening) void sync();
   };
   const away = () => (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
-  const shut = () => {
+  const shut = (focusBack: boolean) => {
     if (fig.classList.contains("sc-plate-question")) return;
     set(null);
-    away();
+    if (focusBack) away();
   };
   full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
-  close.addEventListener("click", shut);
-  for (const x of modes) x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
+  close.addEventListener("click", (e) => shut(e.detail === 0));
+  for (const x of modes) x.b.addEventListener("click", (e) => (x.m === null ? shut(e.detail === 0) : set(x.m)));
   el.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     e.stopPropagation();
     // Not from the picker: there Escape shuts its list.
-    if (e.target !== pick) shut();
+    if (e.target !== pick) shut(true);
   });
   set(null);
 

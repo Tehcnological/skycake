@@ -1,0 +1,96 @@
+{
+  "fill": {
+    "solid": "srgb:0.04706,0.04706,0.04706,1.00000"
+  },
+  "groups": [
+    {
+      "name": "Toppings",
+      "layers": [
+        {
+          "image-name": "cake-cherry.png",
+          "name": "cake-cherry",
+          "glass": true
+        },
+        {
+          "image-name": "sky-contrail-airplane.png",
+          "name": "sky-contrail-airplane",
+          "glass": true
+        },
+        {
+          "image-name": "cake-icing.png",
+          "name": "cake-icing",
+          "glass": true
+        },
+        {
+          "image-name": "sky-clouds.png",
+          "name": "sky-clouds",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 1.0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.2
+      },
+      "specular": true,
+      "lighting": "individual"
+    },
+    {
+      "name": "Letters",
+      "layers": [
+        {
+          "image-name": "sky-S-clouds.png",
+          "name": "sky-S-clouds",
+          "glass": true
+        },
+        {
+          "image-name": "cake-C-rings.png",
+          "name": "cake-C-rings",
+          "glass": true
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.2
+      },
+      "specular": true,
+      "lighting": "combined"
+    },
+    {
+      "name": "Background",
+      "layers": [
+        {
+          "image-name": "topo-lines.png",
+          "name": "topo-lines",
+          "glass": false
+        }
+      ],
+      "shadow": {
+        "kind": "none",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "specular": false,
+      "lighting": "combined",
+      "hidden-specializations": [
+        {
+          "appearance": "tinted",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

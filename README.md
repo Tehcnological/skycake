@@ -6,7 +6,7 @@ Named for the upside-down wedding cake every student pilot learns Class B as.
 
 Today it is the free-roam view of two areas, Phoenix to Tucson and Key West to Palm Beach: the area's charts, picked by the Rules and Chart settings (VFR: TAC or sectional, the sectional outside the TAC's map; IFR: area chart or low, the low outside the area chart's), over USGS terrain with every airspace type raised in the chart's own colors (in IFR only special use, plus low altitude airways at their MEA and the fixes on them), approaches, departures and arrivals for every airport on the chart (several at once, from one search box; a departure and an approach are never shown together, so picking one removes the other kind, and the first approach picked switches Rules to IFR once per view), FAA airport diagrams laid over the field, and the FAA's approach, departure and arrival charts in a panel beside the map. On desktop the controls float over the view: a header with the area's name, the Airspace list under it, search top right, and a tool rail bottom right that shows each setting with its value (Diagram, Tags, Height, Rules, Chart), then Full screen, or Close in a standalone app. A mouse works as on a map app: a drag moves the map, a right drag (or Ctrl, Shift or Cmd and a drag) turns and tilts it, the wheel zooms and a double-click zooms in. A pen drags and turns as a mouse does (its side button turns); a double-tap zooms in, and a double-tap held and dragged zooms: down in, up out. On phones the map in the page opens full screen with a tap: a header with a search button over the view, a tab bar under it (Airspace, Procedure, Diagram, View, Plate) and, in a standalone app, Close at the left of the header, and the View tab opens a sheet of switches and segmented picks. There one finger moves the map, a pinch zooms, a twist turns and two fingers up or down tilt. It also plays walkthroughs and asks quizzes, written or generated from the FAA data, with endless practice; their content lives on the sites that use skycake, not here.
 
-It is also its own app, SkyCake Viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
+It is also its own app, skycake viewer, a free web app for skycake.app with offline areas: see [below](#skycake-viewer-the-app).
 
 ## Use it on a site
 
@@ -135,7 +135,7 @@ Procedure charts come from the same d-TPP cycle: every approach, departure (grap
 
 ### Data cycle workflow
 
-[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out, charts with no procedure and procedures with no chart. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, SkyCake Viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
+[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out, charts with no procedure and procedures with no chart. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, skycake viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
 
 It needs one repo setting: Settings, Actions, General, Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests". Without it the PR step fails, and the branch is pushed with no PR.
 
@@ -151,9 +151,9 @@ npm run build   # dist/, committed, so sites can install straight from GitHub
 npm run demo    # http://localhost:5179/demo/ with the built dist/ and data; ?scene={...} to try a scene, ?walkthrough=class-b to play one, ?quiz=class-b, ?quiz=vfr, ?quiz=ifr or ?quiz=practice to ask; /demo/all.html links every mode and quiz type
 ```
 
-Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md), [SkyCake Viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md) (with the plan for F-Droid and iOS), [accessibility mode](docs/superpowers/specs/2026-11-08-accessibility-mode-design.md) and [chart reading quizzes](docs/superpowers/specs/2026-11-08-chart-reading-quiz-design.md) (not built yet). The free roam layout described in the controls note predates the new look; the code and this README are current.
+Design notes: [the 3D view](docs/superpowers/specs/2026-11-03-3d-airspace-design.md), [its controls](docs/superpowers/specs/2026-11-04-skycake-ux-design.md), [skycake viewer](docs/superpowers/specs/2026-11-07-skycake-viewer-design.md) (with the plan for F-Droid and iOS), [accessibility mode](docs/superpowers/specs/2026-11-08-accessibility-mode-design.md) and [chart reading quizzes](docs/superpowers/specs/2026-11-08-chart-reading-quiz-design.md) (not built yet). The free roam layout described in the controls note predates the new look; the code and this README are current.
 
-## SkyCake Viewer (the app)
+## skycake viewer (the app)
 
 `app/` is a standalone web app around `mount()`: a start screen lists the areas as cards, each with the date its data is current through, Open area, and a Save button that saves it for offline use and counts its progress, and `?area=phoenix` opens one full screen (`&scene={...}` sets a first scene, as in the demo). On-screen words in `app/main.ts` are drafts. `demo.html` is a short showcase page (skycake.app/demo) of screenshots from `app/shots/`, each linking to its scene in the app; its words are drafts. The screenshots stay out of the offline shell, so they load only online. `help.html` (skycake.app/help) is a how-to for students: free roam on desktop and phone, walkthroughs and practice, and accessibility mode; its words are drafts too, and it is in the offline shell.
 
@@ -199,7 +199,7 @@ Once the Pages project is up: open it, Custom domains, Set up a custom domain, e
 3. `npm test`
 4. Deletes `dist/`, runs `npm run build` and fails if the result differs from what is committed
 5. Fails if a file in `data/` is over 24 MiB
-6. `npm run app`: builds SkyCake Viewer into `www/` (see below)
+6. `npm run app`: builds skycake viewer into `www/` (see below)
 7. Installs the commit from git, as a site does, then imports `mount` and checks for `style.css`, `three` and `data/phoenix`
 
 A new push to a PR cancels that PR's older run. There are no path filters on purpose: a required check whose workflow is filtered out never reports, and its PR waits forever.
