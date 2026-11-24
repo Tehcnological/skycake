@@ -229,6 +229,9 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
     if (e.key === "Escape") {
       e.preventDefault();
       stop();
+    } else if (!pop.contains(e.target as Node)) {
+      // Arrows elsewhere belong to the live map and its fields.
+      return;
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
       if (index < STEPS.length - 1) {
