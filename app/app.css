@@ -69,11 +69,11 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas p a:hover { border-bottom-color: var(--link); }
 .areas p.notice { border: 0; padding-top: 0; font-size: 15px; line-height: 23px; color: var(--ink2); }
 
-/* Faint contour lines at the top right of the start screen's window and of each card, drawn by scripts/contours.mjs.
-   Decoration only: they end before any button, hold still where motion is unwelcome, and go when more contrast is asked
-   for. #app keeps them off the other pages (main.areas, no #app) and off a map (no .areas). */
-body:has(#app > .areas) { background-image: url(contours-page-still.svg); background-position: top right; background-size: 480px 360px; background-repeat: no-repeat; }
-#app .areas li { background-image: url(contours-card-still.svg); background-position: top right; background-size: 200px 90px; background-repeat: no-repeat; }
+/* Faint contour lines sweeping across the start screen and cards, drawn by scripts/contours.mjs.
+   Decoration only: they hold still where motion is unwelcome, and go when more contrast is asked for.
+   #app keeps them off the other pages (main.areas, no #app) and off a map (no .areas). */
+body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-page-still.svg); background-position: right top; background-size: cover; background-repeat: no-repeat; }
+#app .areas li { background-image: url(contours-card-still.svg); background-position: top right; background-size: 240px 110px; background-repeat: no-repeat; }
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-a11y]) body:has(#app > .areas) { background-image: url(contours-page.svg); }
   :root:not([data-a11y]) #app .areas li { background-image: url(contours-card.svg); }

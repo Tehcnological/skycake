@@ -7,14 +7,14 @@ const RIPPLE = 10; // seconds for the brightening to pass through every height o
 // moves in steps too small to see (under 2% each, 5.6 a second) instead of on every frame, which cost about a tenth of
 // a processor core. 28 is a multiple of 7: the heights' delays are then whole steps, and all seven change together.
 const STEPS = 28;
-const STEP = 3; // px, the grid the lines are traced on
+const STEP = 3; // default px grid the lines are traced on
 
-// Sizes in CSS px. The lines fade out with distance from `fade`, the top right corner, before the picture's other
-// edges and before a card's buttons (they start 70px down). The colours are literal because a background picture
-// cannot read the page's variables: each sits just above --divider in app/app.css.
+// Sizes in CSS px. The page landscape sweeps across most of the start screen and fades softly toward the bottom left;
+// card contours stay subtle near the top right. The colours are literal because a background picture cannot read the
+// page's variables: each sits just above --divider in app/app.css.
 const SURFACES = {
-  page: { w: 480, h: 360, seed: 111, scale: 0.08, color: "#323232", fade: { cx: 480, cy: 0, r: 350 } },
-  card: { w: 200, h: 90, seed: 112, scale: 0.2, color: "#383838", fade: { cx: 200, cy: 0, r: 68 } },
+  page: { w: 1200, h: 900, step: 6, seed: 111, scale: 0.032, color: "#383838", fade: { cx: 1040, cy: 160, r: 1120 } },
+  card: { w: 240, h: 110, step: 3, seed: 112, scale: 0.16, color: "#3a3a3a", fade: { cx: 240, cy: 0, r: 96 } },
 };
 
 // mulberry32: the same picture on every build.
@@ -53,13 +53,14 @@ function lines(f, w, h, level, step = STEP) {
 // motion and accessibility mode.
 export function contours(surface, moving) {
   assert.ok(Object.hasOwn(SURFACES, surface), `no such surface: ${surface}`);
-  const { w, h, seed, scale, color, fade } = SURFACES[surface];
+  const { w, h, step = STEP, seed, scale, color, fade } = SURFACES[surface];
   const f = field(seed, scale);
-  const levels = [1, 2, 3, 4, 5, 6, 7].map((k) => lines(f, w, h, k / 8));
+  const levels = [1, 2, 3, 4, 5, 6, 7].map((k) => lines(f, w, h, k / 8, step));
   assert.ok(levels.flat().length > 3, `${surface}: almost no contour lines`);
   // The grid's last cell may overhang the picture by one step; the viewBox clips it.
-  for (const [x, y] of levels.flat(2)) assert.ok(x >= 0 && x <= w + STEP && y >= 0 && y <= h + STEP, `${surface}: a point at ${x}, ${y}`);
+  for (const [x, y] of levels.flat(2)) assert.ok(x >= 0 && x <= w + step && y >= 0 && y <= h + step, `${surface}: a point at ${x}, ${y}`);
+  const stroke = surface === "page" ? ' stroke-width="1.25"' : "";
   const groups = levels.map((level, n) => `<g${moving ? ` style="animation-delay:-${((n * RIPPLE) / levels.length).toFixed(4)}s"` : ""}>${level.map((line) => `<path d="M${line.map((p) => p.map((v) => v.toFixed(1)).join(" ")).join("L")}"/>`).join("")}</g>`).join("");
-  const style = moving ? `@keyframes t{50%{opacity:1}}g{opacity:.5;animation:t ${RIPPLE}s steps(${STEPS}) infinite}` : "g{opacity:.8}";
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" fill="none" stroke="url(#c)" stroke-linecap="round" stroke-linejoin="round"><defs><radialGradient id="c" gradientUnits="userSpaceOnUse" cx="${fade.cx}" cy="${fade.cy}" r="${fade.r}"><stop offset="0" stop-color="${color}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient></defs><style>${style}</style>${groups}</svg>`;
+  const style = moving ? `@keyframes t{50%{opacity:1}}g{opacity:.48;animation:t ${RIPPLE}s steps(${STEPS}) infinite}` : "g{opacity:.78}";
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" fill="none" stroke="url(#c)"${stroke} stroke-linecap="round" stroke-linejoin="round"><defs><radialGradient id="c" gradientUnits="userSpaceOnUse" cx="${fade.cx}" cy="${fade.cy}" r="${fade.r}"><stop offset="0" stop-color="${color}"/><stop offset="0.68" stop-color="${color}" stop-opacity="0.55"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient></defs><style>${style}</style>${groups}</svg>`;
 }
