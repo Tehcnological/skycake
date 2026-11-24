@@ -372,20 +372,20 @@ export function freeRoam(c: Context): Promise<void> {
     diagramButton.setAttribute("aria-pressed", String(r.diagram));
     tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
     if (!r.airport) {
-      diagramTool.value.textContent = "pick";
-      diagramButton.title = tabs.diagram.title = "select an airport to view its diagram";
-      diagramButton.setAttribute("aria-label", `${L.diagram}: select an airport first`);
+      diagramTool.value.textContent = L.diagramPick;
+      diagramButton.title = tabs.diagram.title = L.diagramPickHint;
+      diagramButton.setAttribute("aria-label", `${L.diagram}: ${L.diagramPickHint}`);
     } else if (!has(r.airport)) {
-      diagramTool.value.textContent = "none";
-      diagramButton.title = tabs.diagram.title = `${r.airport} has no FAA airport diagram`;
-      diagramButton.setAttribute("aria-label", `${L.diagram}: none for ${r.airport}`);
+      diagramTool.value.textContent = L.diagramNone;
+      diagramButton.title = tabs.diagram.title = L.diagramNoneHint(r.airport);
+      diagramButton.setAttribute("aria-label", `${L.diagram}: ${L.diagramNoneHint(r.airport)}`);
     } else if (r.diagram) {
       diagramTool.value.textContent = r.airport;
-      diagramButton.title = tabs.diagram.title = `hide ${r.airport} airport diagram`;
+      diagramButton.title = tabs.diagram.title = L.diagramHide(r.airport);
       diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.on}`);
     } else {
       diagramTool.value.textContent = L.off;
-      diagramButton.title = tabs.diagram.title = `show ${r.airport} airport diagram`;
+      diagramButton.title = tabs.diagram.title = L.diagramShow(r.airport);
       diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.off}`);
     }
     plates.procedures(r.procedures, r.airport);
@@ -488,7 +488,7 @@ export function freeRoam(c: Context): Promise<void> {
       sheet(null);
       if (findButton.offsetParent) setFind(true, false);
       else input.focus();
-      showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
+      showResults(r.airport ? L.diagramNoneHint(r.airport) : L.diagramPickHint);
       return;
     }
     results.hidden = true;

@@ -71,6 +71,18 @@ export const LABELS = {
     zoomOut: "zoom out",
     zoomFit: "fit",
     plateMissing: "This chart did not load.",
+    plateEmpty: "pick an airport or procedure to view its chart",
+    diagramPick: "pick",
+    diagramNone: "none",
+    diagramPickHint: "pick an airport to view its diagram",
+    diagramNoneHint: (airport) => `${airport} has no FAA airport diagram`,
+    diagramShow: (airport) => `show ${airport} airport diagram`,
+    diagramHide: (airport) => `hide ${airport} airport diagram`,
+    loading: "loading…",
+    loadStep: (step) => ({ terrain: "loading terrain…", chart: "loading charts…", airspace: "building airspace…", prepare: "preparing 3D view…" })[step],
+    powered: "powered by skycake",
+    unavailable: "chart unavailable",
+    retry: "try again",
     inView: "in view",
     number: "Placeholder: Number",
     skip: "Placeholder: Skip",
@@ -123,12 +135,6 @@ function h(tag, attrs = {}, ...kids) {
     e.append(...kids);
     return e;
 }
-const LOAD_STEPS = {
-    terrain: "loading terrain…",
-    chart: "loading charts…",
-    airspace: "building airspace…",
-    prepare: "preparing 3D view…",
-};
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host, o) {
     const L = { ...LABELS, ...o.labels, camera: { ...LABELS.camera, ...o.labels?.camera }, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
@@ -144,11 +150,11 @@ export async function mount(host, o) {
     let loader = null;
     let loadStatus = null;
     if (!o.close) {
-        loadStatus = h("p", { role: "status" }, "loading…");
-        loader = h("div", { class: "sc-loading" }, h("span", { class: "sc-spinner", "aria-hidden": "true" }), loadStatus, h("small", { class: "sc-powered" }, "powered by skycake"));
+        loadStatus = h("p", { role: "status" }, L.loading);
+        loader = h("div", { class: "sc-loading" }, h("span", { class: "sc-spinner", "aria-hidden": "true" }), loadStatus, h("small", { class: "sc-powered" }, L.powered));
         fig.append(loader);
         fig.addEventListener("skycake-loading", (e) => {
-            const msg = LOAD_STEPS[e.detail?.step];
+            const msg = L.loadStep(e.detail?.step);
             if (msg && loadStatus)
                 loadStatus.textContent = msg;
         });
@@ -264,9 +270,9 @@ export async function mount(host, o) {
     }
     catch (err) {
         if (loader) {
-            const retry = h("button", { type: "button", class: "sc-pill sc-retry" }, "try again");
+            const retry = h("button", { type: "button", class: "sc-pill sc-retry" }, L.retry);
             retry.addEventListener("click", () => void mount(host, o).catch((e) => console.error(e)));
-            loader.replaceChildren(h("p", { role: "alert" }, "chart unavailable"), retry, h("small", { class: "sc-powered" }, "powered by skycake"));
+            loader.replaceChildren(h("p", { role: "alert" }, L.unavailable), retry, h("small", { class: "sc-powered" }, L.powered));
         }
         throw err;
     }

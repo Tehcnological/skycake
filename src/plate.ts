@@ -127,7 +127,7 @@ export function plateView(c: Context, on: {
     }
     if (!p) {
       img = null;
-      return body.replaceChildren(h("p", { class: "sc-plate-missing" }, "pick an airport or procedure to view its chart"));
+      return body.replaceChildren(h("p", { class: "sc-plate-missing" }, L.plateEmpty));
     }
     // Unfitted until it loads, so a chart that loads while the panel is closed is fitted as it reopens.
     t = fit = { x: 0, y: 0, s: 1 };

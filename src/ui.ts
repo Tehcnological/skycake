@@ -96,6 +96,20 @@ export type Labels = {
   zoomOut: string;
   zoomFit: string;
   plateMissing: string;
+  plateEmpty: string;
+  /** The diagram control: its value with no airport, or one without a diagram; its hints and their notice. */
+  diagramPick: string;
+  diagramNone: string;
+  diagramPickHint: string;
+  diagramNoneHint: (airport: string) => string;
+  diagramShow: (airport: string) => string;
+  diagramHide: (airport: string) => string;
+  /** An embedded view's loading screen: its words while loading, each step, and on failure. */
+  loading: string;
+  loadStep: (step: "terrain" | "chart" | "airspace" | "prepare") => string;
+  powered: string;
+  unavailable: string;
+  retry: string;
   /** Accessibility mode: free roam's list of what is on the map, and the map in words (areas as `facts` gives them). */
   inView: string;
   /** Accessibility mode's find questions: the number field's name, and Skip (moves on without scoring). */
@@ -197,6 +211,18 @@ export const LABELS: Labels = {
   zoomOut: "zoom out",
   zoomFit: "fit",
   plateMissing: "This chart did not load.",
+  plateEmpty: "pick an airport or procedure to view its chart",
+  diagramPick: "pick",
+  diagramNone: "none",
+  diagramPickHint: "pick an airport to view its diagram",
+  diagramNoneHint: (airport) => `${airport} has no FAA airport diagram`,
+  diagramShow: (airport) => `show ${airport} airport diagram`,
+  diagramHide: (airport) => `hide ${airport} airport diagram`,
+  loading: "loading…",
+  loadStep: (step) => ({ terrain: "loading terrain…", chart: "loading charts…", airspace: "building airspace…", prepare: "preparing 3D view…" })[step],
+  powered: "powered by skycake",
+  unavailable: "chart unavailable",
+  retry: "try again",
   inView: "in view",
   number: "Placeholder: Number",
   skip: "Placeholder: Skip",
@@ -277,13 +303,6 @@ function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, 
   return e;
 }
 
-const LOAD_STEPS: Record<string, string> = {
-  terrain: "loading terrain…",
-  chart: "loading charts…",
-  airspace: "building airspace…",
-  prepare: "preparing 3D view…",
-};
-
 /** Builds the view inside `host`. Resolves once the view has loaded and shows its first scene. */
 export async function mount(host: HTMLElement, o: Options): Promise<void> {
   const L: Labels = { ...LABELS, ...o.labels, camera: { ...LABELS.camera, ...o.labels?.camera }, kinds: { ...LABELS.kinds, ...o.labels?.kinds }, groups: { ...LABELS.groups, ...o.labels?.groups }, charts: { ...LABELS.charts, ...o.labels?.charts }, modes: { ...LABELS.modes, ...o.labels?.modes }, ask: { ...LABELS.ask, ...o.labels?.ask } };
@@ -300,11 +319,11 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   let loader: HTMLElement | null = null;
   let loadStatus: HTMLElement | null = null;
   if (!o.close) {
-    loadStatus = h("p", { role: "status" }, "loading…");
-    loader = h("div", { class: "sc-loading" }, h("span", { class: "sc-spinner", "aria-hidden": "true" }), loadStatus, h("small", { class: "sc-powered" }, "powered by skycake"));
+    loadStatus = h("p", { role: "status" }, L.loading);
+    loader = h("div", { class: "sc-loading" }, h("span", { class: "sc-spinner", "aria-hidden": "true" }), loadStatus, h("small", { class: "sc-powered" }, L.powered));
     fig.append(loader);
     fig.addEventListener("skycake-loading", (e) => {
-      const msg = LOAD_STEPS[(e as CustomEvent).detail?.step];
+      const msg = L.loadStep((e as CustomEvent).detail?.step);
       if (msg && loadStatus) loadStatus.textContent = msg;
     });
   }
@@ -422,9 +441,9 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
     ready();
   } catch (err) {
     if (loader) {
-      const retry = h("button", { type: "button", class: "sc-pill sc-retry" }, "try again");
+      const retry = h("button", { type: "button", class: "sc-pill sc-retry" }, L.retry);
       retry.addEventListener("click", () => void mount(host, o).catch((e) => console.error(e)));
-      loader.replaceChildren(h("p", { role: "alert" }, "chart unavailable"), retry, h("small", { class: "sc-powered" }, "powered by skycake"));
+      loader.replaceChildren(h("p", { role: "alert" }, L.unavailable), retry, h("small", { class: "sc-powered" }, L.powered));
     }
     throw err;
   }
