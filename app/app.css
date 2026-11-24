@@ -106,14 +106,14 @@ body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-pag
 .areas .brand-sub { font-weight: 400; font-size: 14.5px; color: var(--ink3); letter-spacing: 0; }
 .areas .brand-word { position: relative; display: inline-flex; align-items: baseline; cursor: default; user-select: none; }
 .areas .bw-sky, .areas .bw-c { position: relative; display: inline-block; transition: color 0.24s var(--ease-std); }
-.areas .bw-plane { position: absolute; left: -0.15em; top: -0.58em; width: 1.9em; height: 1.05em; color: #ffffff; opacity: 0; pointer-events: none; transform: translate(-4px, 3px) scale(0.86); transform-origin: left bottom; transition: opacity 0.28s var(--ease), transform 0.34s var(--ease); }
-.areas .bw-trail { stroke-dasharray: 34; stroke-dashoffset: 34; transition: stroke-dashoffset 0.38s var(--ease); }
-.areas .bw-cake { position: absolute; left: 50%; top: -0.04em; width: 0.92em; height: 0.74em; opacity: 0; pointer-events: none; transform: translateX(-48%) translateY(2px) scale(0.86); transform-origin: center bottom; transition: opacity 0.24s var(--ease), transform 0.3s var(--ease); }
+.areas .bw-plane { position: absolute; left: -0.18em; top: -0.02em; width: 1.85em; height: 1.05em; color: #ffffff; opacity: 0; pointer-events: none; transform: translate(-4px, 2px) scale(0.9); transform-origin: left bottom; transition: opacity 0.28s var(--ease), transform 0.34s var(--ease); }
+.areas .bw-trail { stroke-dasharray: 56; stroke-dashoffset: 56; transition: stroke-dashoffset 0.4s var(--ease); }
+.areas .bw-cake { position: absolute; left: 50%; top: 0.12em; width: 0.56em; height: 0.5em; opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(2px) scale(0.86); transform-origin: center bottom; transition: opacity 0.24s var(--ease), transform 0.3s var(--ease); }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-sky { color: #52a4ff; }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-c { color: #d89b4f; }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-plane { opacity: 1; transform: none; }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-trail { stroke-dashoffset: 0; }
-:root:not([data-a11y]) .areas .brand-word:hover .bw-cake { opacity: 1; transform: translateX(-48%); }
+:root:not([data-a11y]) .areas .brand-word:hover .bw-cake { opacity: 1; transform: translateX(-50%); }
 #app .areas .head-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 16px; }
 #app .areas h1 { display: block; margin: 0; font: 300 clamp(28px, 4.5vw, 38px)/1.08 var(--head); letter-spacing: -0.025em; }
 .areas .tutorial-link { position: relative; isolation: isolate; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 0; background: var(--surface); color: var(--ink2); font: 400 14px/1 var(--head); text-decoration: none; transform-origin: left center; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
