@@ -296,23 +296,24 @@ export function plateView(c, on) {
             void sync();
     };
     const away = () => (on.back?.() ?? fig.querySelector(".view")).focus();
-    const shut = () => {
+    const shut = (focusBack) => {
         if (fig.classList.contains("sc-plate-question"))
             return;
         set(null);
-        away();
+        if (focusBack)
+            away();
     };
     full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
-    close.addEventListener("click", shut);
+    close.addEventListener("click", (e) => shut(e.detail === 0));
     for (const x of modes)
-        x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
+        x.b.addEventListener("click", (e) => (x.m === null ? shut(e.detail === 0) : set(x.m)));
     el.addEventListener("keydown", (e) => {
         if (e.key !== "Escape")
             return;
         e.stopPropagation();
         // Not from the picker: there Escape shuts its list.
         if (e.target !== pick)
-            shut();
+            shut(true);
     });
     set(null);
     // The divider (drag it, or arrow keys) sets the panel's share of the map's room: its width beside the map, its

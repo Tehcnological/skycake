@@ -296,19 +296,19 @@ export function plateView(c: Context, on: {
     if (opening) void sync();
   };
   const away = () => (on.back?.() ?? fig.querySelector<HTMLElement>(".view")!).focus();
-  const shut = () => {
+  const shut = (focusBack: boolean) => {
     if (fig.classList.contains("sc-plate-question")) return;
     set(null);
-    away();
+    if (focusBack) away();
   };
   full.addEventListener("click", () => set(now === "full" ? "split" : "full"));
-  close.addEventListener("click", shut);
-  for (const x of modes) x.b.addEventListener("click", () => (x.m === null ? shut() : set(x.m)));
+  close.addEventListener("click", (e) => shut(e.detail === 0));
+  for (const x of modes) x.b.addEventListener("click", (e) => (x.m === null ? shut(e.detail === 0) : set(x.m)));
   el.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     e.stopPropagation();
     // Not from the picker: there Escape shuts its list.
-    if (e.target !== pick) shut();
+    if (e.target !== pick) shut(true);
   });
   set(null);
 

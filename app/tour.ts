@@ -104,8 +104,9 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
   const foot = el("div", "tour-foot", backBtn, nextBtn);
 
   const pop = el("section", "tour-pop", arrow, head, heading, body, foot);
+  pop.tabIndex = -1;
   pop.setAttribute("role", "dialog");
-  pop.setAttribute("aria-modal", "false");
+  pop.setAttribute("aria-modal", "true");
   pop.setAttribute("aria-label", "SkyCake tutorial");
   pop.setAttribute("aria-live", "polite");
 
@@ -194,10 +195,10 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
     const cy = ry + rh / 2;
     if (side === "left" || side === "right") {
       arrow.style.left = "";
-      arrow.style.top = `${Math.round(Math.max(16, Math.min(ph - 16, cy - top)))}px`;
+      arrow.style.top = `${Math.round(Math.max(18, Math.min(ph - 18, cy - top)))}px`;
     } else {
       arrow.style.top = "";
-      arrow.style.left = `${Math.round(Math.max(16, Math.min(pw - 16, cx - left)))}px`;
+      arrow.style.left = `${Math.round(Math.max(18, Math.min(pw - 18, cx - left)))}px`;
     }
   };
 
@@ -208,10 +209,11 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
     body.textContent = step.body;
     backBtn.hidden = index === 0;
     nextBtn.textContent = index === STEPS.length - 1 ? "done" : "next";
+    // Measure and anchor synchronously BEFORE triggering fade-in so the popout never flashes or jumps.
+    place();
     pop.classList.remove("pop-in");
     void pop.offsetWidth;
     pop.classList.add("pop-in");
-    requestAnimationFrame(place);
   };
 
   const stop = () => {
@@ -261,6 +263,6 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
   window.addEventListener("resize", place);
   window.addEventListener("keydown", onKey);
   render();
-  nextBtn.focus();
+  pop.focus({ preventScroll: true });
   return stop;
 }

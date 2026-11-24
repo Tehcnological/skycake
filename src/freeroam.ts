@@ -491,6 +491,8 @@ export function freeRoam(c: Context): Promise<void> {
       showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
       return;
     }
+    results.hidden = true;
+    if (fig.classList.contains("sc-open-find")) setFind(false, false);
     const turningOn = !r.diagram;
     r = toggleDiagram(r, has);
     // Turning the diagram on with no procedure shown glides the camera to the field so the runways are immediately visible.

@@ -37,8 +37,8 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 /* The offline copy: quiet flat button with underline-to-fill hover. */
 .areas button { position: relative; isolation: isolate; min-width: 128px; border: 0; background: var(--canvas); color: var(--ink2); font-weight: 400; font-variant-numeric: tabular-nums; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
 .areas button::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--fill); opacity: 0.45; transition: height 0.26s var(--ease-std), opacity 0.18s; }
-.areas button:hover:not(:disabled), .areas button:focus-visible:not(:disabled) { color: var(--tile-ink); }
-.areas button:hover:not(:disabled)::before, .areas button:focus-visible:not(:disabled)::before { height: 100%; opacity: 1; }
+.areas button:hover:not(:disabled) { color: var(--tile-ink); }
+.areas button:hover:not(:disabled)::before { height: 100%; opacity: 1; }
 .areas button:active:not(:disabled) { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
 .areas button[data-state="saved"] { color: var(--mark); font-weight: 600; }
 .areas button[data-state="saved"]::before, .areas button[data-state="saving"]::before { opacity: 0; }
@@ -108,8 +108,8 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 #app .areas h1 { display: block; margin: 0; font: 300 clamp(28px, 4.5vw, 38px)/1.08 var(--head); letter-spacing: -0.025em; }
 .areas .tutorial-link { position: relative; isolation: isolate; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 0; background: var(--surface); color: var(--ink2); font: 400 14px/1 var(--head); text-decoration: none; transform-origin: left center; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
 .areas .tutorial-link::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--fill); opacity: 0.7; transition: height 0.26s var(--ease-std), opacity 0.18s; }
-.areas .tutorial-link:hover, .areas .tutorial-link:focus-visible { color: var(--tile-ink); }
-.areas .tutorial-link:hover::before, .areas .tutorial-link:focus-visible::before { height: 100%; opacity: 1; }
+.areas .tutorial-link:hover { color: var(--tile-ink); }
+.areas .tutorial-link:hover::before { height: 100%; opacity: 1; }
 .areas .tutorial-link:active { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
 :root[data-a11y] .areas .tutorial-link { min-height: 48px; border: 1px solid var(--edge); font-size: 16px; }
 #app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
@@ -139,14 +139,15 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 .areas .notice + .actions { margin-top: 14px; }
 
 /* Interactive UI popout coachmark tour over live free roam (borderless flat planes). */
-@keyframes tour-pop-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.tour-layer { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
-.tour-shade { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); opacity: 0; transition: opacity 0.24s var(--ease-std); }
+@keyframes tour-pop-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.tour-layer { position: fixed; inset: 0; z-index: 200; pointer-events: auto; }
+.tour-shade { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); opacity: 0; pointer-events: none; transition: opacity 0.22s var(--ease-std); }
 .tour-shade.on { opacity: 1; }
-.tour-ring { position: fixed; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.6); opacity: 0; transition: left 0.28s var(--ease), top 0.28s var(--ease), width 0.28s var(--ease), height 0.28s var(--ease), opacity 0.2s var(--ease-std); }
+.tour-ring { position: fixed; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.6); opacity: 0; pointer-events: none; transition: left 0.26s var(--ease), top 0.26s var(--ease), width 0.26s var(--ease), height 0.26s var(--ease), opacity 0.2s var(--ease-std); }
 .tour-ring.on { opacity: 1; }
-.tour-pop { position: fixed; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); pointer-events: auto; transition: left 0.26s var(--ease), top 0.26s var(--ease); }
-.tour-pop.pop-in { animation: tour-pop-in 0.2s var(--ease) both; }
+.tour-pop { position: fixed; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); pointer-events: auto; }
+.tour-pop:focus { outline: none; }
+.tour-pop.pop-in { animation: tour-pop-in 0.18s var(--ease) both; }
 .tour-arrow { position: absolute; width: 10px; height: 10px; box-sizing: border-box; border: 0; background: var(--surface); transform: rotate(45deg); pointer-events: none; }
 .tour-pop[data-side="right"] .tour-arrow { left: -5px; margin-top: -5px; }
 .tour-pop[data-side="left"] .tour-arrow { right: -5px; margin-top: -5px; }
