@@ -2,6 +2,7 @@
 // data is current through; ?area=phoenix opens one full screen (and ?scene={...} a first scene, as in the demo).
 // Every on-screen word here is a placeholder for Chris's copy.
 import { browserStorage, mount, store, stored } from "../src/index.js";
+import { TUTORIAL, TUTORIAL_LABELS } from "./tutorial.js";
 
 /** www/data/manifest.json, written by scripts/app.mjs. */
 /** rev: a hash of every file, so any rebuild (charts every 56 days, procedures every 28) is a new revision. */
@@ -21,6 +22,7 @@ const TEXT = {
   saved: "saved",
   failed: "retry download",
   notForNavigation: "not for navigation",
+  tutorial: "take the tutorial",
   privacy: "privacy",
   help: "how to use",
   a11y: "accessibility mode",
@@ -39,6 +41,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
 
 const params = new URLSearchParams(location.search);
 const area = params.get("area");
+const tutorial = params.has("tutorial") && params.get("tutorial") !== "0";
 
 // One Cache Storage cache per area and revision; the service worker answers from any of them. A cache counts as saved
 // only once it holds the marker, written after every file arrived (another tab, or a closed page, can see it half done).
@@ -135,8 +138,9 @@ async function startScreen(manifest: Manifest) {
     setA11y(box.checked);
   });
   const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
+  const headRow = el("div", { className: "head-row" }, el("h1", { textContent: TEXT.choose }), el("a", { className: "tutorial-link", href: "?tutorial=1", textContent: TEXT.tutorial }));
   const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
-  root.replaceChildren(el("section", { className: "areas" }, brand, el("h1", { textContent: TEXT.choose }), list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
+  root.replaceChildren(el("section", { className: "areas" }, brand, headRow, list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
 }
 
 const status = document.querySelector<HTMLElement>("#load-status")!;
@@ -148,7 +152,29 @@ try {
   const response = await fetch("data/manifest.json");
   if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
   const manifest: Manifest = await response.json();
-  if (area && Object.hasOwn(manifest.areas, area)) {
+  const closeToHome = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    location.replace(new URL("./", location.href).href);
+  };
+  if (tutorial && Object.hasOwn(manifest.areas, TUTORIAL.area)) {
+    const a = manifest.areas[TUTORIAL.area];
+    const title = { name: TEXT.names[TUTORIAL.area] ?? TUTORIAL.area, note: note(a, new Date().toISOString().slice(0, 10)) };
+    statusText.textContent = "loading tutorial…";
+    progress.hidden = false;
+    root.addEventListener("skycake-loading", (e) => {
+      const [n, words] = STEPS[(e as CustomEvent).detail.step] ?? [];
+      if (!n) return;
+      progress.value = n;
+      statusText.textContent = `tutorial: ${words}…`;
+    });
+    await mount(root, {
+      base: `data/${TUTORIAL.area}/`,
+      title,
+      close: closeToHome,
+      labels: TUTORIAL_LABELS,
+      mode: { walkthrough: TUTORIAL, next: { label: TEXT.choose, href: "./" } },
+    });
+  } else if (area && Object.hasOwn(manifest.areas, area)) {
     let scene;
     try {
       scene = JSON.parse(params.get("scene") ?? "null") ?? undefined;
@@ -166,7 +192,7 @@ try {
       progress.value = n;
       statusText.textContent = `${title.name}: ${words}…`;
     });
-    await mount(root, { base: `data/${area}/`, title, close: () => location.replace(location.pathname), ...(scene && { scene }) });
+    await mount(root, { base: `data/${area}/`, title, close: closeToHome, ...(scene && { scene }) });
   } else {
     await startScreen(manifest);
   }
@@ -177,6 +203,6 @@ try {
   const retry = el("button", { type: "button", textContent: "Try again" });
   retry.addEventListener("click", () => location.reload());
   const actions = el("div", { className: "actions" }, retry);
-  if (area) actions.append(el("a", { className: "go", href: location.pathname, textContent: TEXT.choose }));
-  root.replaceChildren(el("section", { className: "areas" }, el("h1", { textContent: area ? "Chart unavailable" : "Areas unavailable" }), el("p", { className: "notice", role: "alert", textContent: "Check your connection and try again." }), actions));
+  if (area || tutorial) actions.append(el("a", { className: "go", href: "./", textContent: TEXT.choose }));
+  root.replaceChildren(el("section", { className: "areas" }, el("h1", { textContent: area || tutorial ? "Chart unavailable" : "Areas unavailable" }), el("p", { className: "notice", role: "alert", textContent: "Check your connection and try again." }), actions));
 }

@@ -29,11 +29,21 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   // A save asks for fresh copies with cache: "reload"; those go to the network.
   if (e.request.method !== "GET" || e.request.cache === "reload") return;
-  // Navigations (?area= and ?scene= share index.html): network-first so deploys show up right away when online,
-  // falling back to the cached shell when offline.
-  if (e.request.mode === "navigate") {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request, { ignoreSearch: true })));
+  const path = new URL(e.request.url).pathname;
+  // Area data (charts, terrain, procedures, plates): cache-first so saved offline copies load instantly without network.
+  // manifest.json stays network-first so new FAA data cycles appear right away when online.
+  if (path.includes("/data/") && !path.endsWith("/data/manifest.json") && e.request.mode !== "navigate") {
+    e.respondWith(caches.match(e.request).then((hit) => hit ?? fetch(e.request)));
     return;
   }
-  e.respondWith(caches.match(e.request).then((hit) => hit ?? fetch(e.request)));
+  // Shell (HTML navigations, JS, CSS): prefer fresh online deploys, falling back quickly to cache if offline or stalled.
+  e.respondWith((async () => {
+    const cached = await caches.match(e.request, { ignoreSearch: e.request.mode === "navigate" });
+    const net = fetch(e.request).then((r) => (r.ok ? r : cached ?? r));
+    if (!cached) return net;
+    return Promise.race([
+      net.catch(() => cached),
+      new Promise((done) => setTimeout(() => done(cached), 2000)),
+    ]);
+  })());
 });

@@ -246,7 +246,7 @@ export type Options = {
   scene?: Scene;
   /** Shorthand for a first scene: types raised at first. */
   types?: Kind[];
-  /** The airport current at first (search box, diagram). Default: KPHX when the area has it. */
+  /** The airport current at first (search box, diagram). Default: none until an airport or procedure is picked. */
   airport?: string;
   /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
   approach?: string;
@@ -392,7 +392,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
       return loaded.get(id)!;
     };
     const { freeRoam } = await import("./freeroam.js");
-    const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
+    const airport = o.airport ?? null;
     const context: Context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
     // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
     if (a11y.row)

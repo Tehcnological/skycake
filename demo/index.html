@@ -34,7 +34,7 @@
     : walkthrough ? { walkthrough: await json(walkthrough), next: { label: "Quiz", href: "./?quiz=class-b" } } : "explore";
   // ?a11y=1 or ?a11y=0: the site drives accessibility mode; left out, skycake shows its own switch in free roam.
   const a11y = q.get("a11y");
-  const example = quiz === "vfr" || quiz === "ifr";
+  const example = quiz === "vfr" || quiz === "ifr" || walkthrough === "tutorial";
   const labels = example ? {
     right: "Correct",
     wrong: "Incorrect",
@@ -42,6 +42,12 @@
     rightSecondTry: "Correct on the second try",
     backToQuiz: "Back to quiz",
     submit: "Check answer",
+    continue: "Continue",
+    play: "Play",
+    pause: "Pause",
+    back: "Previous step",
+    next: "Next step",
+    stepOf: (n, total) => `${n}/${total}`,
     answerWas: (answer) => `Correct answer: ${answer}`,
     count: (n, total) => `Question ${n} of ${total}`,
     nextQuestion: "Next question",
@@ -52,7 +58,7 @@
     number: "Answer number",
     skip: "Skip question",
   } : undefined;
-  if (example) document.title = mode.quiz.title;
+  if (example) document.title = "quiz" in mode ? mode.quiz.title : mode.walkthrough.title;
   mount(document.querySelector("#v"), { base: "/data/phoenix/", mode, labels, onResult: (r) => console.log("skycake result", r), ...(scene ? { scene: JSON.parse(scene) } : {}), ...(a11y !== null ? { a11y: a11y === "1" } : {}) });
 </script>
 </body>

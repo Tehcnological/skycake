@@ -149,7 +149,7 @@ export type Options = {
     scene?: Scene;
     /** Shorthand for a first scene: types raised at first. */
     types?: Kind[];
-    /** The airport current at first (search box, diagram). Default: KPHX when the area has it. */
+    /** The airport current at first (search box, diagram). Default: none until an airport or procedure is picked. */
     airport?: string;
     /** Shorthand for a first scene: this approach (at `airport`, default KPHX) shown. */
     approach?: string;

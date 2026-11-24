@@ -122,9 +122,13 @@ test("written item ids must not repeat", async () => {
   assert.deepEqual(await validateQuiz(q, data, files, "phoenix"), ["q item 2: id a repeats"]);
 });
 test("a walkthrough with no steps", async () => assert.deepEqual(await validateWalkthrough({ ...good, steps: [] }, data, files, "phoenix"), ["t: no steps"]));
-test("the demo samples have no problems", async () => {
+test("the demo samples and built-in tutorial have no problems", async () => {
+  const realCharts = async (airport: string) => JSON.parse(readFileSync(`data/phoenix/charts/${airport}.json`, "utf8")) as ChartEntry[];
   assert.deepEqual(await validateQuiz(JSON.parse(readFileSync("demo/class-b-quiz.json", "utf8")), data, files, "phoenix"), []);
   assert.deepEqual(await validateWalkthrough(JSON.parse(readFileSync("demo/class-b.json", "utf8")), data, files, "phoenix"), []);
+  assert.deepEqual(await validateWalkthrough(JSON.parse(readFileSync("demo/tutorial.json", "utf8")), data, files, "phoenix", realCharts), []);
+  const { TUTORIAL } = await import("../app/tutorial.js");
+  assert.deepEqual(await validateWalkthrough(TUTORIAL, data, files, "phoenix", realCharts), []);
 });
 
 const index: ChartEntry[] = [

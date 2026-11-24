@@ -103,7 +103,14 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 #app > .areas { max-width: 820px; padding: clamp(16px, 4vw, 36px) clamp(14px, 3vw, 28px); }
 .areas .brand { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--divider); font: 600 14.5px var(--head); }
 .brand img { width: 26px; height: 26px; }
-#app .areas h1 { display: block; margin: 18px 0 16px; font: 300 clamp(28px, 4.5vw, 38px)/1.08 var(--head); letter-spacing: -0.025em; }
+#app .areas .head-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 18px 0 16px; }
+#app .areas h1 { display: block; margin: 0; font: 300 clamp(28px, 4.5vw, 38px)/1.08 var(--head); letter-spacing: -0.025em; }
+.areas .tutorial-link { position: relative; isolation: isolate; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 14px; border-radius: 0; background: var(--surface); color: var(--ink2); font: 400 14px/1 var(--head); text-decoration: none; transform-origin: left center; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
+.areas .tutorial-link::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--fill); opacity: 0.7; transition: height 0.26s var(--ease-std), opacity 0.18s; }
+.areas .tutorial-link:hover, .areas .tutorial-link:focus-visible { color: var(--tile-ink); }
+.areas .tutorial-link:hover::before, .areas .tutorial-link:focus-visible::before { height: 100%; opacity: 1; }
+.areas .tutorial-link:active { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
+:root[data-a11y] .areas .tutorial-link { min-height: 48px; border: 1px solid var(--edge); font-size: 16px; }
 #app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
 #app .areas li { gap: 0; padding: 0; border-radius: 0; }
 .chart-preview { display: block; width: 100%; height: clamp(78px, 10vw, 108px); object-fit: cover; border-radius: 0; }
@@ -126,6 +133,6 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
   .areas li .actions { padding: 0 12px 12px; }
   .areas .actions > * { padding-inline: 10px; }
   .areas .info { padding: 10px 12px; }
-  #app .areas h1 { margin: 14px 0 12px; }
+  #app .areas .head-row { margin: 14px 0 12px; }
 }
 .areas .notice + .actions { margin-top: 14px; }

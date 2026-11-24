@@ -233,7 +233,7 @@ export async function mount(host, o) {
             return loaded.get(id);
         };
         const { freeRoam } = await import("./freeroam.js");
-        const airport = o.airport ?? (data.airports.some((a) => a.id === "KPHX") ? "KPHX" : null);
+        const airport = o.airport ?? null;
         const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
         // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
         if (a11y.row)

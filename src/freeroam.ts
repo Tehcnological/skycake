@@ -80,6 +80,7 @@ export const ICONS = {
 export function freeRoam(c: Context): Promise<void> {
   const { fig, view: v, data, labels: L } = c;
   const has = (a: string) => !!data.airports.find((x) => x.id === a)?.diagram;
+  const anyDiagram = data.airports.some((a) => !!a.diagram);
   let r: Roam = start(c.first, c.airport ?? undefined);
   // Once the first scene is showing, every change keeps what is raised on screen.
   let shown = false;
@@ -364,10 +365,29 @@ export function freeRoam(c: Context): Promise<void> {
     }
     files = loaded.filter((p): p is Procedure => !!p);
     drawChips();
-    const diagram = r.airport !== null && has(r.airport);
-    diagramButton.hidden = tabs.diagram.hidden = !diagram;
+    const canDiagram = r.airport !== null && has(r.airport);
+    diagramButton.hidden = tabs.diagram.hidden = !anyDiagram;
+    diagramButton.setAttribute("aria-disabled", String(!canDiagram));
+    tabs.diagram.setAttribute("aria-disabled", String(!canDiagram));
     diagramButton.setAttribute("aria-pressed", String(r.diagram));
     tabs.diagram.setAttribute("aria-pressed", String(r.diagram));
+    if (!r.airport) {
+      diagramTool.value.textContent = "pick";
+      diagramButton.title = tabs.diagram.title = "select an airport to view its diagram";
+      diagramButton.setAttribute("aria-label", `${L.diagram}: select an airport first`);
+    } else if (!has(r.airport)) {
+      diagramTool.value.textContent = "none";
+      diagramButton.title = tabs.diagram.title = `${r.airport} has no FAA airport diagram`;
+      diagramButton.setAttribute("aria-label", `${L.diagram}: none for ${r.airport}`);
+    } else if (r.diagram) {
+      diagramTool.value.textContent = r.airport;
+      diagramButton.title = tabs.diagram.title = `hide ${r.airport} airport diagram`;
+      diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.on}`);
+    } else {
+      diagramTool.value.textContent = L.off;
+      diagramButton.title = tabs.diagram.title = `show ${r.airport} airport diagram`;
+      diagramButton.setAttribute("aria-label", `${L.diagram}: ${r.airport} ${L.off}`);
+    }
     plates.procedures(r.procedures, r.airport);
     shown = true;
     await v.apply(resolved, files, now, framing.filter((p): p is Procedure => !!p));
@@ -426,10 +446,11 @@ export function freeRoam(c: Context): Promise<void> {
     showResults();
     refresh();
   };
-  const showResults = () => {
+  const showResults = (notice?: string) => {
     warmIfr();
     const q = input.value;
     results.replaceChildren();
+    if (notice) results.append(h("p", { class: "sc-notice", role: "status" }, notice));
     const at = browse === null ? undefined : data.airports.find((a) => a.id === browse);
     if (q.trim()) {
       const groups = search(q, data.airports);
@@ -448,8 +469,8 @@ export function freeRoam(c: Context): Promise<void> {
     }
     results.hidden = false;
   };
-  input.addEventListener("input", showResults);
-  input.addEventListener("focus", showResults);
+  input.addEventListener("input", () => showResults());
+  input.addEventListener("focus", () => showResults());
   input.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     results.hidden = true;
@@ -457,11 +478,23 @@ export function freeRoam(c: Context): Promise<void> {
     if (fig.classList.contains("sc-open-find")) shutFind();
   });
   fig.addEventListener("pointerdown", (e) => {
-    if (!topRight.contains(e.target as Node)) results.hidden = true;
+    if (!topRight.contains(e.target as Node) && !diagramButton.contains(e.target as Node) && !tabs.diagram.contains(e.target as Node)) results.hidden = true;
   }, { signal });
 
   const toggleDiagramNow = () => {
+    if (r.airport === null || !has(r.airport)) {
+      browse = null;
+      input.value = "";
+      sheet(null);
+      if (findButton.offsetParent) setFind(true, false);
+      showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
+      if (!findButton.offsetParent) input.focus();
+      return;
+    }
+    const turningOn = !r.diagram;
     r = toggleDiagram(r, has);
+    // Turning the diagram on with no procedure shown glides the camera to the field so the runways are immediately visible.
+    if (turningOn && r.diagram && r.procedures.length === 0) r = { ...r, camera: undefined };
     refresh();
   };
   diagramButton.addEventListener("click", toggleDiagramNow);
@@ -552,8 +585,10 @@ export function freeRoam(c: Context): Promise<void> {
   // The page scrolls again before the site's close runs, in case it stays on this page.
   const leave = (close: () => void) => {
     document.documentElement.classList.remove("skycake-full");
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     close();
   };
+  fullButton.setAttribute("aria-label", c.close ? L.close : L.fullScreen);
   fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
   headFull?.addEventListener("click", () => goFull(true));
   openButton.addEventListener("click", () => goFull(true));
