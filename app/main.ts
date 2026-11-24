@@ -91,7 +91,40 @@ async function startScreen(manifest: Manifest) {
   setA11y(stored(storage));
   const today = new Date().toISOString().slice(0, 10);
   const keys = "caches" in window ? await caches.keys() : null;
-  const brand = el("div", { className: "brand" }, el("img", { src: "icon-192.png", alt: "" }), TEXT.title);
+  const svgEl = (cls: string, vb: string, inner: string) => {
+    const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("class", cls);
+    s.setAttribute("viewBox", vb);
+    s.setAttribute("aria-hidden", "true");
+    s.innerHTML = inner;
+    return s;
+  };
+  const brandWord = el(
+    "span",
+    { className: "brand-word" },
+    el(
+      "span",
+      { className: "bw-sky" },
+      "sky",
+      svgEl(
+        "bw-plane",
+        "0 0 40 22",
+        `<path class="bw-trail" d="M2 18.5 C 10 17.2, 18 13.5, 26.5 7.6" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><g transform="translate(29.8 5.2) rotate(-36) scale(0.55)"><path d="M9 0 L2.5 -1.4 L-2.8 -7.8 L-4.8 -7.8 L-1.8 -1.4 L-6.6 -1.1 L-8.6 -3.5 L-10 -3.5 L-8.7 0 L-10 3.5 L-8.6 3.5 L-6.6 1.1 L-1.8 1.4 L-4.8 7.8 L-2.8 7.8 L2.5 1.4 Z" fill="currentColor"/></g>`,
+      ),
+    ),
+    el(
+      "span",
+      { className: "bw-c" },
+      "c",
+      svgEl(
+        "bw-cake",
+        "0 0 20 16",
+        `<path d="M10.2 5.2 C10.4 3.1, 11.7 1.6, 13.6 1.2" fill="none" stroke="#d9454b" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="6.2" r="2.65" fill="#f05458"/><path d="M2.2 12.6 C2.4 9.5, 5.5 7.9, 10 7.9 C14.5 7.9, 17.6 9.5, 17.8 12.6 C17.1 13.3, 15.8 12.7, 14.9 12.1 C14.1 11.6, 13.3 12.5, 12.4 13.2 C11.5 13.8, 10.6 12.1, 9.5 11.9 C8.4 11.7, 7.6 14.2, 6.5 14.2 C5.5 14.2, 5.4 12.2, 4.4 12.2 C3.5 12.2, 2.8 13.1, 2.2 12.6 Z" fill="#ffffff"/>`,
+      ),
+    ),
+    el("span", { className: "bw-ake" }, "ake"),
+  );
+  const brand = el("div", { className: "brand" }, brandWord, el("span", { className: "brand-sub", textContent: "viewer" }));
   const list = el("ul");
   // One card per area: its name and date, Open area, and its offline copy's button.
   for (const [id, a] of Object.entries(manifest.areas)) {
