@@ -108,7 +108,7 @@ body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-pag
 .areas .bw-sky, .areas .bw-c { position: relative; display: inline-block; transition: color 0.24s var(--ease-std); }
 .areas .bw-plane { position: absolute; left: -0.18em; top: -0.02em; width: 1.85em; height: 1.05em; color: #ffffff; opacity: 0; pointer-events: none; transform: translate(-4px, 2px) scale(0.9); transform-origin: left bottom; transition: opacity 0.28s var(--ease), transform 0.34s var(--ease); }
 .areas .bw-trail { stroke-dasharray: 56; stroke-dashoffset: 56; transition: stroke-dashoffset 0.4s var(--ease); }
-.areas .bw-cake { position: absolute; left: 50%; top: 0.12em; width: 0.56em; height: 0.5em; opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(2px) scale(0.86); transform-origin: center bottom; transition: opacity 0.24s var(--ease), transform 0.3s var(--ease); }
+.areas .bw-cake { position: absolute; left: 50%; top: 0.24em; width: 0.56em; height: 0.5em; opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(2px) scale(0.86); transform-origin: center bottom; transition: opacity 0.24s var(--ease), transform 0.3s var(--ease); }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-sky { color: #52a4ff; }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-c { color: #d89b4f; }
 :root:not([data-a11y]) .areas .brand-word:hover .bw-plane { opacity: 1; transform: none; }
