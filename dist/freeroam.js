@@ -480,9 +480,9 @@ export function freeRoam(c) {
             sheet(null);
             if (findButton.offsetParent)
                 setFind(true, false);
-            showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
-            if (!findButton.offsetParent)
+            else
                 input.focus();
+            showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
             return;
         }
         const turningOn = !r.diagram;

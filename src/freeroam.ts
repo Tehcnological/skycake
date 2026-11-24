@@ -487,8 +487,8 @@ export function freeRoam(c: Context): Promise<void> {
       input.value = "";
       sheet(null);
       if (findButton.offsetParent) setFind(true, false);
+      else input.focus();
       showResults(r.airport ? `${r.airport} has no diagram · pick another airport` : "pick an airport to view its diagram");
-      if (!findButton.offsetParent) input.focus();
       return;
     }
     const turningOn = !r.diagram;

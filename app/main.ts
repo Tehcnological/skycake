@@ -2,7 +2,7 @@
 // data is current through; ?area=phoenix opens one full screen (and ?scene={...} a first scene, as in the demo).
 // Every on-screen word here is a placeholder for Chris's copy.
 import { browserStorage, mount, store, stored } from "../src/index.js";
-import { TUTORIAL, TUTORIAL_LABELS } from "./tutorial.js";
+import { startTour } from "./tour.js";
 
 /** www/data/manifest.json, written by scripts/app.mjs. */
 /** rev: a hash of every file, so any rebuild (charts every 56 days, procedures every 28) is a new revision. */
@@ -156,25 +156,8 @@ try {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     location.replace(new URL("./", location.href).href);
   };
-  if (tutorial && Object.hasOwn(manifest.areas, TUTORIAL.area)) {
-    const a = manifest.areas[TUTORIAL.area];
-    const title = { name: TEXT.names[TUTORIAL.area] ?? TUTORIAL.area, note: note(a, new Date().toISOString().slice(0, 10)) };
-    statusText.textContent = "loading tutorial…";
-    progress.hidden = false;
-    root.addEventListener("skycake-loading", (e) => {
-      const [n, words] = STEPS[(e as CustomEvent).detail.step] ?? [];
-      if (!n) return;
-      progress.value = n;
-      statusText.textContent = `tutorial: ${words}…`;
-    });
-    await mount(root, {
-      base: `data/${TUTORIAL.area}/`,
-      title,
-      close: closeToHome,
-      labels: TUTORIAL_LABELS,
-      mode: { walkthrough: TUTORIAL, next: { label: TEXT.choose, href: "./" } },
-    });
-  } else if (area && Object.hasOwn(manifest.areas, area)) {
+  const chosenArea = area && Object.hasOwn(manifest.areas, area) ? area : tutorial && Object.hasOwn(manifest.areas, "phoenix") ? "phoenix" : null;
+  if (chosenArea) {
     let scene;
     try {
       scene = JSON.parse(params.get("scene") ?? "null") ?? undefined;
@@ -182,21 +165,28 @@ try {
       console.warn("skycake: ignoring a scene that is not JSON");
     }
     // replace, so Back after Close doesn't reopen the map.
-    const a = manifest.areas[area];
-    const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
-    statusText.textContent = `loading ${title.name}…`;
+    const a = manifest.areas[chosenArea];
+    const title = { name: TEXT.names[chosenArea] ?? chosenArea, note: note(a, new Date().toISOString().slice(0, 10)) };
+    statusText.textContent = tutorial ? "loading tutorial…" : `loading ${title.name}…`;
     progress.hidden = false;
     root.addEventListener("skycake-loading", (e) => {
       const [n, words] = STEPS[(e as CustomEvent).detail.step] ?? [];
       if (!n) return;
       progress.value = n;
-      statusText.textContent = `${title.name}: ${words}…`;
+      statusText.textContent = `${tutorial ? "tutorial" : title.name}: ${words}…`;
     });
-    await mount(root, { base: `data/${area}/`, title, close: closeToHome, ...(scene && { scene }) });
+    await mount(root, { base: `data/${chosenArea}/`, title, close: closeToHome, ...(scene && { scene }) });
+    status.remove();
+    if (tutorial) {
+      const fig = root.querySelector<HTMLElement>(".skycake");
+      if (fig) {
+        startTour(fig, () => history.replaceState(null, "", `?area=${encodeURIComponent(chosenArea)}`));
+      }
+    }
   } else {
     await startScreen(manifest);
+    status.remove();
   }
-  status.remove();
 } catch (error) {
   console.warn("skycake: viewer unavailable", error);
   status.remove();
