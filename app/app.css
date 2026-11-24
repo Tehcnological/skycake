@@ -150,7 +150,7 @@ body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-pag
 
 /* Interactive UI popout coachmark tour over live free roam (borderless flat planes). */
 @keyframes tour-pop-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.tour-layer { position: fixed; inset: 0; z-index: 200; pointer-events: auto; }
+.tour-layer { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
 .tour-shade { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); opacity: 0; pointer-events: none; transition: opacity 0.22s var(--ease-std); }
 .tour-shade.on { opacity: 1; }
 .tour-ring { position: fixed; box-sizing: border-box; border: 0; border-radius: 0; box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.6); opacity: 0; pointer-events: none; transition: left 0.26s var(--ease), top 0.26s var(--ease), width 0.26s var(--ease), height 0.26s var(--ease), opacity 0.2s var(--ease-std); }
