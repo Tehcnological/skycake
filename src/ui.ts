@@ -314,7 +314,7 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
   const a11y = initial(o.a11y, storage);
   fig.toggleAttribute("data-a11y", a11y.on);
 
-  // Embedded maps get a quiet built-in loading screen with "powered by skycake" and an inline retry on error.
+  // Embedded maps get their own loading screen with "powered by skycake" and an inline retry on error.
   // Standalone apps (o.close) drive their own full-window loading overlay.
   let loader: HTMLElement | null = null;
   let loadStatus: HTMLElement | null = null;

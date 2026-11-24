@@ -1,4 +1,4 @@
-/* skycake viewer only. Matches style.css's quiet flat dark tokens and blue tile accent. */
+/* skycake viewer only. Uses style.css's dark tokens and blue tile accent. */
 :root {
   color-scheme: dark;
   --canvas: #0c0c0c; --surface: #161616; --bar: #141414; --divider: #262626; --edge: #484848;
@@ -17,7 +17,7 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 
 @keyframes sc-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-/* The start screen and info pages: clean flat layout on the bare canvas. */
+/* The start screen and info pages: flat, on the bare canvas. */
 .areas { box-sizing: border-box; max-width: 640px; margin: 0 auto; padding: clamp(16px, 4vw, 36px) clamp(14px, 3vw, 24px) 24px; animation: sc-page-in 0.24s var(--ease) both; }
 .areas h1 { display: flex; align-items: center; gap: 10px; margin: 0; font: 300 clamp(26px, 4.5vw, 36px)/1.1 var(--head); letter-spacing: -0.025em; }
 .areas h1 img { width: 32px; height: 32px; }
@@ -34,7 +34,7 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas .go { flex: 1 1 auto; border: 0; background: var(--fill); color: var(--tile-ink); transition: background-color 0.16s, transform 0.14s var(--ease); }
 .areas .go:hover { background: var(--fill-hover); }
 .areas .go:active { background: var(--fill-down); transform: perspective(500px) rotateY(-2deg) scale(0.985); }
-/* The offline copy: quiet flat button with underline-to-fill hover. */
+/* The offline copy: a flat button; hover fills it. */
 .areas button { position: relative; isolation: isolate; min-width: 128px; border: 0; background: var(--canvas); color: var(--ink2); font-weight: 400; font-variant-numeric: tabular-nums; transition: color 0.24s var(--ease-std), transform 0.14s var(--ease); }
 .areas button::before { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: 2px; background: var(--fill); opacity: 0.45; transition: height 0.26s var(--ease-std), opacity 0.18s; }
 .areas button:hover:not(:disabled) { color: var(--tile-ink); }
@@ -46,7 +46,7 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas button[data-state="saving"] { color: var(--ink3); }
 .areas .remove-offline { min-width: 44px; width: 44px; padding: 0; font-size: 18px; line-height: 1; flex: none; }
 
-/* Accessibility mode's switch: clean borderless row with flat rectangular switch. */
+/* Accessibility mode's switch: a borderless row with a flat switch. */
 .areas .a11y { display: flex; align-items: center; gap: 14px; min-height: 44px; margin-top: 16px; padding: 12px 0; border-top: 1px solid var(--divider); border-radius: 0; background: transparent; cursor: pointer; }
 .areas .a11y span { flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .areas .a11y b { font: 400 15px/20px var(--head); }
@@ -148,7 +148,7 @@ body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-pag
 }
 .areas .notice + .actions { margin-top: 14px; }
 
-/* Interactive UI popout coachmark tour over live free roam (borderless flat planes). */
+/* The tutorial: a card over live free roam, pointing at one control at a time. */
 @keyframes tour-pop-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .tour-layer { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
 .tour-shade { position: fixed; inset: 0; background: rgb(0 0 0 / 0.6); opacity: 0; pointer-events: none; transition: opacity 0.22s var(--ease-std); }
