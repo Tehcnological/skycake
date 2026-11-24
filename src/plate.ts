@@ -59,7 +59,7 @@ export function plateView(c: Context, on: {
   // Map / Plate / Split: map only (the panel closed), chart only (full screen), both.
   const modes = ([[L.plateMap, null], [L.platePlate, "full"], [L.plateSplit, "split"]] as const).map(([label, m]) => ({ m, b: h("button", { type: "button", "aria-pressed": "false" }, label) }));
   const switcher = h("div", { class: "sc-seg sc-plate-switch", role: "group", "aria-label": L.plate }, ...modes.map((x) => x.b));
-  const full = h("button", { type: "button", class: "sc-x", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
+  const full = h("button", { type: "button", class: "sc-x sc-plate-fullbtn", "aria-pressed": "false" }, icon(ICONS.full, "0 0 12 12"));
   const close = h("button", { type: "button", class: "sc-x", "aria-label": L.close }, icon(ICONS.close));
   const body = h("div", { class: "sc-plate-body", tabindex: "0", role: "group", "aria-label": L.plateChart, "aria-keyshortcuts": "ArrowLeft ArrowRight ArrowUp ArrowDown + -" });
   const round = (label: string, paths: string[], box?: string) => h("button", { type: "button", class: "sc-round", "aria-label": label }, icon(paths, box));

@@ -58,6 +58,12 @@ test("flat 0px chrome, no CSS case transforms, and motion disabled in a11y and r
   assert.match(css, /--sc-r-ctl:\s*0px;/);
   assert.match(css, /--sc-r-panel:\s*0px;/);
   assert.match(css, /--sc-shadow:\s*none;/);
-  assert.match(css, /\.skycake\[data-a11y\] \*, .*transition: none !important; animation: none !important;/);
+  assert.match(css, /\.skycake\[data-a11y\] \*(?::not\(\.sc-spinner\))?, .*transition: none !important; animation: none !important;/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*animation: none !important;/);
+});
+
+test("quiz answer choices use an equal-width grid and embedded loading overlay is styled", () => {
+  assert.match(outside(".skycake .sc-quiz .sc-choices") ?? "", /display: grid; grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(outside(".skycake .sc-loading") ?? "", /position: absolute; inset: 0;/);
+  assert.match(outside(".skycake .sc-head-full") ?? "", /display: none/);
 });

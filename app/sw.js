@@ -29,6 +29,11 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   // A save asks for fresh copies with cache: "reload"; those go to the network.
   if (e.request.method !== "GET" || e.request.cache === "reload") return;
-  // ?area= and ?scene= are the same page.
-  e.respondWith(caches.match(e.request, { ignoreSearch: e.request.mode === "navigate" }).then((hit) => hit ?? fetch(e.request)));
+  // Navigations (?area= and ?scene= share index.html): network-first so deploys show up right away when online,
+  // falling back to the cached shell when offline.
+  if (e.request.mode === "navigate") {
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request, { ignoreSearch: true })));
+    return;
+  }
+  e.respondWith(caches.match(e.request).then((hit) => hit ?? fetch(e.request)));
 });

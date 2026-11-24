@@ -101,11 +101,14 @@ async function startScreen(manifest: Manifest) {
     if (keys) {
       const mb = Math.ceil(a.bytes / 1e6);
       const button = el("button", { type: "button" });
+      const removeBtn = el("button", { type: "button", className: "remove-offline", textContent: "×", title: "remove offline copy" });
+      removeBtn.setAttribute("aria-label", `remove offline copy, ${TEXT.names[id] ?? id}`);
       const show = (state: "download" | "update" | "saving" | "saved" | "failed", pct = 0) => {
         button.dataset.state = state;
         button.textContent = { download: TEXT.download(mb), update: TEXT.update(mb), saving: TEXT.saving(pct), saved: TEXT.saved, failed: TEXT.failed }[state];
         button.setAttribute("aria-label", `${button.textContent}, ${TEXT.names[id] ?? id}`);
         button.disabled = state === "saving" || state === "saved";
+        removeBtn.hidden = state !== "saved";
       };
       show((await complete(keys, cacheOf(id, a))) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
       button.addEventListener("click", () => {
@@ -115,7 +118,12 @@ async function startScreen(manifest: Manifest) {
           show("failed");
         });
       });
-      actions.append(button);
+      removeBtn.addEventListener("click", async () => {
+        for (const k of await caches.keys()) if (isArea(k, id)) await caches.delete(k);
+        show("download");
+        button.focus();
+      });
+      actions.append(button, removeBtn);
     }
     li.append(actions);
     list.append(li);
@@ -135,7 +143,7 @@ const status = document.querySelector<HTMLElement>("#load-status")!;
 const statusText = status.querySelector("p")!;
 const progress = status.querySelector("progress")!;
 // The viewer's loading steps (skycake-loading events), in order, as the words under the spinner and the bar's value.
-const STEPS: Record<string, [number, string]> = { terrain: [1, "Loading terrain"], chart: [2, "Loading charts"], airspace: [3, "Building airspace"], prepare: [4, "Preparing the 3D view"] };
+const STEPS: Record<string, [number, string]> = { terrain: [1, "loading terrain"], chart: [2, "loading charts"], airspace: [3, "building airspace"], prepare: [4, "preparing 3D view"] };
 try {
   const response = await fetch("data/manifest.json");
   if (!response.ok) throw new Error(`Manifest HTTP ${response.status}`);
@@ -150,7 +158,7 @@ try {
     // replace, so Back after Close doesn't reopen the map.
     const a = manifest.areas[area];
     const title = { name: TEXT.names[area] ?? area, note: note(a, new Date().toISOString().slice(0, 10)) };
-    statusText.textContent = `Loading ${title.name}…`;
+    statusText.textContent = `loading ${title.name}…`;
     progress.hidden = false;
     root.addEventListener("skycake-loading", (e) => {
       const [n, words] = STEPS[(e as CustomEvent).detail.step] ?? [];

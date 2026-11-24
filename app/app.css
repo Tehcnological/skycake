@@ -43,6 +43,7 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 .areas button[data-state="saved"]::before, .areas button[data-state="saving"]::before { opacity: 0; }
 .areas button:disabled { cursor: default; }
 .areas button[data-state="saving"] { color: var(--ink3); }
+.areas .remove-offline { min-width: 44px; width: 44px; padding: 0; font-size: 18px; line-height: 1; flex: none; }
 
 /* Accessibility mode's switch: clean borderless row with flat rectangular switch. */
 .areas .a11y { display: flex; align-items: center; gap: 14px; min-height: 44px; margin-top: 16px; padding: 12px 0; border-top: 1px solid var(--divider); border-radius: 0; background: transparent; cursor: pointer; }
@@ -86,6 +87,7 @@ body:has(#app > .areas) { background-image: url(contours-page-still.svg); backgr
 :root[data-a11y] .areas li { border: 1px solid var(--edge); }
 :root[data-a11y] .areas button { border: 1px solid var(--edge); }
 :root[data-a11y] .areas .actions > *, :root[data-a11y] .areas .a11y { min-height: 48px; font-size: 16px; }
+:root[data-a11y] .areas .remove-offline { min-width: 48px; width: 48px; }
 :root[data-a11y] .areas .info span, :root[data-a11y] .areas .a11y small, :root[data-a11y] .areas p { font-size: 15px; line-height: 22px; }
 :root[data-a11y] .areas p a { text-decoration: underline; }
 :root[data-a11y] :focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 7px var(--canvas); }

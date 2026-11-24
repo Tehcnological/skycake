@@ -61,7 +61,10 @@ export function freeRoam(c) {
     let tagsOn = c.first.tags ?? true;
     let scale = c.first.height ?? c.startScale;
     // Which chart is under the airspace: VFR or IFR, then one of that mode's charts. Each mode keeps the last one picked.
-    let chart = pickChart(data.charts, c.first.chart);
+    // A first scene with an approach and no explicit chart opens on IFR, matching picking an approach in search.
+    const typeOf = (p) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
+    const startIfr = !c.first.chart && (c.first.procedures ?? []).some((p) => typeOf(p) === "IAP") ? chartsIn(data.charts, "ifr")[0] : undefined;
+    let chart = startIfr ?? pickChart(data.charts, c.first.chart);
     const lastIn = { [modeOf(chart)]: chart };
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
     // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
@@ -151,19 +154,20 @@ export function freeRoam(c) {
         head.append(a11yToggle());
     }
     const caption = fig.querySelector(".sc-caption");
-    // Phone tab bar.
+    // Phone tab bar. Close always lives at the leading edge of the header (never a 6th scrolling tab); embedded narrow
+    // views also get a full-screen button in the header when not full screen.
     const tab = (label, paths) => h("button", { type: "button", class: "sc-tab" }, icon(paths), h("span", {}, label));
-    const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: tab(L.close, ICONS.close) };
+    const closeTab = h("button", { type: "button", class: "sc-area-close" }, icon(ICONS.close), h("span", {}, L.close));
+    const headFull = c.close ? null : h("button", { type: "button", class: "sc-head-full", "aria-label": L.fullScreen, title: L.fullScreen }, icon(ICONS.full, "0 0 12 12"));
+    const tabs = { airspace: tab(L.airspace, ICONS.layers), inView: tab(L.inView, ICONS.list), procedure: tab(L.procedureTab, ICONS.procedure), diagram: tab(L.diagram, ICONS.diagram), view: tab(L.viewTab, ICONS.view), plate: tab(L.plateOpen, ICONS.plate), close: closeTab };
     tabs.inView.classList.add("sc-inview-tab");
-    const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, ...Object.values(tabs));
-    if (c.close) {
-        tabs.close.className = "sc-area-close";
-        head.prepend(tabs.close);
-    }
+    const tabBar = h("nav", { class: "sc-tabs", "aria-label": L.controls }, tabs.airspace, tabs.inView, tabs.procedure, tabs.diagram, tabs.view, tabs.plate);
+    head.prepend(closeTab);
+    if (headFull)
+        findButton.after(headFull);
     // Showing a procedure the viewer picked: a departure takes the approaches away and the reverse (roam.ts), and the
     // first approach in this view switches the chart to IFR, once, so someone who goes back to VFR stays there.
-    const typeOf = (p) => data.airports.find((a) => a.id === p.airport)?.procedures.find((x) => x.name === p.name)?.type;
-    let ifrDone = false;
+    let ifrDone = !!startIfr;
     let toIfr = () => { };
     // While someone is choosing a procedure, the IFR chart that an approach would switch to loads.
     const ifrNext = () => lastIn.ifr ?? chartsIn(data.charts, "ifr")[0];
@@ -522,6 +526,8 @@ export function freeRoam(c) {
     const drawPhone = () => {
         fig.classList.toggle("sc-preview", phone.matches && !fig.classList.contains("full"));
         tabs.close.hidden = !c.close && !fig.classList.contains("full");
+        if (headFull)
+            headFull.hidden = fig.classList.contains("full");
     };
     const setFull = (on) => {
         fig.classList.toggle("full", on);
@@ -542,6 +548,7 @@ export function freeRoam(c) {
         close();
     };
     fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
+    headFull?.addEventListener("click", () => goFull(true));
     openButton.addEventListener("click", () => goFull(true));
     tabs.close.addEventListener("click", () => {
         sheet(null);

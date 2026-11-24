@@ -86,6 +86,15 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 @keyframes sc-drop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @keyframes sc-sheet-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes sc-slide-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@keyframes sc-spin { to { transform: rotate(1turn); } }
+
+/* Embedded loading screen: covers the view until the first scene is ready. */
+.skycake .sc-loading { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: var(--sc-side); text-align: center; }
+.skycake .sc-loading p { margin: 0; font: 400 14px var(--sc-head); color: var(--sc-soft); }
+.skycake .sc-spinner { width: 28px; height: 28px; box-sizing: border-box; border: 2px solid var(--sc-hairline); border-top-color: var(--sc-mark); border-radius: 50%; animation: sc-spin 0.9s linear infinite; }
+.skycake .sc-powered { font: 400 12px var(--sc-mono); color: var(--sc-muted); letter-spacing: 0.02em; }
+.skycake .sc-retry { align-self: center; background: var(--sc-tile); color: var(--sc-tile-ink); font-weight: 600; }
+.skycake.sc-busy .sc-caption { display: none; }
 
 /* Flat panels, buttons and rows. */
 .skycake .sc-panel { box-sizing: border-box; border: 1px solid var(--sc-edge); border-radius: var(--sc-r-panel); background: var(--sc-panel); box-shadow: var(--sc-shadow); }
@@ -132,6 +141,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-where b { font: 300 17px/20px var(--sc-head); }
 .skycake .sc-where span { font: 400 11px/14px var(--sc-sans); color: var(--sc-muted); }
 .skycake .sc-area-close, .skycake .sc-find { display: none; }
+.skycake .sc-head-full { display: none; }
 
 /* Corners (desktop). */
 .skycake .sc-tl, .skycake .sc-tr, .skycake .sc-br { position: absolute; z-index: 3; display: flex; flex-direction: column; gap: 4px; }
@@ -206,15 +216,23 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* The head is one row while the panel has room for the title beside the rest, else the map / plate / split pivot
    takes a second row under it. */
 .skycake .sc-plate { container-type: inline-size; }
-.skycake .sc-plate-switch { flex: none; gap: 4px; padding: 0 4px; }
-.skycake .sc-plate-switch button { min-width: 44px; padding: 0 6px; font-size: 14px; }
+.skycake .sc-plate-switch { flex: none; gap: 2px; padding: 0 2px; }
+.skycake .sc-plate-switch button { min-width: 44px; padding: 0 5px; font-size: 13.5px; }
 /* Full screen covers the view, so "Not for navigation" rises over the chart, and the zoom buttons clear it. */
 .skycake.sc-plate-full .sc-caption { z-index: 7; }
 /* Beside the panel, the caption stays within the map's width and wraps, over the view's tools when a narrow map
    brings them over it (it takes no clicks, so they still work). */
 .skycake.sc-plate:not(.sc-plate-full) .sc-caption { z-index: 4; box-sizing: border-box; max-width: calc(100% - var(--sc-share) * 100% - 2 * var(--sc-gap)); }
 .skycake.sc-plate-full .sc-plate-zoom { bottom: 48px; }
+@container (max-width: 520px) {
+  /* Map / plate / split already switches to full-screen plate, so drop the duplicate icon to keep one header row. */
+  .skycake .sc-plate-fullbtn { display: none; }
+}
 @container (max-width: 440px) {
+  .skycake .sc-plate-head:has(> .sc-x:not([hidden]):nth-child(2)) { padding-top: 2px; }
+  .skycake .sc-plate-head:has(> .sc-x:not([hidden]):nth-child(2)) .sc-plate-switch { order: 1; flex: 1 1 100%; padding: 0 2px 4px; }
+}
+@container (max-width: 340px) {
   .skycake .sc-plate-head { padding-top: 2px; }
   .skycake .sc-plate-switch { order: 1; flex: 1 1 100%; padding: 0 2px 4px; }
 }
@@ -233,7 +251,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake[data-a11y] .sc-plate-zoom { display: flex; }
 /* A 44px target; the grip drawn in it. */
 .skycake .sc-divider { position: absolute; z-index: 1; left: -22px; top: 50%; width: 44px; height: 56px; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; cursor: col-resize; touch-action: none; }
-.skycake .sc-divider::before { content: ""; width: 8px; height: 42px; box-sizing: border-box; border: 1px solid var(--sc-frame); border-radius: 0; background: var(--sc-panel) linear-gradient(90deg, transparent 2px, var(--sc-muted) 2px 3px, transparent 3px 4px, var(--sc-muted) 4px 5px, transparent 5px); }
+.skycake .sc-divider::before { content: ""; width: 8px; height: 42px; box-sizing: border-box; border: 1px solid var(--sc-soft); border-radius: 0; background: var(--sc-panel) linear-gradient(90deg, transparent 2px, var(--sc-soft) 2px 3px, transparent 3px 4px, var(--sc-soft) 4px 5px, transparent 5px); }
 .skycake.sc-plate-full .sc-divider { display: none; }
 
 /* Phone tab bar: hidden on desktop. */
@@ -256,11 +274,14 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake .sc-where { flex: 1; min-width: 0; padding: 0; border: 0; background: none; gap: 0; }
   .skycake .sc-where b { font-size: 16px; line-height: 18px; }
   .skycake .sc-where b, .skycake .sc-where span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .skycake .sc-head:has(.sc-area-close) { padding-left: 2px; }
+  .skycake .sc-head:has(.sc-area-close:not([hidden])) { padding-left: 2px; }
   .skycake .sc-area-close { display: inline-flex; align-items: center; justify-content: center; width: var(--sc-row); height: var(--sc-row); border: 0; background: none; color: var(--sc-ink); cursor: pointer; }
   .skycake .sc-area-close span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .skycake .sc-find { display: flex; align-items: center; justify-content: center; width: var(--sc-row); height: var(--sc-row); margin-left: auto; border: 0; border-radius: 0; background: none; color: var(--sc-ink); cursor: pointer; transition: color 0.14s, box-shadow 0.16s var(--sc-ease); }
   .skycake .sc-find[aria-expanded="true"] { color: var(--sc-mark); box-shadow: inset 0 -2px 0 var(--sc-mark); }
+  .skycake .sc-head-full { display: flex; align-items: center; justify-content: center; width: var(--sc-row); height: var(--sc-row); border: 0; border-radius: 0; background: none; color: var(--sc-ink); cursor: pointer; transition: color 0.14s; }
+  .skycake .sc-head-full svg { width: 16px; height: 16px; }
+  .skycake .sc-head-full:hover, .skycake .sc-head-full:focus-visible { color: var(--sc-mark); }
   .skycake .sc-tl .sc-pill { display: none; }
   .skycake .sc-tl { left: 0; right: 0; top: auto; bottom: var(--sc-tabs); width: auto; max-height: none; }
   .skycake .sc-kinds, .skycake .sc-inview, .skycake .sc-vs { border-radius: 0; border-width: 1px 0 0; border-color: var(--sc-hairline); max-height: 58svh; background: var(--sc-panel); box-shadow: none; }
@@ -298,10 +319,10 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake.sc-plate:not(.sc-plate-full) .sc-caption { max-width: none; }
   .skycake .sc-plate { position: relative; order: -1; top: auto; bottom: auto; width: auto; flex: 0 0 calc(var(--sc-share) * (100% - var(--sc-headh) - var(--sc-tabs))); border-left: 0; border-bottom: 1px solid var(--sc-hairline); }
   .skycake.sc-plate:not(.sc-plate-full) .view { width: auto; }
-  .skycake.sc-plate .sc-tr { right: var(--sc-gap); width: auto; top: calc(var(--sc-headh) + var(--sc-share) * (100% - var(--sc-headh) - var(--sc-tabs)) + var(--sc-gap)); }
+  .skycake.sc-plate .sc-tr { right: var(--sc-gap); width: auto; top: calc(var(--sc-headh) + var(--sc-share) * (100% - var(--sc-headh) - var(--sc-tabs)) + 22px); }
   .skycake.sc-plate-full .sc-plate { position: absolute; top: var(--sc-headh); bottom: var(--sc-tabs); left: 0; right: 0; flex: none; }
   .skycake .sc-divider { left: 50%; top: auto; bottom: -22px; width: 56px; height: 44px; transform: translateX(-50%); cursor: row-resize; }
-  .skycake .sc-divider::before { width: 42px; height: 8px; background: var(--sc-panel) linear-gradient(transparent 2px, var(--sc-muted) 2px 3px, transparent 3px 4px, var(--sc-muted) 4px 5px, transparent 5px); }
+  .skycake .sc-divider::before { width: 42px; height: 8px; background: var(--sc-panel) linear-gradient(transparent 2px, var(--sc-soft) 2px 3px, transparent 3px 4px, var(--sc-soft) 4px 5px, transparent 5px); }
 }
 
 /* The tooltip and the tags on the chart. Tags sit on the chart and stay unchanged with the page theme. */
@@ -434,10 +455,12 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-quiz { position: absolute; z-index: 5; left: 50%; bottom: 40px; transform: translateX(-50%); box-sizing: border-box; width: min(500px, calc(100% - 2 * var(--sc-gap))); }
 .skycake[data-a11y] .sc-quiz { bottom: 44px; }
 .skycake .sc-quiz .sc-card { position: static; transform: none; width: auto; }
-/* Short choices share rows, so the card stays low and what the question shows, framed in the middle, stays clear of it. */
-.skycake .sc-quiz .sc-choices { flex-flow: row wrap; }
-.skycake .sc-quiz .sc-choices .sc-choice { flex: 1 1 auto; text-align: center; }
+/* Equal-width grid so every answer button has the same size (2x2 for four choices, 1x2 for two, 1x3 for three). */
+.skycake .sc-quiz .sc-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.skycake .sc-quiz .sc-choices:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.skycake .sc-quiz .sc-choices .sc-choice { text-align: center; padding: 6px 10px; }
 @media (max-width: 860px) {
+  .skycake.sc-quizzing:not(.full) .view { height: 54svh; }
   .skycake .sc-quiz { position: static; transform: none; width: auto; flex: none; display: flex; flex-direction: column; min-height: var(--sc-tabs); }
   .skycake[data-a11y] .sc-quiz { bottom: auto; }
   .skycake .sc-quiz .sc-card { flex: 1; max-height: none; }
@@ -483,7 +506,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake[data-a11y] .view:focus-visible, .skycake[data-a11y] .sc-plate-body:focus-visible, .skycake[data-a11y] .sc-tab:focus-visible { outline-offset: -5px; box-shadow: none; }
 .skycake[data-a11y] .sc-pill, .skycake[data-a11y] .sc-search, .skycake[data-a11y] .sc-number, .skycake[data-a11y] .sc-plate-pick { height: 48px; font-size: 16px; }
 .skycake[data-a11y] .sc-search input { font-size: 16px; }
-.skycake[data-a11y] .sc-round, .skycake[data-a11y] .sc-x, .skycake[data-a11y] .sc-find { width: 48px; height: 48px; }
+.skycake[data-a11y] .sc-round, .skycake[data-a11y] .sc-x, .skycake[data-a11y] .sc-find, .skycake[data-a11y] .sc-head-full { width: 48px; height: 48px; }
 .skycake[data-a11y] .sc-tool, .skycake[data-a11y] .sc-seg button, .skycake[data-a11y] .sc-option, .skycake[data-a11y] .sc-row, .skycake[data-a11y] .sc-chip, .skycake[data-a11y] .sc-card .sc-choice { min-height: 48px; font-size: 16px; }
 .skycake[data-a11y] .sc-card .sc-choice { border: 1px solid var(--sc-frame); }
 /* Larger tab names, with more room around them. */
@@ -491,13 +514,15 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake[data-a11y] .sc-tab svg { width: 20px; height: 20px; }
 .skycake[data-a11y] .sc-step p { font-size: 18px; line-height: 28px; }
 .skycake[data-a11y] .sc-caption { font-size: 14px; line-height: 20px; }
-.skycake[data-a11y] *, .skycake[data-a11y] *::before, .skycake[data-a11y] *::after { transition: none !important; animation: none !important; }
+.skycake[data-a11y] *:not(.sc-spinner), .skycake[data-a11y] *::before, .skycake[data-a11y] *::after { transition: none !important; animation: none !important; }
+.skycake[data-a11y] .sc-spinner { animation-duration: 3s; }
 /* Larger tags on solid backgrounds. */
 .skycake[data-a11y] .view .tag { font-size: 13px; }
 .skycake[data-a11y] .view .fix { border-color: #fff; background: #14171c; }
 .skycake[data-a11y] .view .tag.apt, .skycake[data-a11y] .view .tag.plane, .skycake[data-a11y] .view .wp { background: #14171c; }
 @media (prefers-reduced-motion: reduce) {
-  .skycake *, .skycake *::before, .skycake *::after { transition: none !important; animation: none !important; }
+  .skycake *:not(.sc-spinner), .skycake *::before, .skycake *::after { transition: none !important; animation: none !important; }
+  .skycake .sc-spinner { animation-duration: 3s; }
 }
 /* The mode's own toggle, when the site has none: a symbol under the tool rail; on a phone, in the header. */
 .skycake .sc-head .sc-a11y-toggle { display: none; }
