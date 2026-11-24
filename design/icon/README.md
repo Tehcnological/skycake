@@ -1,4 +1,4 @@
-# skycake app icon — Liquid Glass (Icon Composer 27.2)
+# skycake app icon: Liquid Glass (Icon Composer 27.2)
 
 Built from `app/icon.png` (`ui/flat-metro` @ c3c9d2c), the primary Baumkuchen `sc` monogram.
 

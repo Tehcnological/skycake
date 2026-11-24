@@ -495,7 +495,7 @@ export function freeRoam(c: Context): Promise<void> {
     if (fig.classList.contains("sc-open-find")) setFind(false, false);
     const turningOn = !r.diagram;
     r = toggleDiagram(r, has);
-    // Turning the diagram on with no procedure shown glides the camera to the field so the runways are immediately visible.
+    // Turning the diagram on with no procedure shown moves the camera to the field, so the runways are in view.
     if (turningOn && r.diagram && r.procedures.length === 0) r = { ...r, camera: undefined };
     refresh();
   };

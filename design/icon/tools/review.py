@@ -8,7 +8,7 @@ def on(img, c): return Image.alpha_composite(Image.new('RGBA', img.size, c), img
 names = ['Default', 'Dark', 'ClearLight', 'ClearDark', 'TintedLight', 'TintedDark']
 sheet = Image.new('RGB', (1500, 1330), (18, 18, 20)); d = ImageDraw.Draw(sheet)
 def lab(x, y, t): d.text((x, y), t, font=Fs, fill=(200, 200, 200))
-d.text((30, 20), 'skycake.icon — clean contrail, flat #0c0c0c, 2x topo lines (Icon Composer 27.2)', font=F, fill=(240, 240, 240))
+d.text((30, 20), 'skycake.icon: contrail, flat #0c0c0c, 2x topo lines (Icon Composer 27.2)', font=F, fill=(240, 240, 240))
 # before / after, large
 y = 70; S = 600
 crop = (60, 60, 964, 964)

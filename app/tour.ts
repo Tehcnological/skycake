@@ -1,4 +1,4 @@
-// Interactive UI popout coachmark tour for skycake viewer.
+// skycake viewer's tutorial: a card that points at one control at a time.
 // Anchors a flat popout card and spotlight ring directly to live free-roam UI controls (no walkthrough/quiz engine).
 
 type Placement = "right" | "left" | "bottom" | "top" | "center";
@@ -44,8 +44,8 @@ const STEPS: TourStep[] = [
     prefer: "bottom",
   },
   {
-    title: "official FAA procedure plates",
-    body: "Open Plate to view the official FAA approach, arrival, or departure chart beside the 3D view. Switch between map, plate, and split, or drag the divider to resize.",
+    title: "FAA procedure plates",
+    body: "Open Plate to view the FAA approach, arrival, or departure chart beside the 3D view. Switch between map, plate, and split, or drag the divider to resize.",
     target: (fig) => firstVisible(fig, [".sc-tr .sc-plate-open", ".sc-tabs .sc-tab:last-child"]),
     prefer: "bottom",
   },
@@ -68,7 +68,7 @@ const STEPS: TourStep[] = [
     prefer: "left",
   },
   {
-    title: "switch areas anytime",
+    title: "switch areas",
     body: "Select Close to return to the start screen, switch between Phoenix and Miami, or save areas offline. skycake is for learning, not for navigation.",
     target: (fig) => firstVisible(fig, [".sc-rail .sc-tool:last-child", ".sc-head .sc-area-close"]),
     prefer: "left",
@@ -82,7 +82,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, ...kids:
   return e;
 };
 
-/** Launches the interactive popout coachmark tour over a mounted free-roam viewer. */
+/** Starts the tutorial over a mounted free roam view. */
 export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
   const shade = el("div", "tour-shade");
   const ring = el("div", "tour-ring");
@@ -209,7 +209,7 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
     body.textContent = step.body;
     backBtn.hidden = index === 0;
     nextBtn.textContent = index === STEPS.length - 1 ? "done" : "next";
-    // Measure and anchor synchronously BEFORE triggering fade-in so the popout never flashes or jumps.
+    // Placed before it fades in, so the card does not jump.
     place();
     pop.classList.remove("pop-in");
     void pop.offsetWidth;

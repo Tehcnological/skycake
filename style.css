@@ -1,5 +1,5 @@
 /* skycake. Colors and type come from the --sc-* variables, which fall back to a host site's own tokens where it has
-   them and to a quiet flat dark default otherwise. Set any --sc-* on .skycake (or higher) to restyle.
+   them and to a flat dark default otherwise. Set any --sc-* on .skycake (or higher) to restyle.
    Layout: desktop (wider than 860px) floats compact controls over the view: the area and airspace top left, search
    top right, the tool rail bottom right. Phones put a header over the view and a tab bar under it, and open menus as
    flush sheets above the tab bar. The procedure plate panel sits beside the view (on an upright phone, over it). */
@@ -20,7 +20,7 @@
   --sc-accent-bg: var(--redbg, rgb(82 164 255 / 0.16));
   --sc-tile: var(--tile, color-mix(in srgb, var(--sc-accent) 58%, #000));
   --sc-tile-ink: var(--tile-ink, #ffffff);
-  /* Surfaces, subtle hover, active fill, active indicator, and focus ring. */
+  /* Surfaces, hover, active fill, active indicator, and focus ring. */
   --sc-raised: var(--sc-panel);
   --sc-line: var(--sc-frame);
   --sc-edge: var(--sc-ctl-edge, transparent);
@@ -174,7 +174,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-tool[aria-disabled="true"] svg { opacity: 0.55; }
 .skycake .sc-tool svg { width: 16px; height: 16px; color: var(--sc-muted); transition: color 0.14s; }
 .skycake .sc-tool:hover svg, .skycake .sc-tool[aria-pressed="true"] svg { color: var(--sc-ink); }
-/* The View sheet (phones only): plain typographic pivot options, zero boxes. */
+/* The View sheet (phones only): the options as plain text, no boxes. */
 .skycake .sc-vs { display: none; }
 .skycake .sc-segrow { display: grid; grid-template-columns: 60px minmax(0, 1fr); align-items: center; gap: 10px; }
 .skycake .sc-segrow > span { font: 300 15px var(--sc-head); color: var(--sc-muted); }
@@ -395,7 +395,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-card .sc-choice:active:not(:disabled) { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
 .skycake .sc-card .sc-choice[aria-pressed="true"] { background: var(--sc-sel); box-shadow: inset 2px 0 0 var(--sc-mark); }
 .skycake .sc-card .sc-choice:disabled, .skycake .sc-card .sc-number:disabled { opacity: 0.6; cursor: default; }
-/* The card's main action: the primary tile fill, crisp white text; darkens slightly on hover to preserve contrast. */
+/* The card's main action: the primary tile fill and white text; darker on hover. */
 .skycake .sc-card .sc-submit, .skycake .sc-card .sc-next, .skycake .sc-end .sc-next-link { text-align: center; background: var(--sc-tile); color: var(--sc-tile-ink); font-weight: 600; }
 .skycake .sc-card .sc-submit:hover:not(:disabled), .skycake .sc-card .sc-next:hover { background: color-mix(in srgb, var(--sc-tile) 85%, #000); }
 .skycake .sc-card .sc-result { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 15px var(--sc-head); }
@@ -437,7 +437,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-progress i { flex: 1; height: 4px; border-radius: 0; background: linear-gradient(90deg, var(--sc-mark) var(--f, 0%), var(--sc-frame) 0); }
 .skycake .sc-progress i.check { background: linear-gradient(90deg, var(--sc-mark) var(--f, 0%), transparent 0); box-shadow: inset 0 0 0 1px var(--sc-soft); }
 .skycake .sc-count { flex: none; min-width: 3em; text-align: center; font: 500 12.5px var(--sc-mono); color: var(--sc-muted); }
-/* Circular flat transport button. */
+/* The round play and pause button. */
 .skycake .sc-big-play { position: absolute; z-index: 4; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%; background: var(--sc-tile); color: var(--sc-tile-ink); cursor: pointer; transition: transform 0.18s var(--sc-ease), background-color 0.16s; }
 .skycake .sc-big-play:hover { background: color-mix(in srgb, var(--sc-tile) 85%, #000); transform: translate(-50%, -50%) scale(1.04); }
 .skycake .sc-big-play svg { width: 30px; height: 30px; margin-left: 4px; }

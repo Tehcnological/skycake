@@ -9,8 +9,8 @@ const RIPPLE = 10; // seconds for the brightening to pass through every height o
 const STEPS = 28;
 const STEP = 3; // default px grid the lines are traced on
 
-// Sizes in CSS px. The page landscape sweeps across most of the start screen and fades softly toward the bottom left;
-// card contours stay subtle near the top right. The colours are literal because a background picture cannot read the
+// Sizes in CSS px. The page landscape sweeps across most of the start screen and fades out toward the bottom left;
+// card contours stay faint near the top right. The colours are literal because a background picture cannot read the
 // page's variables: each sits just above --divider in app/app.css.
 const SURFACES = {
   page: { w: 1200, h: 900, step: 6, seed: 111, scale: 0.032, color: "#383838", fade: { cx: 1040, cy: 160, r: 1120 } },
