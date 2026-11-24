@@ -1,4 +1,4 @@
-// SkyCake Viewer, the standalone app. The start screen lists the areas, each with its offline download and the date its
+// skycake viewer, the standalone app. The start screen lists the areas, each with its offline download and the date its
 // data is current through; ?area=phoenix opens one full screen (and ?scene={...} a first scene, as in the demo).
 // Every on-screen word here is a placeholder for Chris's copy.
 import { browserStorage, mount, store, stored } from "../src/index.js";

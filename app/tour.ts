@@ -1,4 +1,4 @@
-// Interactive UI popout coachmark tour for SkyCake Viewer.
+// Interactive UI popout coachmark tour for skycake viewer.
 // Anchors a flat popout card and spotlight ring directly to live free-roam UI controls (no walkthrough/quiz engine).
 
 type Placement = "right" | "left" | "bottom" | "top" | "center";
@@ -69,7 +69,7 @@ const STEPS: TourStep[] = [
   },
   {
     title: "switch areas anytime",
-    body: "Select Close to return to the start screen, switch between Phoenix and Miami, or save areas offline. SkyCake is for learning, not for navigation.",
+    body: "Select Close to return to the start screen, switch between Phoenix and Miami, or save areas offline. skycake is for learning, not for navigation.",
     target: (fig) => firstVisible(fig, [".sc-rail .sc-tool:last-child", ".sc-head .sc-area-close"]),
     prefer: "left",
   },
@@ -107,7 +107,7 @@ export function startTour(fig: HTMLElement, onDone?: () => void): () => void {
   pop.tabIndex = -1;
   pop.setAttribute("role", "dialog");
   pop.setAttribute("aria-modal", "true");
-  pop.setAttribute("aria-label", "SkyCake tutorial");
+  pop.setAttribute("aria-label", "skycake tutorial");
   pop.setAttribute("aria-live", "polite");
 
   const root = el("div", "tour-layer", shade, ring, pop);

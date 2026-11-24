@@ -1,6 +1,7 @@
 {
-  "name": "SkyCake Viewer",
-  "short_name": "SkyCake",
+  "id": "./",
+  "name": "skycake viewer",
+  "short_name": "skycake",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

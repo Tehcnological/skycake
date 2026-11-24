@@ -140,7 +140,7 @@ export declare const LABELS: Labels;
 export type Options = {
     /** URL of the area's data folder, e.g. "/skycake/phoenix/". */
     base: string;
-    /** What the view shows, in its header: the area's name and a note under it (SkyCake Viewer: the current-through date). */
+    /** What the view shows, in its header: the area's name and a note under it (skycake viewer: the current-through date). */
     title?: {
         name: string;
         note?: string;

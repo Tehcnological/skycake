@@ -1,4 +1,4 @@
-/* SkyCake Viewer only. Matches style.css's quiet flat dark tokens and blue tile accent. */
+/* skycake viewer only. Matches style.css's quiet flat dark tokens and blue tile accent. */
 :root {
   color-scheme: dark;
   --canvas: #0c0c0c; --surface: #161616; --bar: #141414; --divider: #262626; --edge: #484848;
