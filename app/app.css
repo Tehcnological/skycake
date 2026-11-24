@@ -12,6 +12,7 @@
   --ease-std: cubic-bezier(0.22, 1, 0.36, 1);
 }
 html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 @keyframes sc-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
