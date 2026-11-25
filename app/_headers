@@ -1,5 +1,5 @@
 # Cloudflare Pages response headers for SkyCake Viewer. Everything the app loads is its own: no inline script or style
-# (the help pages' a11y.js and demo.css are files for this), images and the airplane model may come from data: or blob:
+# (the help pages load a11y.js), images and the airplane model may come from data: or blob:
 # URLs, and no other site may frame it.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self' data: blob:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
