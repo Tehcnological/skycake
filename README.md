@@ -135,7 +135,7 @@ Procedure charts come from the same d-TPP cycle: every approach, departure (grap
 
 ### Data cycle workflow
 
-[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out, charts with no procedure and procedures with no chart. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, skycake viewer from Cloudflare's rebuild of main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
+[`.github/workflows/data.yml`](.github/workflows/data.yml) runs daily at 10:30 UTC (cycles take effect at 0901Z) and can be started by hand under Actions. When a new 28-day cycle is in effect and no `data/<cycle>` branch exists yet, it runs `npm run data`, checks file sizes, pushes `data/<cycle>` and opens a PR whose body lists airports and diagrams the build left out, charts with no procedure and procedures with no chart. A PR opened with a workflow's token starts no workflows, so it starts `build-and-test` on the branch itself (`ci.yml` takes `workflow_dispatch` for this). Merge the PR to ship the data: sites get it from git, skycake viewer from the Deploy workflow once CI passes on main. Saved areas in the app then offer Update. It uses no secrets and only free hosted runners.
 
 It needs one repo setting: Settings, Actions, General, Workflow permissions, tick "Allow GitHub Actions to create and approve pull requests". Without it the PR step fails, and the branch is pushed with no PR.
 
@@ -167,19 +167,9 @@ The start screen has the accessibility mode switch (the same `skycake-a11y` key 
 
 ### Hosting on Cloudflare Pages
 
-Free, no payment method needed. In the Cloudflare dashboard: Workers & Pages, Create, Pages, Connect to Git, pick `Tehcnological/skycake`, then:
+Free, no payment method needed. The Pages project `skycake-site` is direct upload, not connected to Git. [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys it: after `build-and-test` passes on a push to main (every merge, data cycle PRs included), it runs `npm run app` and uploads `www/` with wrangler. It can also be started by hand under Actions. It needs one repo secret, `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with Account, Cloudflare Pages, Edit on this account. To deploy from a machine instead: `npm run app`, then `npx wrangler pages deploy www --project-name skycake-site --branch main`.
 
-| Setting | Value |
-| --- | --- |
-| Project name | `skycake` (skycake.pages.dev is taken by an unrelated site, so Pages adds a suffix) |
-| Production branch | `main` |
-| Framework preset | None |
-| Build command | `npm run app` |
-| Build output directory | `www` |
-| Root directory | (blank) |
-| Environment variable | `NODE_VERSION` = `22` |
-
-Pages runs `npm ci` itself before the build command. Each PR also gets a preview URL. Only `demo.html`'s share-card tags (`og:image`, `og:url`) name skycake.app; nothing else in the app has a host name, so another domain needs only those changed.
+Only `demo.html`'s share-card tags (`og:image`, `og:url`) name skycake.app; nothing else in the app has a host name, so another domain needs only those changed.
 
 ### skycake.app
 

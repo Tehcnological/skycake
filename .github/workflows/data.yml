@@ -2,7 +2,7 @@ name: Data cycle
 
 # The FAA publishes new procedures every 28 days and new charts every 56, effective at 0901Z. Once a day this checks
 # whether a new 28-day cycle is in effect and, if so, rebuilds data/ and opens a PR. Merging it ships the data to the
-# sites (from git) and to SkyCake Viewer (Cloudflare rebuilds main). See "Data" in README.md.
+# sites (from git) and to SkyCake Viewer (deploy.yml, after CI passes on main). See "Data" in README.md.
 on:
   schedule:
     - cron: "30 10 * * *"

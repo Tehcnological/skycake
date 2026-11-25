@@ -1,5 +1,5 @@
 // Builds SkyCake Viewer (app/) into www/: the app bundled with three.js, the library's style.css, the area data, a data
-// manifest and the service worker. npm run app; Cloudflare runs the same. www/ is not in package.json files, so sites
+// manifest and the service worker. npm run app; deploy.yml runs the same. www/ is not in package.json files, so sites
 // that install skycake never get it.
 import { build } from "esbuild";
 import sharp from "sharp";
