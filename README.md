@@ -236,9 +236,8 @@ const problems = await validateQuiz(quiz, data, files, "phoenix", charts);
 
 - **Start screen (`index.html`):** Lists all 16 areas as cards with chart previews, current-through dates, an Open link, and Save / Update / Remove offline buttons. Also includes a link to an interactive tutorial (`?tutorial=1`, which runs on Phoenix), an accessibility mode switch (sharing `skycake-a11y`), and links to `help.html`, `accessibility.html`, `privacy.html`, and `terms.html`.
 - **Direct area links:** `?area=phoenix` opens an area full screen. Adding `&scene={...}` sets the initial scene.
-- **Showcase (`demo.html`):** Screenshots from `app/shots/` linking to specific scenes (`skycake.app/demo`). Screenshots stay out of the offline cache and load online only.
 - **User guide (`help.html`):** Instructions for desktop and phone controls, walkthroughs, quizzes, and accessibility mode (`skycake.app/help`). Cached in the offline shell.
-- On-screen copy in `app/main.ts`, `demo.html`, and `help.html` is currently draft copy.
+- On-screen copy in `app/main.ts` and `help.html` is currently draft copy.
 
 ### Building and offline caching
 
@@ -268,7 +267,6 @@ npm run app
 npx wrangler pages deploy www --project-name skycake-site --branch main
 ```
 
-- Only `demo.html`'s Open Graph tags (`og:image`, `og:url`) reference `skycake.app`. Hosting under another domain requires changing only those tags.
 - For the `skycake.app` custom domain: open the Pages project, go to Custom domains > Set up a custom domain, enter `skycake.app`, and activate it. An apex domain must be a zone on the same Cloudflare account (automatic if registered through Cloudflare; otherwise add the domain on the Free plan and point its nameservers to Cloudflare first). `.app` requires HTTPS, which Pages provisions automatically. Add `www.skycake.app` the same way if needed.
 
 ## Data updates
