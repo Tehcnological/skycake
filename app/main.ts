@@ -25,6 +25,7 @@ const TEXT = {
   notForNavigation: "not for navigation",
   tutorial: "take the tutorial",
   privacy: "privacy",
+  terms: "terms",
   help: "how to use",
   a11y: "accessibility mode",
   a11yNote: "larger text and controls",
@@ -198,7 +199,7 @@ async function startScreen(manifest: Manifest) {
   });
   const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
   const headRow = el("div", { className: "head-row" }, el("h1", { textContent: TEXT.choose }), el("a", { className: "tutorial-link", href: "?tutorial=1", textContent: TEXT.tutorial }));
-  const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
+  const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "terms.html", textContent: TEXT.terms }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
   root.replaceChildren(el("section", { className: "areas" }, brand, headRow, list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
 }
 
