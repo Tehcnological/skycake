@@ -44,7 +44,8 @@
   /* Phone chrome: the header over the view and the tab bar under it (with the home bar's inset). */
   --sc-headh: 44px;
   --sc-tabh: 50px;
-  --sc-tabs: calc(var(--sc-tabh) + env(safe-area-inset-bottom, 0px));
+  --sc-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --sc-tabs: calc(var(--sc-tabh) + var(--sc-safe-bottom));
   /* The plate panel's share of the map's room; the divider sets it. */
   --sc-share: 0.38;
   position: relative;
@@ -304,7 +305,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   .skycake.sc-open-view .sc-vs { display: flex; }
   .skycake .sc-vs .sc-switch { padding: 0; }
   /* Whole tab names, never cut short: each tab at least as wide as its name, the bar scrolling sideways when they don't fit. */
-  .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr); overflow-x: auto; height: var(--sc-tabs); box-sizing: border-box; flex: none; padding: 0 2px env(safe-area-inset-bottom, 0px); border-top: 1px solid var(--sc-hairline); background: var(--sc-bar); }
+  .skycake .sc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr); overflow-x: auto; height: var(--sc-tabs); box-sizing: border-box; flex: none; padding: 0 2px var(--sc-safe-bottom); border-top: 1px solid var(--sc-hairline); background: var(--sc-bar); }
   .skycake .sc-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; margin: 0; min-width: 0; padding: 0 4px; border: 0; border-radius: 0; background: none; color: var(--sc-muted); font: 400 11.5px/1 var(--sc-head); cursor: pointer; transition: color 0.16s, box-shadow 0.18s var(--sc-ease); }
   .skycake .sc-tab span { white-space: nowrap; }
   /* The bar clips what leaves it, so a tab's ring is drawn inside. */
@@ -456,7 +457,7 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 @media (max-width: 860px) {
   .skycake .sc-player { position: relative; left: auto; bottom: auto; transform: none; width: auto; flex: none; height: var(--sc-tabs); }
   .skycake[data-a11y] .sc-player { bottom: auto; }
-  .skycake .sc-bar { height: var(--sc-tabs); box-sizing: border-box; gap: 2px; padding: 0 4px env(safe-area-inset-bottom, 0px); border-width: 1px 0 0; border-color: var(--sc-hairline); background: var(--sc-bar); }
+  .skycake .sc-bar { height: var(--sc-tabs); box-sizing: border-box; gap: 2px; padding: 0 4px var(--sc-safe-bottom); border-width: 1px 0 0; border-color: var(--sc-hairline); background: var(--sc-bar); }
   /* Above the bar and the caption line. */
   .skycake .sc-step, .skycake .sc-player .sc-card { position: absolute; left: var(--sc-gap); right: var(--sc-gap); bottom: calc(100% + 34px); max-height: 55svh; overflow: auto; border-width: 1px; border-radius: 0; }
   .skycake[data-a11y] .sc-step, .skycake[data-a11y] .sc-player .sc-card { bottom: calc(100% + 40px); }
