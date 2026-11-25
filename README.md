@@ -47,7 +47,7 @@ Sixteen US areas are included under `data/`. Every area also has USGS terrain, a
 |---|---|---|---|---|
 | Move (pan) | Drag | Drag | One-finger drag | `Shift` + Arrow keys |
 | Turn and tilt | Right-drag, or `Ctrl`, `Shift`, or `Cmd` + drag | Side button + drag | Twist two fingers to turn; move two fingers up or down to tilt | Arrow keys |
-| Zoom | Scroll wheel | Double-tap and drag (down zooms in, up zooms out) | Pinch | `+` / `=` and `-` |
+| Zoom | Scroll wheel | Zoom in and Zoom out buttons | Pinch | `+` / `=` and `-` outside pen mode |
 | Inspect or select | Hover for label; click a flat area to display it in 3D; click an airport tag to list its procedures | Tap a flat area to display it in 3D; tap an airport tag | Tap a flat area to display it in 3D; tap an airport tag | Use `In view` in accessibility mode |
 
 Clicking or tapping an active 3D area shows its label. A second tap on the same area hides the label. Turn airspace types off from the `Airspace` list.

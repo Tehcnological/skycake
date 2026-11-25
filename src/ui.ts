@@ -390,8 +390,9 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
         "-": () => v.zoom(1 / ZOOM),
       };
       // Not an arrow pressed on the camera pad (its own buttons move the camera), on Play (it sits in the view) or in a text field.
-      if ((e.target as Element).closest(".sc-pad, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.target as Element).closest(".sc-pad, .sc-pen-zoom, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey) return;
       e.preventDefault();
+      if (view.hasAttribute("data-pen") && ["+", "=", "-"].includes(e.key)) return;
       act[e.key]();
     });
 
@@ -411,8 +412,10 @@ export async function mount(host: HTMLElement, o: Options): Promise<void> {
       return loaded.get(id)!;
     };
     const { freeRoam } = await import("./freeroam.js");
+    const { zoomButtons } = await import("./pad.js");
     const airport = o.airport ?? null;
     const context: Context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
+    view.append(h("div", { class: "sc-pen-zoom", role: "group", "aria-label": L.camera.group }, ...zoomButtons(context)));
     // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
     if (a11y.row)
       context.setA11y = (on) => {

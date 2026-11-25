@@ -553,10 +553,12 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 /* Accessibility mode's camera pad: inside the view, bottom left, above the caption line. A ring of arrows around a centre
    mark; zoom and Pan beside it. Over the phone's wake button; under the open sheets. On a phone it folds behind its
    Camera button until opened. */
-.skycake .sc-pad { display: none; position: absolute; z-index: 3; left: var(--sc-gap); bottom: 44px; align-items: flex-end; gap: 6px; }
+.skycake :is(.sc-pad, .sc-pen-zoom) { display: none; position: absolute; z-index: 3; left: var(--sc-gap); bottom: var(--sc-camera-bottom, 44px); align-items: flex-end; gap: 6px; }
 .skycake[data-a11y] .sc-pad { display: flex; }
 .skycake.sc-preview .sc-pad { display: none; }
 .skycake .sc-pad .sc-round { width: 48px; height: 48px; }
+.skycake:not(.sc-preview, .sc-asleep:not(.full)) .view[data-pen] .sc-pen-zoom { display: flex; }
+.skycake[data-a11y] .view[data-pen]:has(.sc-pad-open) .sc-pen-zoom { display: none; }
 .skycake .sc-pad-fold { display: none; }
 .skycake .sc-pad-ring { display: grid; grid-template: repeat(3, 48px) / repeat(3, 48px); gap: 2px; }
 .skycake .sc-pad-ring .sc-pad-up { grid-area: 1 / 2; }
@@ -570,14 +572,17 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
   /* The Airspace and In view lists stop above the pad (3 x 48px and gaps, over the 44px caption strip). */
   .skycake[data-a11y] .sc-tl { max-height: calc(100% - var(--sc-gap) - 44px - 160px); }
   .skycake[data-a11y]:has(.sc-where) .sc-tl { max-height: calc(100% - var(--sc-gap) - 44px - 160px - 52px); }
-  .skycake.sc-quizzing .sc-pad { top: calc(var(--sc-gap) + 54px); bottom: auto; }
+  .skycake.sc-quizzing :is(.sc-pad, .sc-pen-zoom) { top: calc(var(--sc-gap) + 54px); bottom: auto; }
+  .skycake[data-a11y] .view[data-pen]:has(.sc-pad) .sc-pen-zoom { display: none; }
 }
 @media (max-width: 860px) {
-  .skycake .sc-pad { bottom: 42px; flex-wrap: wrap; max-width: calc(100% - 2 * var(--sc-gap)); }
+  .skycake :is(.sc-pad, .sc-pen-zoom) { --sc-camera-bottom: 42px; }
+  .skycake .sc-pad { flex-wrap: wrap; max-width: calc(100% - 2 * var(--sc-gap)); }
   .skycake .sc-pad-fold { display: flex; flex-basis: 100%; }
   .skycake .sc-pad:not(.sc-pad-open) .sc-pad-ring, .skycake .sc-pad:not(.sc-pad-open) .sc-pad-side { display: none; }
   /* Above the wake pill (14px under it, 44px tall). */
-  .skycake.sc-quizzing .sc-pad { bottom: 64px; }
+  .skycake.sc-quizzing :is(.sc-pad, .sc-pen-zoom) { --sc-camera-bottom: 64px; }
+  .skycake[data-a11y] .view:has(.sc-pad) .sc-pen-zoom { bottom: calc(var(--sc-camera-bottom) + var(--sc-row) + 6px); }
 }
 
 /* Accessibility mode's In view: a pill and list under Airspace (desktop), a tab and sheet (phone). Off the mode, hidden. */

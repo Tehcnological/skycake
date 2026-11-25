@@ -7,4 +7,5 @@ export declare const ARROWS: {
 };
 export declare const PLUS: string[];
 export declare const MINUS: string[];
+export declare function zoomButtons({ view, labels }: Pick<Context, "view" | "labels">): HTMLButtonElement[];
 export declare function pad(c: Context): HTMLElement;

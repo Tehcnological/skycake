@@ -216,9 +216,11 @@ export async function mount(host, o) {
                 "-": () => v.zoom(1 / ZOOM),
             };
             // Not an arrow pressed on the camera pad (its own buttons move the camera), on Play (it sits in the view) or in a text field.
-            if (e.target.closest(".sc-pad, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
+            if (e.target.closest(".sc-pad, .sc-pen-zoom, .sc-big-play, input, textarea") || !act[e.key] || e.ctrlKey || e.metaKey || e.altKey)
                 return;
             e.preventDefault();
+            if (view.hasAttribute("data-pen") && ["+", "=", "-"].includes(e.key))
+                return;
             act[e.key]();
         });
         // Every mode: CSS covers most browsers; iPhone Safari also needs its own gesture events stopped, or a pinch zooms
@@ -239,8 +241,10 @@ export async function mount(host, o) {
             return loaded.get(id);
         };
         const { freeRoam } = await import("./freeroam.js");
+        const { zoomButtons } = await import("./pad.js");
         const airport = o.airport ?? null;
         const context = { fig, view: v, data, first: firstScene(o, data, (m) => console.warn(m)), airport, labels: L, procedures, url, startScale: START_SCALE, close: o.close, a11y: a11y.on, title: o.title };
+        view.append(h("div", { class: "sc-pen-zoom", role: "group", "aria-label": L.camera.group }, ...zoomButtons(context)));
         // Free roam's new controls are always built and shown by CSS, so the switch changes the mode in place.
         if (a11y.row)
             context.setA11y = (on) => {

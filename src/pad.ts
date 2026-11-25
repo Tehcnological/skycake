@@ -14,14 +14,20 @@ export const PLUS = ["M12 5v14", "M5 12h14"];
 export const MINUS = ["M5 12h14"];
 const PAN = ["M12 3v18", "M3 12h18", "M9 6l3-3 3 3", "M9 18l3 3 3-3", "M6 9l-3 3 3 3", "M18 9l3 3-3 3"];
 
+const round = (label: string, paths: string[], cls: string, onClick: () => void) => {
+  const b = h("button", { type: "button", class: `sc-round ${cls}`, "aria-label": label }, icon(paths));
+  b.addEventListener("click", onClick);
+  return b;
+};
+
+export function zoomButtons({ view, labels }: Pick<Context, "view" | "labels">): HTMLButtonElement[] {
+  const { zoom } = STEPS;
+  return [round(labels.camera.zoomIn, PLUS, "", () => view.zoom(zoom)), round(labels.camera.zoomOut, MINUS, "", () => view.zoom(1 / zoom))];
+}
+
 export function pad(c: Context): HTMLElement {
   const { view: v, labels: L } = c;
-  const { turn, pan, zoom } = STEPS;
-  const round = (label: string, paths: string[], cls: string, onClick: () => void) => {
-    const b = h("button", { type: "button", class: `sc-round ${cls}`, "aria-label": label }, icon(paths));
-    b.addEventListener("click", onClick);
-    return b;
-  };
+  const { turn, pan } = STEPS;
   let panning = false;
   const arrows = {
     left: round(L.camera.left, ARROWS.left, "sc-pad-left", () => (panning ? v.pan(-pan, 0) : v.orbit(-turn, 0))),
@@ -37,7 +43,7 @@ export function pad(c: Context): HTMLElement {
   });
   panButton.setAttribute("aria-pressed", "false");
   const ring = h("div", { class: "sc-pad-ring" }, arrows.up, arrows.left, h("i", { class: "sc-pad-mid", "aria-hidden": "true" }), arrows.right, arrows.down);
-  const side = h("div", { class: "sc-pad-side" }, round(L.camera.zoomIn, PLUS, "", () => v.zoom(zoom)), round(L.camera.zoomOut, MINUS, "", () => v.zoom(1 / zoom)), panButton);
+  const side = h("div", { class: "sc-pad-side" }, ...zoomButtons(c), panButton);
   // On a phone the pad folds away behind one button, so it leaves the map clear until wanted.
   const fold = h("button", { type: "button", class: "sc-pill sc-pad-fold", "aria-expanded": "false" }, icon(PAN), L.camera.group);
   const el = h("div", { class: "sc-pad", role: "group", "aria-label": L.camera.group }, fold, ring, side);
