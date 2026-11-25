@@ -855,7 +855,6 @@ a11y = false) {
     const zoomButton = (e) => e.pointerType === "pen" && (e.button === 0 || e.button === 2);
     let press = null;
     let firstUp = null;
-    let handledUp = null;
     let zoomDrag = null;
     const zoomTo = (p, off) => {
         takeOver();
@@ -866,7 +865,6 @@ a11y = false) {
         touchMoved();
     };
     el3d.addEventListener("pointerdown", (e) => {
-        handledUp = null;
         if (zoomDrag)
             return;
         press = zoomButton(e) ? { id: e.pointerId, button: e.button, at: at(e) } : null;
@@ -876,13 +874,12 @@ a11y = false) {
         if (!pair)
             return;
         e.stopImmediatePropagation();
-        zoomDrag = { id: e.pointerId, y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone(), moved: false };
+        zoomDrag = { id: e.pointerId, y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone() };
         el3d.setPointerCapture(e.pointerId);
     }, { capture: true });
     el3d.addEventListener("pointermove", (e) => {
         if (zoomDrag?.id !== e.pointerId || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP)
             return;
-        zoomDrag.moved = true;
         zoomTo(zoomDrag.p, zoomDrag.off / dragZoom(e.clientY - zoomDrag.y));
     });
     const pointerDone = (e) => {
@@ -896,12 +893,6 @@ a11y = false) {
         }
         if (zoomDrag?.id !== e.pointerId)
             return;
-        if (e.type === "pointerup") {
-            if (e.button === 0)
-                handledUp = { at: at(e), ms: e.timeStamp };
-            if (!zoomDrag.moved)
-                zoomTo(zoomDrag.p, zoomDrag.off / 2);
-        }
         zoomDrag = null;
         most = 0; // the second press is not a tap
     };
@@ -913,17 +904,6 @@ a11y = false) {
     });
     el3d.addEventListener("pointerup", pointerDone, { capture: true });
     el3d.addEventListener("pointercancel", pointerDone, { capture: true });
-    // Some pen drivers send a browser double-click directly. A pointer pair already zoomed on its second release.
-    el3d.addEventListener("dblclick", (e) => {
-        if (e.button !== 0 || downType !== "pen")
-            return;
-        const alreadyZoomed = isSecondTap(handledUp, at(e), e.timeStamp);
-        handledUp = null;
-        if (alreadyZoomed)
-            return;
-        firstUp = null;
-        zoomTo(groundUnder(at(e)) ?? controls.target.clone(), camera.position.distanceTo(controls.target) / 2);
-    });
     el3d.addEventListener("pointerdown", (e) => {
         downType = e.pointerType;
         if (!fingers.size) {

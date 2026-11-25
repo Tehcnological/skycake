@@ -6,7 +6,7 @@ const SHELL_CACHE = `shell:${VERSION}`;
 // One shell file into the cache. Cloudflare Pages answers help.html with a redirect to /help, and a redirected
 // response cannot answer a navigation, so such a page is stored as a plain copy under both addresses.
 async function keep(cache, url) {
-  const r = await fetch(url);
+  const r = await fetch(url, { cache: "no-cache" });
   if (!r.ok) throw new Error(`${url}: ${r.status}`);
   if (!r.redirected) return cache.put(url, r);
   const body = await r.blob();
@@ -36,10 +36,10 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(caches.match(e.request).then((hit) => hit ?? fetch(e.request)));
     return;
   }
-  // Shell (pages, JS, CSS): network first, the cached copy after 2 s or offline.
+  // Shell (pages, JS, CSS): network first (revalidating HTTP cache), the cached copy after 2 s or offline.
   e.respondWith((async () => {
     const cached = await caches.match(e.request, { ignoreSearch: e.request.mode === "navigate" });
-    const net = fetch(e.request).then((r) => (r.ok ? r : cached ?? r));
+    const net = fetch(e.request, { cache: "no-cache" }).then((r) => (r.ok ? r : cached ?? r));
     if (!cached) return net;
     return Promise.race([
       net.catch(() => cached),
