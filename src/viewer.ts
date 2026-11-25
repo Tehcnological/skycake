@@ -398,9 +398,10 @@ export async function build(
   const oneLayer = { stencilWrite: true, stencilFunc: THREE.NotEqualStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp };
   // Every area stands in its own group, squashed into the ground while flat.
   const lives: Live[] = [];
-  // Mode C veils that overlap draw as one: each keeps only the edge outside the others.
+  // Mode C veils that overlap draw as one: the part of an edge inside another veil hides while that veil shows.
   const veils = data.areas.filter((a) => a.kind === "MODEC").map((a) => ({ a, rings: a.rings.map((ring) => ring.map(([lat, lon]) => [X(lon), Z(lat)])) }));
-  const veiled = (a: Area, p: number[], n: number[]) => veils.some((o) => o.a !== a && o.rings.some((r) => inRing([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], r)));
+  const veiledBy = (a: Area, p: number[], n: number[]) => veils.find((o) => o.a !== a && o.rings.some((r) => inRing([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], r)))?.a;
+  const inside: { line: LineSegments2; by: Area }[] = [];
   // Where an outline was cut at the map's edge, the cut is not part of it.
   const onEdge = (p: number[], n: number[]) => [[0, width / 2], [1, depth / 2]].some(([i, h]) => Math.abs(Math.abs(p[i]) - h) < 1e-3 && Math.abs(n[i] - p[i]) < 1e-3);
   for (const area of data.areas) {
@@ -415,11 +416,21 @@ export async function build(
     live.size = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...zs) - Math.min(...zs));
     lives.push(live);
     if (area.kind === "MODEC") {
-      const pts = rings.flatMap((r) => r.flatMap((p, i) => {
-        const n = r[(i + 1) % r.length];
-        return veiled(area, p, n) || onEdge(p, n) ? [] : [area.floor, area.ceiling].flatMap((alt) => [p[0], nm(alt), p[1], n[0], nm(alt), n[1]]);
-      }));
-      group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(pts), fat(s.color, 1, false, 0.6)));
+      const parts = new Map<Area | undefined, number[]>();
+      for (const r of rings) {
+        r.forEach((p, i) => {
+          const n = r[(i + 1) % r.length];
+          if (onEdge(p, n)) return;
+          const by = veiledBy(area, p, n);
+          if (!parts.has(by)) parts.set(by, []);
+          parts.get(by)!.push(...[area.floor, area.ceiling].flatMap((alt) => [p[0], nm(alt), p[1], n[0], nm(alt), n[1]]));
+        });
+      }
+      for (const [by, pts] of parts) {
+        const line = new LineSegments2(new LineSegmentsGeometry().setPositions(pts), fat(s.color, 1, false, 0.6));
+        group.add(line);
+        if (by) inside.push({ line, by });
+      }
       continue;
     }
     if (area.kind === "ADIZ" || area.kind === "PARK") {
@@ -1403,6 +1414,7 @@ export async function build(
       l.group.visible = l.t > 0 && inMode(l);
       l.group.scale.y = Math.max(ease, 0.001);
     }
+    for (const v of inside) v.line.visible = !lives.find((l) => l.area === v.by)!.group.visible;
     if (twoMoved) readTwoFingers();
     if (fly) {
       fly.t = Math.min(1, fly.t + dt / 0.7);
