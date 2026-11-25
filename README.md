@@ -8,26 +8,26 @@ It also ships as [SkyCake Viewer](#skycake-viewer), a free web app at [skycake.a
 
 ## Areas covered
 
-Sixteen US areas are included under `data/`:
+Sixteen US areas are included under `data/`. Every area also has USGS terrain, airspace, airways and the FAA's instrument procedures.
 
-- Atlanta (`atlanta`), IFR area chart
-- Boston (`boston`)
-- Chicago (`chicago`), IFR area chart
-- Dallas-Fort Worth (`dallas-fort-worth`), IFR area chart
-- Denver (`denver`), IFR area chart
-- Grand Forks (`grand-forks`), sectional and IFR low only
-- Houston (`houston`)
-- Las Vegas (`las-vegas`)
-- Los Angeles (`los-angeles`), IFR area chart
-- Miami, Key West to Palm Beach (`miami`), IFR area chart
-- New York (`new-york`)
-- Phoenix, to Tucson (`phoenix`), IFR area chart
-- San Diego (`san-diego`)
-- San Francisco (`san-francisco`), IFR area chart
-- Seattle (`seattle`)
-- Washington (`washington`), IFR area chart
-
-Every area includes a VFR sectional chart and an IFR low enroute chart. Fifteen areas include a VFR Terminal Area Chart (TAC); Grand Forks does not. Nine areas include an IFR area chart (marked above).
+| Area | Folder | Sectional | TAC | IFR low | IFR area chart | Procedure charts | Airport diagrams |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Atlanta | `atlanta` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Boston | `boston` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| Chicago | `chicago` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Dallas-Fort Worth | `dallas-fort-worth` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Denver | `denver` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Grand Forks | `grand-forks` | ✓ |  | ✓ |  | ✓ | ✓ |
+| Houston | `houston` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| Las Vegas | `las-vegas` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| Los Angeles | `los-angeles` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Miami, Key West to Palm Beach | `miami` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| New York | `new-york` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| Phoenix, to Tucson | `phoenix` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| San Diego | `san-diego` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| San Francisco | `san-francisco` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Seattle | `seattle` | ✓ | ✓ | ✓ |  | ✓ | ✓ |
+| Washington | `washington` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ## What it shows
 
