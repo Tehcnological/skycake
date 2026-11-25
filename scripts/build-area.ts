@@ -22,7 +22,7 @@
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { unzipSync } from "fflate";
 import { createCanvas } from "@napi-rs/canvas";
 import { fromArrayBuffer, fromUrl } from "geotiff";
@@ -109,7 +109,10 @@ const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
 let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, LAKE: number, OUT: string;
 
 async function download(url: string, dir = cache): Promise<Uint8Array> {
-  const file = join(dir, url.split("/").pop()!);
+  // The file's own name only: a name from a remote listing must not reach outside the cache.
+  const name = basename(new URL(url).pathname);
+  if (!/^[\w.-]+$/.test(name) || name.startsWith(".")) throw new Error(`refusing to save ${url}: odd file name`);
+  const file = join(dir, name);
   if (!existsSync(file)) {
     console.log(`downloading ${url}`);
     const res = await fetch(url);
@@ -406,7 +409,10 @@ async function procedures() {
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
   for (const a of kept) await writeFile(join(dir, `${a.id}.json`), JSON.stringify(procedures.filter((p) => p.airport === a.id)));
-  return { airports: kept, ...parseAirways(text, BOUNDS) };
+  // Ids become file names (procedures/<id>.json, charts/<id>.json).
+  const odd = kept.filter((a) => !/^[A-Z0-9]{3,4}$/.test(a.id));
+  if (odd.length) console.log(`left out, an id that cannot be a file name: ${odd.map((a) => JSON.stringify(a.id)).join(" ")}`);
+  return { airports: kept.filter((a) => !odd.includes(a)), ...parseAirways(text, BOUNDS) };
 }
 
 type Dtpp = { base: string; dir: string; meta: string };

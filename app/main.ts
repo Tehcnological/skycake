@@ -16,6 +16,7 @@ const TEXT = {
   names: { atlanta: "atlanta", boston: "boston", chicago: "chicago", "dallas-fort-worth": "dallas-fort worth", denver: "denver", "grand-forks": "grand forks", houston: "houston", "las-vegas": "las vegas", "los-angeles": "los angeles", miami: "miami", "new-york": "new york", phoenix: "phoenix", "san-diego": "san diego", "san-francisco": "san francisco", seattle: "seattle", washington: "washington" } as Record<string, string>,
   through: (d: string) => `current through ${d}`,
   expired: (d: string) => `out of date since ${d}`,
+  olderCopy: "saved copy is from an older cycle",
   download: (mb: number) => `save offline · ${mb} MB`,
   update: (mb: number) => `update ${mb} MB`,
   saving: (pct: number) => `saving ${pct}%`,
@@ -49,6 +50,24 @@ const cacheOf = (id: string, a: AreaInfo) => `data:${id}:${a.rev}`;
 const isArea = (key: string, id: string) => key.startsWith(`data:${id}:`);
 const MARK = "saved";
 const complete = async (keys: string[], name: string) => keys.includes(name) && !!(await (await caches.open(name)).match(MARK));
+/**
+ * The date a saved copy of the area is current through, when a saved copy of another revision is what the service
+ * worker will answer with: undefined when there is none or it is the manifest's own, null when the copy predates the
+ * marker recording it.
+ */
+async function savedThrough(id: string, a: AreaInfo): Promise<string | null | undefined> {
+  for (const k of (await globalThis.caches?.keys()) ?? []) {
+    if (!isArea(k, id) || k === cacheOf(id, a)) continue;
+    const mark = await (await caches.open(k)).match(MARK);
+    if (!mark) continue;
+    try {
+      return (JSON.parse(await mark.text()) as { through?: string }).through ?? null;
+    } catch {
+      return null;
+    }
+  }
+  return undefined;
+}
 
 /** progress: the share of the area's files saved so far, 0 to 1. */
 async function save(id: string, a: AreaInfo, progress: (share: number) => void) {
@@ -70,7 +89,7 @@ async function save(id: string, a: AreaInfo, progress: (share: number) => void) 
         if (!failed) progress(++done / a.files.length);
       }
     }));
-    await cache.put(MARK, new Response(a.rev));
+    await cache.put(MARK, new Response(JSON.stringify({ rev: a.rev, through: a.through })));
   } catch (e) {
     await caches.delete(name);
     throw e;
@@ -85,7 +104,9 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
   e.append(...kids);
   return e;
 };
-const note = (a: AreaInfo, today: string) => (a.through < today ? TEXT.expired(a.through) : TEXT.through(a.through));
+// The date the data shown is current through: a saved older copy answers before the network, so it is that copy's.
+const note = (a: AreaInfo, today: string, saved?: string | null) =>
+  saved === null ? TEXT.olderCopy : (d => (d < today ? TEXT.expired(d) : TEXT.through(d)))(saved ?? a.through);
 
 async function startScreen(manifest: Manifest) {
   setA11y(stored(storage));
@@ -129,7 +150,8 @@ async function startScreen(manifest: Manifest) {
   // One card per area: its name and date, Open area, and its offline copy's button.
   for (const [id, a] of Object.entries(manifest.areas)) {
     const old = a.through < today;
-    const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { id: `name-${id}`, textContent: TEXT.names[id] ?? id }), el("span", { textContent: note(a, today) })));
+    const noteEl = el("span", { textContent: note(a, today, await savedThrough(id, a)) });
+    const li = el("li", { className: old ? "old" : "" }, el("div", { className: "info" }, el("b", { id: `name-${id}`, textContent: TEXT.names[id] ?? id }), noteEl));
     const go = el("a", { id: `go-${id}`, className: "go", href: `?area=${encodeURIComponent(id)}`, textContent: TEXT.open(TEXT.names[id] ?? id) });
     li.prepend(el("img", { className: "chart-preview", src: `preview-${encodeURIComponent(id)}.webp`, alt: "" }));
     const actions = el("div", { className: "actions" }, go);
@@ -149,7 +171,10 @@ async function startScreen(manifest: Manifest) {
       show((await complete(keys, cacheOf(id, a))) ? "saved" : keys.some((k) => isArea(k, id)) ? "update" : "download");
       button.addEventListener("click", () => {
         show("saving");
-        save(id, a, (share) => show("saving", Math.floor(share * 100))).then(() => show("saved"), (e) => {
+        save(id, a, (share) => show("saving", Math.floor(share * 100))).then(() => {
+          show("saved");
+          noteEl.textContent = note(a, today);
+        }, (e) => {
           console.warn("skycake: save failed", e);
           show("failed");
         });
@@ -157,6 +182,7 @@ async function startScreen(manifest: Manifest) {
       removeBtn.addEventListener("click", async () => {
         for (const k of await caches.keys()) if (isArea(k, id)) await caches.delete(k);
         show("download");
+        noteEl.textContent = note(a, today);
         button.focus();
       });
       actions.append(button, removeBtn);
@@ -199,7 +225,7 @@ try {
     }
     // replace, so Back after Close doesn't reopen the map.
     const a = manifest.areas[chosenArea];
-    const title = { name: TEXT.names[chosenArea] ?? chosenArea, note: note(a, new Date().toISOString().slice(0, 10)) };
+    const title = { name: TEXT.names[chosenArea] ?? chosenArea, note: note(a, new Date().toISOString().slice(0, 10), await savedThrough(chosenArea, a)) };
     statusText.textContent = tutorial ? "loading tutorial…" : `loading ${title.name}…`;
     progress.hidden = false;
     root.addEventListener("skycake-loading", (e) => {

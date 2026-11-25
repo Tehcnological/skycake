@@ -16,7 +16,9 @@ const tag = (r: string, t: string) => r.match(new RegExp(`<${t}>([^<]*)</${t}>`)
 
 /** Every record of an airport's block, in metafile order. */
 export const chartRecords = (block: string): ChartRecord[] =>
-  block.split("<record>").slice(1).map((r) => ({ code: tag(r, "chart_code"), name: tag(r, "chart_name"), pdf: tag(r, "pdf_name"), action: tag(r, "useraction") }));
+  block.split("<record>").slice(1).map((r) => ({ code: tag(r, "chart_code"), name: tag(r, "chart_name"), pdf: tag(r, "pdf_name"), action: tag(r, "useraction") }))
+    // pdf_name becomes a download and a file name (pageFile): a plain name or nothing.
+    .filter((r) => /^[A-Z0-9_-]+\.PDF$/i.test(r.pdf));
 
 // Graphic obstacle departures (ODP) are departures too.
 const KINDS: Record<string, ChartEntry["kind"]> = { IAP: "IAP", DP: "DP", ODP: "DP", STR: "STR" };

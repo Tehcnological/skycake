@@ -1,4 +1,5 @@
-# Keeps the actions in .github/workflows/ current, majors included. npm security updates are on in the repo settings.
+# Keeps the actions in .github/workflows/ current, majors included, as commit pins, and the deploy step's wrangler
+# lockfile (.github/deploy). npm security updates are on in the repo settings.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -8,3 +9,7 @@ updates:
     groups:
       actions:
         patterns: ['*']
+  - package-ecosystem: npm
+    directory: /.github/deploy
+    schedule:
+      interval: monthly

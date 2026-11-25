@@ -3,32 +3,35 @@ name: Data cycle
 # The FAA publishes new procedures every 28 days and new charts every 56, effective at 0901Z. Once a day this checks
 # whether a new 28-day cycle is in effect and, if so, rebuilds data/ and opens a PR. Merging it ships the data to the
 # sites (from git) and to SkyCake Viewer (deploy.yml, after CI passes on main). See "Data" in README.md.
+# Two jobs: build runs npm ci and the data build (and so every dependency and every FAA and USGS download) with a
+# read-only token; open-pr holds the write token and runs only git and gh on the built files. No secrets.
 on:
   schedule:
     - cron: "30 10 * * *"
   workflow_dispatch:
 
-# Push the branch, open the PR, start CI on it. Nothing else; no secrets.
 permissions:
-  contents: write
-  pull-requests: write
-  actions: write
+  contents: read
 
 concurrency:
   group: data-cycle
   cancel-in-progress: false
 
 jobs:
-  rebuild:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 90 # a clean charts build (529 d-TPP PDFs) has not been timed; this bounds a hung job
+    permissions:
+      contents: read
+    outputs:
+      cycle: ${{ steps.cycle.outputs.cycle }}
+      due: ${{ steps.cycle.outputs.due }}
     steps:
-      # The write token stays out of .git/config, so npm ci and the data build cannot read it. Only the last step uses it.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -65,12 +68,49 @@ jobs:
             exit 1
           fi
 
-      - name: Open a PR
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: steps.cycle.outputs.due
+        with:
+          name: data
+          path: |
+            data/
+            data.log
+          retention-days: 3
+
+  open-pr:
+    needs: build
+    if: needs.build.outputs.due
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Push the branch, open the PR, start CI on it. Nothing else runs here: no npm, no repo scripts.
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: data
+          path: ${{ runner.temp }}/built
+
+      # Only data/ and the log are taken from the build; nothing else it might have packed reaches the checkout.
+      - name: Take the built data
+        run: |
+          test -d "$RUNNER_TEMP/built/data"
+          rm -rf data
+          cp -R "$RUNNER_TEMP/built/data" data
+          cp "$RUNNER_TEMP/built/data.log" "$RUNNER_TEMP/data.log"
+
+      - name: Open a PR
         env:
           GH_TOKEN: ${{ github.token }}
-          CYCLE: ${{ steps.cycle.outputs.cycle }}
+          CYCLE: ${{ needs.build.outputs.cycle }}
         run: |
+          case "$CYCLE" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) echo "::error::odd cycle $CYCLE"; exit 1 ;; esac
           branch="data/$CYCLE"
           git switch -c "$branch"
           git add data
@@ -81,11 +121,11 @@ jobs:
             echo "FAA data for the cycle effective $CYCLE, built by the Data cycle workflow. Check the notes below, then merge."
             echo
             echo '```'
-            grep -E "left out|ticks fit|charts|with no|airports|IAP|SID|STAR|^[A-Z]+ [0-9]+," data.log || true
+            grep -E "left out|ticks fit|charts|with no|airports|IAP|SID|STAR|^[A-Z]+ [0-9]+," "$RUNNER_TEMP/data.log" || true
             echo '```'
             echo
             git diff --stat HEAD~1 | tail -1
-          } > body.md
-          gh pr create --base main --head "$branch" --title "Data: $CYCLE cycle" --body-file body.md
+          } > "$RUNNER_TEMP/body.md"
+          gh pr create --base main --head "$branch" --title "Data: $CYCLE cycle" --body-file "$RUNNER_TEMP/body.md"
           # A PR opened with this workflow's token starts no other workflows, so start CI on the branch here.
           gh workflow run ci.yml --ref "$branch"

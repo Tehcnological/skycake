@@ -1,0 +1,8 @@
+{
+  "name": "skycake-deploy",
+  "private": true,
+  "description": "Only wrangler, for the Deploy workflow's upload step: its own lockfile, so that step installs nothing unpinned.",
+  "dependencies": {
+    "wrangler": "4.168.0"
+  }
+}
