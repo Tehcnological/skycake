@@ -2,6 +2,13 @@
 
 Notable changes. Sites install skycake from GitHub, so a version here is the `version` in `package.json`, not an npm release.
 
+## 1.0.2 (2026-11-25)
+
+- Picking: a smaller airspace wins over a raised SFRA that overlaps it; the SFRA still picks where it is the best match.
+- Pen: `Zoom in` and `Zoom out` show when a pen is detected, and pen zoom is button-only (no double-tap-and-drag, middle drag, wheel or map keyboard zoom). Switching back to a mouse brings back hover tags and wheel zoom.
+- SkyCake Viewer on iPhone: the installed app keeps its bottom controls above the home indicator and the status bar blur off the headers.
+- SkyCake Viewer: the public demo page and its screenshots are gone from the build. `npm run demo` still serves the sample walkthroughs and quizzes.
+
 ## 1.0.1 (2026-11-25)
 
 - Data: the 2026-11-26 procedure cycle in all 16 areas, current through 2026-12-23. Boston leaves out KOQU, one of whose approaches now runs off the map.
