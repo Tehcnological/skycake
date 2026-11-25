@@ -1,0 +1,47 @@
+name: Deploy
+
+# SkyCake Viewer to skycake.app: after CI passes on a push to main (merges, data cycle PRs included), build www/ and
+# upload it to the Cloudflare Pages project, which is direct upload, not connected to Git. See "Hosting" in README.md.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build the app
+        run: npm run app
+
+      - name: Upload to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ea674aaebe725a1a5f53f685818e922c
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::warning::No CLOUDFLARE_API_TOKEN secret, so nothing deployed. See Hosting in README.md."; exit 0; fi
+          npx --yes wrangler@4.168.0 pages deploy www --project-name skycake-site --branch main --commit-hash "$(git rev-parse HEAD)"

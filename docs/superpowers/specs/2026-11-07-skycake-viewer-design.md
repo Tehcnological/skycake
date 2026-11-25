@@ -31,7 +31,7 @@ skycake stays the library sites embed, and is also its own app: a free web app o
 ## Data cycle (phase 2)
 
 - `.github/workflows/data.yml` runs daily at 10:30 UTC (cycles take effect 0901Z) and by hand. When any `area.json` is from an older cycle than `npm run data -- --cycle` and no `data/<cycle>` branch exists, it rebuilds, checks file sizes, opens "Data: <cycle> cycle" and starts `build-and-test` on the branch (a workflow's own PRs start no workflows).
-- Chris merges the PR. Sites get the data from git; Cloudflare rebuilds the app; saved areas offer Update.
+- Chris merges the PR. Sites get the data from git; the Deploy workflow uploads the app; saved areas offer Update.
 - `data/` stays committed because instrumentready.com copies `node_modules/skycake/data/`. Git grows by about 23 MB a cycle.
 - A full rebuild took 5 minutes on a hosted Ubuntu runner and reproduced the committed data byte for byte (2026-11-08).
 - **Open:** whether a `workflow_dispatch` run counts as the required `build-and-test` check on the bot's PR. The first run (by hand, or 2026-11-26) shows it.

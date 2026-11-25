@@ -56,7 +56,7 @@ jobs:
             exit 1
           fi
 
-      # SkyCake Viewer, the standalone web app: Cloudflare runs npm run app and serves www/. Its own asserts check the
+      # SkyCake Viewer, the standalone web app: deploy.yml runs npm run app and uploads www/. Its own asserts check the
       # data manifest and the service worker's file list.
       - name: App builds
         run: |
