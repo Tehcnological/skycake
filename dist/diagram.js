@@ -54,12 +54,7 @@ export function readOutlines(glyphs) {
     }
     return labels;
 }
-function line(pts) {
-    const values = new Set(pts.map((p) => p.value));
-    if (values.size < 2)
-        return null;
-    const spread = (k) => Math.max(...pts.map((p) => p[k])) - Math.min(...pts.map((p) => p[k]));
-    const along = spread("x") > spread("y") ? "x" : "y";
+function line(pts, along) {
     const n = pts.length, sx = pts.reduce((s, p) => s + p[along], 0), sv = pts.reduce((s, p) => s + p.value, 0);
     const sxx = pts.reduce((s, p) => s + p[along] ** 2, 0), sxv = pts.reduce((s, p) => s + p[along] * p.value, 0);
     const b = (n * sxv - sx * sv) / (n * sxx - sx * sx);
@@ -75,18 +70,22 @@ export function fitLabels(labels) {
         const v = labelValue(l.text);
         return v ? [{ ...v, x: l.x, y: l.y }] : [];
     });
-    const lat = line(pts.filter((p) => p.kind === "lat")), lon = line(pts.filter((p) => p.kind === "lon"));
-    if (!lat || !lon || lat.along === lon.along)
+    const lats = pts.filter((p) => p.kind === "lat"), lons = pts.filter((p) => p.kind === "lon");
+    if (new Set(lats.map((p) => p.value)).size < 2 || new Set(lons.map((p) => p.value)).size < 2)
         return null;
-    const at = (ax, p) => ax.a + ax.b * p[ax.along];
-    const midLat = (Math.max(...pts.filter((p) => p.kind === "lat").map((p) => p.value)) + Math.min(...pts.filter((p) => p.kind === "lat").map((p) => p.value))) / 2;
+    const midLat = (Math.max(...lats.map((p) => p.value)) + Math.min(...lats.map((p) => p.value))) / 2;
     const k = Math.cos((midLat * Math.PI) / 180);
-    const error = Math.max(...pts.map((p) => Math.abs(at(p.kind === "lat" ? lat : lon, p) - p.value) * (p.kind === "lat" ? 1 : k) * 60 * 6076));
-    if (error > 100)
-        return null;
-    if (Math.abs(Math.abs(lon.b * k) / Math.abs(lat.b) - 1) > 0.03)
-        return null;
-    return { lat, lon, error: Math.round(error) };
+    // The page is north up or turned a quarter, so latitude runs down it or across it. With two labels of a kind either
+    // way fits them exactly, so keep the way that fits best, then the one whose two scales agree best.
+    const fits = ["y", "x"].map((along) => {
+        const lat = line(lats, along), lon = line(lons, along === "y" ? "x" : "y");
+        const at = (ax, p) => ax.a + ax.b * p[ax.along];
+        const error = Math.max(...pts.map((p) => Math.abs(at(p.kind === "lat" ? lat : lon, p) - p.value) * (p.kind === "lat" ? 1 : k) * 60 * 6076));
+        const skew = Math.abs(Math.abs(lon.b * k) / Math.abs(lat.b) - 1);
+        return { lat, lon, error: Number.isFinite(error) ? error : Infinity, skew: Number.isFinite(skew) ? skew : Infinity };
+    });
+    const best = fits.filter((f) => f.error <= 100 && f.skew <= 0.03).sort((f, g) => Math.round(f.error) - Math.round(g.error) || f.skew - g.skew)[0];
+    return best ? { lat: best.lat, lon: best.lon, error: Math.round(best.error) } : null;
 }
 export const latLon = (f, x, y) => [f.lat.a + f.lat.b * (f.lat.along === "x" ? x : y), f.lon.a + f.lon.b * (f.lon.along === "x" ? x : y)];
 /** Clockwise turn, in degrees, that puts north at the top of the page image. */

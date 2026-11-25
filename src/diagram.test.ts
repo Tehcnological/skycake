@@ -112,3 +112,14 @@ test("outlines read as a tick label only when they are one run of known characte
   // Runway heading 272°: no minutes, not a label.
   assert.deepEqual(readOutlines([glyph(46, 1, 0, 2, 0, 3), glyph(6, 1, 0, 2, 3.5, 6), glyph(46, 1, 0, 2, 6.5, 9), glyph(32, 2, 0, 2, 9.5, 11)]), []);
 });
+
+test("KATL: a page turned a quarter with two latitude labels still fits, latitude across the page", () => {
+  // The labels on the d-TPP 2611 KATL diagram, page points.
+  const f = fitLabels([
+    { x: 97, y: 61, text: "33°39'N" }, { x: 235, y: 531, text: "33°38'N" },
+    { x: 23, y: 446, text: "84°27'W" }, { x: 23, y: 330, text: "84°26'W" }, { x: 23, y: 215, text: "84°25'W" }, { x: 23, y: 100, text: "84°24'W" },
+  ])!;
+  assert.ok(f);
+  assert.equal(f.lat.along, "x");
+  assert.equal(northUp(f), 90);
+});

@@ -4,6 +4,8 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- 14 new areas, 16 in all: Atlanta, Boston, Chicago, Dallas-Fort Worth, Denver, Grand Forks, Houston, Las Vegas, Los Angeles, New York, San Diego, San Francisco, Seattle and Washington. The TAC and IFR area chart are optional; an area may span several sectionals or low sheets.
+- Airport diagrams printed a quarter turn with only two latitude ticks now place (KATL, KJFK, KEWR, KDFW, KLAS, KHOU and others).
 - Quizzes: a wrong first answer gets a second try with the question's optional `hint`, the wrong choice struck out; only the first answer scores and `onResult` reports it once. Labels add `tryAgain` and `rightSecondTry`.
 - Quizzes: a 1x/4x height button in the top bar, kept for every question once picked. Explore before the end puts **Back to quiz** in free roam (label `backToQuiz`), back to the same question, or the next if it was answered.
 - Quizzes: an area a question asks about stands up in 3D, four times as tall and seen at an angle; procedure scenes open on the IFR chart and keep raised areas; the airplane is drawn larger with a dashed line to a ring on the ground; a flown route grows in step with the airplane. Generated questions ask for the FAF or MAP by role.

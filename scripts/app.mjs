@@ -56,7 +56,7 @@ for (const id of (await readdir("data")).sort()) {
   const through = new Date(Date.parse(cycle) + 27 * DAY).toISOString().slice(0, 10);
   areas[id] = { edition, through, rev: rev.digest("hex").slice(0, 12), bytes, files };
 }
-assert.deepEqual(Object.keys(areas), ["miami", "phoenix"]);
+assert.ok(Object.keys(areas).length >= 16 && "phoenix" in areas, "every area built");
 for (const a of Object.values(areas)) assert.ok(a.files.includes("area.json") && a.files.includes("sectional.webp"));
 await writeFile(`${out}/data/manifest.json`, JSON.stringify({ areas }));
 
