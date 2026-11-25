@@ -15,6 +15,11 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 [hidden] { display: none !important; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
+/* Keep the installed viewer inside the visible viewport and clear of the notch and Home indicator. */
+#app { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+#app:has(> .skycake.full) { display: flex; flex-direction: column; box-sizing: border-box; height: 100dvh; }
+#app > .skycake.full { --sc-safe-bottom: 0px; position: relative; inset: auto; flex: 1; min-height: 0; }
+
 @keyframes sc-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* The start screen and info pages: flat, on the bare canvas. */
