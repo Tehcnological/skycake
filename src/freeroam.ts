@@ -142,11 +142,11 @@ export function freeRoam(c: Context): Promise<void> {
   const heightTool = tool(L.height, ICONS.height);
   const modeTool = tool(L.mode, ICONS.rules);
   const chartTool = tool(L.chart, ICONS.map);
-  const fullTool = c.close ? tool(L.close, ICONS.close) : tool(L.fullScreen, ICONS.full, "0 0 12 12");
-  const diagramButton = diagramTool.button, fullButton = fullTool.button;
+  // A standalone app (a site's close) leaves from the header's Close; the rail has no second one.
+  const diagramButton = diagramTool.button, fullButton = tool(L.fullScreen, ICONS.full, "0 0 12 12").button;
   const hasIfr = chartsIn(data.charts, "ifr").length > 0;
   modeTool.button.hidden = !hasIfr;
-  const bottomRight = h("div", { class: "sc-br" }, h("div", { class: "sc-panel sc-rail" }, diagramButton, tagsTool.button, heightTool.button, modeTool.button, chartTool.button, fullButton));
+  const bottomRight = h("div", { class: "sc-br" }, h("div", { class: "sc-panel sc-rail" }, diagramButton, tagsTool.button, heightTool.button, modeTool.button, chartTool.button, ...(c.close ? [] : [fullButton])));
 
   const seg = (label: string) => {
     const opts = h("div", { class: "sc-seg", role: "group", "aria-label": label });
@@ -593,8 +593,8 @@ export function freeRoam(c: Context): Promise<void> {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     close();
   };
-  fullButton.setAttribute("aria-label", c.close ? L.close : L.fullScreen);
-  fullButton.addEventListener("click", () => (c.close ? leave(c.close) : goFull(!fig.classList.contains("full"))));
+  fullButton.setAttribute("aria-label", L.fullScreen);
+  fullButton.addEventListener("click", () => goFull(!fig.classList.contains("full")));
   headFull?.addEventListener("click", () => goFull(true));
   openButton.addEventListener("click", () => goFull(true));
   tabs.close.addEventListener("click", () => {
