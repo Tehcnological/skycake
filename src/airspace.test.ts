@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { KINDS, areaIds, boundaryKind, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
+import { KINDS, areaIds, boundaryKind, circle, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
 
 test("FAA records map to chart kinds; default 1,200 ft Class E and Class A are left out", () => {
   assert.equal(classKind("B", "CLASS_B", 0, "SFC"), "B");
@@ -125,8 +125,8 @@ for (const name of readdirSync(new URL("../data/", import.meta.url))) {
     for (const url of [sectional, tac?.url, low, area?.url]) if (url) assert.ok(existsSync(new URL(url, dir)), `${name}: ${url}`);
     for (const b of [tac?.bounds, area?.bounds]) if (b) assert.ok(b.s >= f.bounds.s && b.n <= f.bounds.n && b.w >= f.bounds.w && b.e <= f.bounds.e && b.s < b.n && b.w < b.e, `${name}: ${JSON.stringify(b)}`);
     assert.ok(f.areas.some((a) => a.kind === "B" || a.kind === "C" || a.kind === "D"), `${name}: no towered airspace`);
-    // The 700 ft sheet has no height; every other volume's ceiling is above its floor (FL ceilings, such as Tijuana's, read as FL).
-    for (const v of f.areas) assert.ok(v.kind === "E700" ? v.ceiling === v.floor : v.ceiling > v.floor, `${name}: ${v.name} ${v.floor} to ${v.ceiling}`);
+    // The 700 ft sheet and the DCA ring (a line on the ground) have no height; every other volume's ceiling is above its floor.
+    for (const v of f.areas) assert.ok(v.kind === "E700" || v.kind === "DC60" ? v.ceiling === v.floor : v.ceiling > v.floor, `${name}: ${v.name} ${v.floor} to ${v.ceiling}`);
     const ids = f.areas.map((a) => a.id);
     assert.equal(new Set(ids).size, ids.length);
   });
@@ -140,4 +140,24 @@ test("built data: DC's SFRA and FRZ, R-4001A to the top, Luke's SATR, and Dahlon
   assert.ok(phx.areas.some((a) => a.kind === "SATR" && a.name.includes("LUKE")));
   // 700 AGL over ground that reaches past 2,000 ft: drawn over the highest ground under it, not the area's 1,026.
   assert.ok(atl.areas.find((a) => a.name === "A-685")!.ceiling > 2700);
+});
+
+test("a 60 NM circle is 60 NM from its centre all round", () => {
+  const c = circle(38.86, -77.04, 60);
+  assert.equal(c.length, 120);
+  for (const [lat, lon] of c) {
+    const nm = Math.hypot((lat - 38.86) * 60, (lon + 77.04) * 60 * Math.cos((38.86 * Math.PI) / 180));
+    assert.ok(Math.abs(nm - 60) < 0.05, String(nm));
+  }
+});
+
+test("built data: only US airspace, no park outlines, and the DCA 60 NM ring around Washington", () => {
+  const f = (name: string): AirspaceFile => JSON.parse(readFileSync(new URL(`../data/${name}/area.json`, import.meta.url), "utf8"));
+  for (const name of readdirSync(new URL("../data/", import.meta.url))) {
+    if (!existsSync(new URL(`../data/${name}/area.json`, import.meta.url))) continue;
+    assert.ok(!f(name).areas.some((a) => /TIJUANA|TCA|CTLZ/.test(a.name)), name);
+    assert.ok(!f(name).areas.some((a) => (a.kind as string) === "PARK"), name);
+  }
+  const ring = f("washington").areas.filter((a) => a.kind === "DC60");
+  assert.equal(ring.length, 1);
 });

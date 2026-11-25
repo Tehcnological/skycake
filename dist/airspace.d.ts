@@ -1,10 +1,10 @@
 import type { Airway, Waypoint } from "./airway.js";
 import type { Airport } from "./procedure.js";
 /** One toggle each. Order is the legend order. */
-export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "PARK"];
+export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "DC60"];
 export type Kind = (typeof KINDS)[number];
 /** Drawn as a sheet (E700: 700 ft above the ground; EFLOOR: Class E from any other floor) or a line (Mode C veils, the ADIZ,
- * parks, refuges, wilderness and marine sanctuaries), not a volume: nothing to tap. */
+ * the 60 NM ring around the DCA VOR/DME), not a volume: nothing to tap. */
 export declare const tappable: (k: Kind) => boolean;
 export type Ring = [lat: number, lon: number][];
 /** id: stable across data rebuilds while the FAA record stays the same (areaIds), so content can name one area. */
@@ -89,6 +89,8 @@ export declare const hundreds: (ft: number, ground: number) => string;
  * number by position, west to east, then north to south. Input order never changes an id.
  */
 export declare function areaIds(areas: Omit<Area, "id">[], ground: number): string[];
+/** A circle of radius nm around a point, one corner every 3 degrees. Flat-earth: off by feet at 60 NM. */
+export declare function circle(lat: number, lon: number, nm: number): Ring;
 /** Ray casting: is the point inside the ring? */
 export declare function inRing(p: number[], ring: number[][]): boolean;
 /** The spot on a coarse grid farthest from a ring's corners while inside it: where its tag goes, even on a curved shelf. */

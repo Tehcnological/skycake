@@ -30,12 +30,36 @@ const TEXT = {
   a11y: "accessibility mode",
   a11yNote: "larger text and controls",
   a11yHelp: "accessibility",
+  install: "install viewer",
+  installIos: "tap Share, then Add to Home Screen",
+  installMac: "choose File, then Add to Dock",
 };
 
 // Accessibility mode: the same switch as the map's own (skycake-a11y), so they agree; it also raises the start screen's
 // contrast. Only the start screen sets data-a11y on the page: a map follows its own switch.
 const storage = browserStorage();
 const setA11y = (on: boolean) => document.documentElement.toggleAttribute("data-a11y", on);
+
+// Install: Chromium hands over its install prompt as an event, held until the button is pressed. Safari and every iOS
+// browser have no prompt a page can open, so there the button shows the steps; Firefox cannot install, so it hides.
+// Installed (running standalone), it hides. ?install (the homepage's install link) opens the steps.
+type InstallPrompt = Event & { prompt(): Promise<void> };
+let installPrompt: InstallPrompt | null = null;
+let syncInstall = () => {};
+const ua = navigator.userAgent;
+const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+const macSafari = !ios && /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|Edg|Firefox|OPR/.test(ua);
+const installSteps = ios ? TEXT.installIos : macSafari ? TEXT.installMac : null;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
+addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  installPrompt = e as InstallPrompt;
+  syncInstall();
+});
+addEventListener("appinstalled", () => {
+  installPrompt = null;
+  syncInstall();
+});
 
 const root = document.querySelector<HTMLElement>("#app")!;
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch((e) => console.warn("skycake: offline unavailable", e));
@@ -198,9 +222,25 @@ async function startScreen(manifest: Manifest) {
     setA11y(box.checked);
   });
   const row = el("label", { className: "a11y" }, el("span", {}, el("b", { textContent: TEXT.a11y }), el("small", { textContent: TEXT.a11yNote })), box);
-  const headRow = el("div", { className: "head-row" }, el("h1", { textContent: TEXT.choose }), el("a", { className: "tutorial-link", href: "?tutorial=1", textContent: TEXT.tutorial }));
+  const steps = el("p", { id: "install-steps", className: "install-steps", textContent: installSteps ?? "", hidden: !(installSteps && params.has("install")) });
+  const install = el("button", { type: "button", className: "tutorial-link", textContent: TEXT.install });
+  install.setAttribute("aria-controls", steps.id);
+  syncInstall = () => {
+    install.hidden = standalone() || !(installPrompt || installSteps);
+    install.setAttribute("aria-expanded", String(!steps.hidden));
+  };
+  syncInstall();
+  install.addEventListener("click", async () => {
+    if (installPrompt) {
+      const p = installPrompt;
+      installPrompt = null;
+      await p.prompt();
+    } else steps.hidden = !steps.hidden;
+    syncInstall();
+  });
+  const headRow = el("div", { className: "head-row" }, el("h1", { textContent: TEXT.choose }), el("div", { className: "head-links" }, el("a", { className: "tutorial-link", href: "?tutorial=1", textContent: TEXT.tutorial }), install));
   const foot = el("p", {}, `${TEXT.notForNavigation} · `, el("a", { href: "help.html", textContent: TEXT.help }), " · ", el("a", { href: "privacy.html", textContent: TEXT.privacy }), " · ", el("a", { href: "terms.html", textContent: TEXT.terms }), " · ", el("a", { href: "accessibility.html", textContent: TEXT.a11yHelp }));
-  root.replaceChildren(el("section", { className: "areas" }, brand, headRow, list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
+  root.replaceChildren(el("section", { className: "areas" }, brand, headRow, steps, list.children.length ? list : el("p", { textContent: "No areas available." }), row, foot));
 }
 
 const status = document.querySelector<HTMLElement>("#load-status")!;

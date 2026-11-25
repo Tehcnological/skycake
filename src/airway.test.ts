@@ -98,7 +98,7 @@ test("VFR and IFR: which charts each has and which airspace each shows", () => {
   assert.deepEqual(chartsIn(all, "ifr"), ["area", "low"]);
   assert.deepEqual(chartsIn({ sectional: "s" }, "ifr"), []);
   for (const k of ["SFRA", "R", "P", "W", "MOA", "A", "TFR", "ADIZ"] as const) assert.equal(shownIn("ifr", k), true);
-  for (const k of ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SATR", "NSA", "PARK"] as const) {
+  for (const k of ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SATR", "NSA", "DC60"] as const) {
     assert.equal(shownIn("ifr", k), false);
     assert.equal(shownIn("vfr", k), true);
   }

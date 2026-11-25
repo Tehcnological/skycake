@@ -25,11 +25,11 @@ const MAGENTA = 0xd0349c;
 const GRAY = 0x7d8a96;
 const ORANGE = 0xff7a1a;
 const RED = 0xc8303c;
-const PARK_BLUE = 0x2b8fd6;
+const RING_BLUE = 0x2b8fd6;
 // After the chart legend: B solid blue, C solid magenta, D dashed blue, E dashed magenta, E 700 ft a magenta tint,
 // Mode C a thin magenta outline, TRSA gray, restricted/prohibited/warning and special air traffic rules hatched blue,
 // MOA/alert hatched magenta, permanent TFRs hatched red, national security areas dashed magenta, the ADIZ a red line,
-// parks and wilderness a blue dashed line on the ground, Class E from other floors a faint blue sheet at that floor.
+// the DCA 60 NM ring a light blue dashed line on the ground, Class E from other floors a faint blue sheet at that floor.
 // The SFRA is orange, not the chart's blue, so it stands apart from Class B in both modes.
 export const STYLE = {
     B: { color: BLUE, wall: 0.42, roof: 0.24, line: "solid", walls: true },
@@ -50,7 +50,7 @@ export const STYLE = {
     TFR: { color: RED, wall: 0.45, roof: 0.08, line: "hatch", walls: true, over: true },
     NSA: { color: MAGENTA, wall: 0.3, roof: 0.06, line: "dashed", walls: true, over: true },
     ADIZ: { color: RED, wall: 0, roof: 0, line: "dashed", walls: false },
-    PARK: { color: PARK_BLUE, wall: 0, roof: 0, line: "dashed", walls: false },
+    DC60: { color: RING_BLUE, wall: 0, roof: 0, line: "dashed", walls: false },
 };
 // Approaches: white transitions, green final, yellow missed. Departures and arrivals: white transitions, green common route.
 // Radar vectors between the field and a departure or arrival: white and black dashes.
@@ -283,6 +283,8 @@ a11y = false) {
     // Tags follow their spot on screen. Procedure tags first, then airspace tags, each highest priority first; one that
     // would overlap a shown tag hides, so an airspace tag never covers a procedure tag (style.css also stacks them over).
     const shelfTags = [];
+    // An airspace tag's area: pointing at a shown tag picks it, even where another area is in front.
+    const tagged = new Map();
     const airportTags = [];
     const airwayTags = [];
     let approachTags = [];
@@ -373,7 +375,7 @@ a11y = false) {
             }
             continue;
         }
-        if (area.kind === "ADIZ" || area.kind === "PARK") {
+        if (area.kind === "ADIZ" || area.kind === "DC60") {
             // On the ground, as the chart prints it, in steps of about a mile so it follows the hills.
             const pts = [];
             for (const r of rings) {
@@ -395,8 +397,22 @@ a11y = false) {
             group.add(line);
             continue;
         }
-        // SFC runs down into the terrain, which hides it.
-        const floor = area.floor <= data.ground ? 0 : area.floor;
+        // SFC runs down into the terrain, which hides it: well below sea level, as a floor cap at 0 shares the chart's plane
+        // over the sea and flickers there (W-291 off San Diego).
+        const floor = area.floor <= data.ground ? -1000 : area.floor;
+        // Stacked sections (R-2310A to 10,000, R-2310B from 10,000) would put two tints in one plane: the upper one's floor
+        // cap is left out where an overlapping area of a see-through kind ends at its floor.
+        const box = (a) => {
+            const ps = a.rings.flat();
+            return [Math.min(...ps.map((p) => p[0])), Math.max(...ps.map((p) => p[0])), Math.min(...ps.map((p) => p[1])), Math.max(...ps.map((p) => p[1]))];
+        };
+        const [s0, n0, w0, e0] = box(area);
+        const stacked = !!s.over && floor > 0 && data.areas.some((o) => {
+            if (o === area || !STYLE[o.kind].over || o.ceiling !== area.floor)
+                return false;
+            const [s1, n1, w1, e1] = box(o);
+            return s1 < n0 && s0 < n1 && w1 < e0 && w0 < e1;
+        });
         for (const r of rings) {
             const shape = new THREE.Shape(r.map((p) => new THREE.Vector2(p[0], -p[1])));
             if (area.kind === "EFLOOR") {
@@ -425,6 +441,9 @@ a11y = false) {
                 continue;
             }
             const geo = new THREE.ExtrudeGeometry(shape, { depth: Math.max(nm(area.ceiling - floor), 0.01), bevelEnabled: false });
+            // Group 0 holds the caps, the floor's first and the roof's second, the same size.
+            if (stacked)
+                geo.groups[0] = { ...geo.groups[0], start: geo.groups[0].start + geo.groups[0].count / 2, count: geo.groups[0].count / 2 };
             geo.rotateX(-Math.PI / 2);
             geo.translate(0, nm(floor), 0);
             const layer = s.over ? {} : oneLayer;
@@ -466,6 +485,7 @@ a11y = false) {
             const [x, z] = deepest(widest);
             const node = fraction(area, data.ground);
             node.classList.add("tag");
+            tagged.set(node, live);
             addTag(node, new THREE.Vector3(x, nm(area.ceiling), z), 5 - Math.min(4, Math.log10(live.size + 1)), () => live.t === 1 && inMode(live), shelfTags);
         }
     }
@@ -897,6 +917,13 @@ a11y = false) {
         return best && [best.lat, best.lon];
     };
     const pick = (e) => {
+        for (const t of shelfTags) {
+            if (t.el.style.visibility !== "visible")
+                continue;
+            const b = t.el.getBoundingClientRect();
+            if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom)
+                return tagged.get(t.el) ?? null;
+        }
         const r = renderer.domElement.getBoundingClientRect();
         ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
         const up = lives.filter((l) => l.goal === 1 && inMode(l));

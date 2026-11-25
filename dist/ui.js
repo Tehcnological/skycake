@@ -4,7 +4,7 @@ import { chartsOf } from "./airspace.js";
 import { firstScene } from "./scene.js";
 import { STEPS, browserStorage, initial, store } from "./a11y.js";
 export const LABELS = {
-    kinds: { B: "Class B", C: "Class C", D: "Class D", E: "Class E", E700: "E 700 ft", EFLOOR: "E other floors", MODEC: "Mode C", TRSA: "TRSA", SFRA: "SFRA", SATR: "SATR", R: "Restricted", P: "Prohibited", W: "Warning", MOA: "MOA", A: "Alert", TFR: "TFR", NSA: "NSA", ADIZ: "ADIZ", PARK: "Parks, wilderness" },
+    kinds: { B: "Class B", C: "Class C", D: "Class D", E: "Class E", E700: "E 700 ft", EFLOOR: "E other floors", MODEC: "Mode C", TRSA: "TRSA", SFRA: "SFRA", SATR: "SATR", R: "Restricted", P: "Prohibited", W: "Warning", MOA: "MOA", A: "Alert", TFR: "TFR", NSA: "NSA", ADIZ: "ADIZ", DC60: "91.161 area" },
     groups: { IAP: "approaches", STAR: "arrivals", SID: "departures" },
     airspace: "airspace",
     search: "airport or procedure",

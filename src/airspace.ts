@@ -4,11 +4,11 @@ import type { Airway, Waypoint } from "./airway.js";
 import type { Airport } from "./procedure.js";
 
 /** One toggle each. Order is the legend order. */
-export const KINDS = ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "PARK"] as const;
+export const KINDS = ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "DC60"] as const;
 export type Kind = (typeof KINDS)[number];
 /** Drawn as a sheet (E700: 700 ft above the ground; EFLOOR: Class E from any other floor) or a line (Mode C veils, the ADIZ,
- * parks, refuges, wilderness and marine sanctuaries), not a volume: nothing to tap. */
-export const tappable = (k: Kind) => !["E700", "EFLOOR", "MODEC", "ADIZ", "PARK"].includes(k);
+ * the 60 NM ring around the DCA VOR/DME), not a volume: nothing to tap. */
+export const tappable = (k: Kind) => !["E700", "EFLOOR", "MODEC", "ADIZ", "DC60"].includes(k);
 export type Ring = [lat: number, lon: number][];
 /** id: stable across data rebuilds while the FAA record stays the same (areaIds), so content can name one area. */
 export type Area = { id: string; kind: Kind; name: string; floor: number; ceiling: number; rings: Ring[] };
@@ -106,6 +106,15 @@ export function areaIds(areas: Omit<Area, "id">[], ground: number): string[] {
     idx.forEach((i, k) => (out[i] = `${id}-${k + 1}`));
   }
   return out;
+}
+
+/** A circle of radius nm around a point, one corner every 3 degrees. Flat-earth: off by feet at 60 NM. */
+export function circle(lat: number, lon: number, nm: number): Ring {
+  return Array.from({ length: 120 }, (_, i) => {
+    const b = (i * 3 * Math.PI) / 180;
+    const dLat = (nm / 60) * Math.cos(b), dLon = (nm / 60) * Math.sin(b) / Math.cos((lat * Math.PI) / 180);
+    return [Math.round((lat + dLat) * 1e5) / 1e5, Math.round((lon + dLon) * 1e5) / 1e5];
+  });
 }
 
 /** Ray casting: is the point inside the ring? */
