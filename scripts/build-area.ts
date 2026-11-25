@@ -5,7 +5,7 @@
  *   low.webp           the FAA IFR low enroute sheet covering the area, the same way
  *   area.webp          the FAA IFR area chart over its own map, the same way
  *   dem.bin            USGS 3DEP terrain at the view's grid points over BOUNDS, 16-bit feet
- *   area.json          class airspace, Mode C veil, special use airspace inside BOUNDS, and the airports
+ *   area.json          US class airspace, Mode C veils, special use and other airspace inside BOUNDS, and the airports
  *   procedures/*.json  approaches, departures and arrivals of each airport inside BOUNDS, from the CIFP
  *   diagrams/*.webp    FAA airport diagrams (d-TPP), north up, placed by their own ticks
  *   charts/*.png       FAA approach, departure and arrival charts (d-TPP), one greyscale page per PDF, turned to read left to right
@@ -29,8 +29,9 @@ import { fromArrayBuffer, fromUrl } from "geotiff";
 import proj4 from "proj4";
 import sharp from "sharp";
 import simplify from "simplify-js";
-import { TOP, areaIds, boundaryKind, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Kind, type Ring } from "../src/airspace.js";
+import { TOP, areaIds, boundaryKind, circle, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Kind, type Ring } from "../src/airspace.js";
 import { parseAirways } from "../src/airway.js";
+import { cifpPositions } from "../src/cifp.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
 import { airportBlock, chartGroups, chartRecords, noChart, pageFile, pageTurn, proceduresOn, type ChartEntry } from "../src/tpp.js";
@@ -103,7 +104,6 @@ const now = date ? Date.parse(date) : Date.now();
 const edition = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (56 * DAY)) * 56 * DAY);
 const [y, m, d] = edition.toISOString().slice(0, 10).split("-");
 const ADDS = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services";
-const PADUS = "https://services.arcgis.com/v01gqwM5QqNysAAi/ArcGIS/rest/services/Federal_Management_Agencies/FeatureServer/0";
 const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
 // The area being built.
 let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, LAKE: number, OUT: string;
@@ -266,7 +266,8 @@ function groundRange(ft: Int16Array, rs: Ring[]): [low: number, high: number] {
 
 async function airspace(ground: Int16Array): Promise<Area[]> {
   const areas: Omit<Area, "id">[] = [];
-  for (const f of await query("Class_Airspace")) {
+  // US records only: Mexico's and Canada's come as TMA, CTR and the like (Tijuana's TCA, as Class D).
+  for (const f of await query("Class_Airspace", undefined, "TYPE_CODE IN ('CLASS','MODE-C')")) {
     const p = f.properties;
     const kind = classKind(p.CLASS as string, p.LOCAL_TYPE as string, Number(p.LOWER_VAL), p.LOWER_CODE as string);
     if (!kind) continue;
@@ -285,8 +286,8 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
   // No value (-9998: the ADIZ, offshore Class E's ceiling) is the surface for a floor and the top for a ceiling.
   const msl = (val: number, uom: string, code: string, rs: Ring[], end: 0 | 1) =>
     val === -9998 && code !== "UNLTD" ? [GROUND, TOP][end] : code === "SFC" && val > 0 ? groundRange(ground, rs)[end] + val : feet(val, uom, code, GROUND);
-  const special = async (layer: string, kindOf: (p: Feature["properties"]) => Kind | null, named: (p: Feature["properties"]) => string, features?: Feature[]) => {
-    for (const f of features ?? (await query(layer))) {
+  const special = async (layer: string, where: string, kindOf: (p: Feature["properties"]) => Kind | null, named: (p: Feature["properties"]) => string) => {
+    for (const f of await query(layer, undefined, where)) {
       const p = f.properties;
       const kind = kindOf(p);
       if (!kind) continue;
@@ -299,28 +300,21 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
       areas.push({ kind, name: named(p), floor, ceiling, rings: rs });
     }
   };
-  await special("Special_Use_Airspace", (p) => suaKind(p.TYPE_CODE as string), (p) => String(p.NAME));
+  await special("Special_Use_Airspace", "COUNTRY = 'UNITED STATES'", (p) => suaKind(p.TYPE_CODE as string), (p) => String(p.NAME));
   // TRSAs, SFRAs (DC's, with its flight restricted zone) and special air traffic rule areas (Luke's sectors, DCA's).
   // Offshore Class E, permanent national defense TFRs, national security areas and the ADIZ are there too.
-  await special("Boundary_Airspace", (p) => boundaryKind(p.TYPE_CODE as string, p.LOCAL_TYPE as string), (p) => (p.TYPE_CODE === "SATA" && p.SECTOR ? `${p.NAME} (${p.SECTOR})` : String(p.NAME)));
-  // National parks, wildlife refuges, wilderness and NOAA marine sanctuaries, where the chart asks for 2,000 ft above the
-  // ground: from USGS's Protected Areas Database (PAD-US), not FAA data.
-  // Waterfowl production areas come under NWR here but are not charted.
-  const parks = await query("PAD-US", PADUS, "(Des_Tp IN ('NP','NWR','WA') OR (Des_Tp = 'MPA' AND Mang_Name = 'NOAA')) AND Unit_Nm NOT LIKE '%Waterfowl Production%'");
-  // One area per name (a refuge comes in many parcels, a park as land and as designation), without specks under ~0.3 NM.
-  const byName = new Map<string, Feature>();
-  for (const f of parks) {
-    if (!f.geometry) continue;
-    const big = polygons(f.geometry).filter((poly) => {
-      const lats = poly[0].map((p) => p[1]), lons = poly[0].map((p) => p[0]);
-      return Math.max(...lats) - Math.min(...lats) > 0.005 || Math.max(...lons) - Math.min(...lons) > 0.005;
-    });
-    const name = String(f.properties.Unit_Nm);
-    const had = byName.get(name);
-    if (had) (had.geometry!.coordinates as number[][][][]).push(...big);
-    else byName.set(name, { properties: { ...f.properties, LOWER_VAL: 0, LOWER_CODE: "SFC", UPPER_VAL: 2000, UPPER_UOM: "FT", UPPER_CODE: "SFC" }, geometry: { type: "MultiPolygon", coordinates: big } });
+  await special("Boundary_Airspace", "COUNTRY IS NULL OR COUNTRY IN ('', 'United States')", (p) => boundaryKind(p.TYPE_CODE as string, p.LOCAL_TYPE as string), (p) => (p.TYPE_CODE === "SATA" && p.SECTOR ? `${p.NAME} (${p.SECTOR})` : String(p.NAME)));
+  // VFR pilots within 60 NM of the DCA VOR/DME need the FAA's special awareness training (14 CFR 91.161). The sectional
+  // prints the ring; it is in no airspace layer, so it comes from the VOR's position in the CIFP.
+  const dca = cifpPositions((await cifp()).split("\n")).get("D |DCA|K6");
+  if (dca) {
+    const ring = clipRing(circle(dca[0], dca[1], 60), BOUNDS);
+    if (ring.length >= 3) areas.push({ kind: "DC60", name: "DCA VOR/DME 60 NM", floor: GROUND, ceiling: GROUND, rings: [ring] });
   }
-  await special("PAD-US", () => "PARK", (p) => String(p.Unit_Nm), [...byName.values()]);
+  // Disneyland's permanent TFR (14 CFR 99.7) is a NOTAM, not in any airspace layer: FDC 6/6925 (tfr.faa.gov, November 2026),
+  // 3 NM around 33°48'05"N 117°55'17"W, the surface to 3,000 ft AGL. The FAA reissues it now and then under a new number.
+  const disney = clipRing(circle(33 + 48 / 60 + 5 / 3600, -(117 + 55 / 60 + 17 / 3600), 3), BOUNDS);
+  if (disney.length >= 3) areas.push({ kind: "TFR", name: "DISNEYLAND THEME PARK TFR", floor: GROUND, ceiling: groundRange(ground, [disney])[1] + 3000, rings: [disney] });
   // A shelf two airports share can come twice, once under each name (Tucson International and Davis-Monthan's
   // Class C); the first one is kept.
   const seen = new Set<string>();
@@ -397,10 +391,13 @@ if (process.argv.includes("--cycle")) {
   console.log(cycleDate.toISOString().slice(0, 10));
   process.exit(0);
 }
-async function procedures() {
+async function cifp(): Promise<string> {
   const c = cycleDate.toISOString().slice(0, 10).split("-");
   const zip = unzipSync(await download(`https://aeronav.faa.gov/Upload_313-d/cifp/CIFP_${c[0].slice(2)}${c[1]}${c[2]}.zip`), { filter: (f) => f.name === "FAACIFP18" });
-  const text = Buffer.from(zip.FAACIFP18).toString("latin1");
+  return Buffer.from(zip.FAACIFP18).toString("latin1");
+}
+async function procedures() {
+  const text = await cifp();
   const off = airportsOffMap(text, BOUNDS);
   if (off.size) console.log(`left out, an approach runs off the map: ${[...off].join(" ")}`);
   const { airports, procedures } = parseProcedures(text, BOUNDS);

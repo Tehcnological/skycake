@@ -1,8 +1,8 @@
 /** One toggle each. Order is the legend order. */
-export const KINDS = ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "PARK"];
+export const KINDS = ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "DC60"];
 /** Drawn as a sheet (E700: 700 ft above the ground; EFLOOR: Class E from any other floor) or a line (Mode C veils, the ADIZ,
- * parks, refuges, wilderness and marine sanctuaries), not a volume: nothing to tap. */
-export const tappable = (k) => !["E700", "EFLOOR", "MODEC", "ADIZ", "PARK"].includes(k);
+ * the 60 NM ring around the DCA VOR/DME), not a volume: nothing to tap. */
+export const tappable = (k) => !["E700", "EFLOOR", "MODEC", "ADIZ", "DC60"].includes(k);
 /** An area's charts in the chart button's order. The area chart only covers its own map, so it needs the low around it. */
 export const chartsOf = (c) => [...(c.tac ? ["tac"] : []), "sectional", ...(c.low && c.area ? ["area"] : []), ...(c.low ? ["low"] : [])];
 /** The chart asked for if the area has it, else its first. */
@@ -92,6 +92,14 @@ export function areaIds(areas, ground) {
         idx.forEach((i, k) => (out[i] = `${id}-${k + 1}`));
     }
     return out;
+}
+/** A circle of radius nm around a point, one corner every 3 degrees. Flat-earth: off by feet at 60 NM. */
+export function circle(lat, lon, nm) {
+    return Array.from({ length: 120 }, (_, i) => {
+        const b = (i * 3 * Math.PI) / 180;
+        const dLat = (nm / 60) * Math.cos(b), dLon = (nm / 60) * Math.sin(b) / Math.cos((lat * Math.PI) / 180);
+        return [Math.round((lat + dLat) * 1e5) / 1e5, Math.round((lon + dLon) * 1e5) / 1e5];
+    });
 }
 /** Ray casting: is the point inside the ring? */
 export function inRing(p, ring) {

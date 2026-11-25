@@ -121,6 +121,10 @@ body:has(#app > .areas) { min-height: 100svh; background-image: url(contours-pag
 .areas .tutorial-link:hover { color: var(--tile-ink); }
 .areas .tutorial-link:hover::before { height: 100%; opacity: 1; }
 .areas .tutorial-link:active { transform: perspective(500px) rotateY(-2deg) scale(0.985); }
+.areas .head-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.areas button.tutorial-link { border: 0; cursor: pointer; }
+.areas button.tutorial-link[hidden], .areas .install-steps[hidden] { display: none; }
+.areas .install-steps { margin: -6px 0 16px; color: var(--ink2); font: 400 14px/1.4 var(--head); }
 :root[data-a11y] .areas .tutorial-link { min-height: 48px; border: 1px solid var(--edge); font-size: 16px; }
 #app .areas ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
 #app .areas li { gap: 0; padding: 0; border-radius: 0; }

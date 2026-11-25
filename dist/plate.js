@@ -150,12 +150,18 @@ export function plateView(c, on) {
     let stale = false;
     let browsing = false;
     let browsed = null;
+    // A chart's procedures go on the map, unless one already shows: ILS OR LOC RWY 11 with the ILS up adds no LOC.
+    const draw = (p) => {
+        const rs = p ? pickRefs(p) : [];
+        if (!rs.some((r) => refs.some((x) => x.airport === r.airport && x.name === r.name)))
+            for (const r of rs)
+                on.show(r);
+    };
     const commit = () => {
         browsing = false;
         const p = browsed;
         browsed = null;
-        for (const r of p ? pickRefs(p) : [])
-            on.show(r);
+        draw(p);
     };
     pick.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ")
@@ -179,8 +185,7 @@ export function plateView(c, on) {
         if (browsing)
             browsed = p;
         else
-            for (const r of pickRefs(p))
-                on.show(r);
+            draw(p);
     });
     back.addEventListener("click", () => shown && show(shown, page - 1));
     next.addEventListener("click", () => shown && show(shown, page + 1));
@@ -277,8 +282,9 @@ export function plateView(c, on) {
     zoomIn.addEventListener("click", () => zoomBy(1.25, [body.clientWidth / 2, body.clientHeight / 2]));
     zoomOut.addEventListener("click", () => zoomBy(1 / 1.25, [body.clientWidth / 2, body.clientHeight / 2]));
     zoomFit.addEventListener("click", fitNow);
-    // A chart left as fitted stays fitted as the panel resizes.
-    const resized = new ResizeObserver(() => t === fit && fitNow());
+    // A chart left as fitted stays fitted as the panel resizes; a moved one is kept in the new box (Plate to Split left it
+    // off screen).
+    const resized = new ResizeObserver(() => (t === fit ? fitNow() : place(t)));
     resized.observe(body);
     let now = null;
     const set = (mode) => {
