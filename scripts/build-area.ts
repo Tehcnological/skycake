@@ -262,14 +262,14 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
     const p = f.properties;
     const kind = classKind(p.CLASS as string, p.LOCAL_TYPE as string, Number(p.LOWER_VAL), p.LOWER_CODE as string);
     if (!kind) continue;
-    const floor = feet(Number(p.LOWER_VAL), "FT", p.LOWER_CODE as string, GROUND);
+    const floor = feet(Number(p.LOWER_VAL), p.LOWER_UOM as string, p.LOWER_CODE as string, GROUND);
     // Class E has no ceiling of its own (-9998): surface areas are drawn up to where the 700 ft floor starts,
     // and the 700 ft area is a sheet.
     const upper = Number(p.UPPER_VAL);
     const rs = rings(f.geometry);
     // TNI: up to but not including, charted with a minus (-30, under a Class B floor at 3,000): the ceiling is 2,999.
     const tni = p.UPPER_DESC === "TNI" && ["B", "C", "D"].includes(kind) ? 1 : 0;
-    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, "FT", p.UPPER_CODE as string, GROUND)) - tni;
+    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, p.UPPER_UOM as string, p.UPPER_CODE as string, GROUND)) - tni;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rs });
   }
   for (const f of await query("Special_Use_Airspace")) {

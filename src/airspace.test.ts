@@ -111,6 +111,8 @@ for (const name of readdirSync(new URL("../data/", import.meta.url))) {
     for (const url of [sectional, tac?.url, low, area?.url]) if (url) assert.ok(existsSync(new URL(url, dir)), `${name}: ${url}`);
     for (const b of [tac?.bounds, area?.bounds]) if (b) assert.ok(b.s >= f.bounds.s && b.n <= f.bounds.n && b.w >= f.bounds.w && b.e <= f.bounds.e && b.s < b.n && b.w < b.e, `${name}: ${JSON.stringify(b)}`);
     assert.ok(f.areas.some((a) => a.kind === "B" || a.kind === "C" || a.kind === "D"), `${name}: no towered airspace`);
+    // The 700 ft sheet has no height; every other volume's ceiling is above its floor (FL ceilings, such as Tijuana's, read as FL).
+    for (const v of f.areas) assert.ok(v.kind === "E700" ? v.ceiling === v.floor : v.ceiling > v.floor, `${name}: ${v.name} ${v.floor} to ${v.ceiling}`);
     const ids = f.areas.map((a) => a.id);
     assert.equal(new Set(ids).size, ids.length);
   });
