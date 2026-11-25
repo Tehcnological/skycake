@@ -47,7 +47,7 @@ jobs:
         if: steps.latest.outputs.latest == 'true'
         with:
           node-version: 22
-          cache: npm
+          # No npm cache: this job runs on main's ref, so a cache it wrote would be read by later main builds.
 
       - name: Install
         if: steps.latest.outputs.latest == 'true'
