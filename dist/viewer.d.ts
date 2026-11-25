@@ -1,12 +1,14 @@
 import { type AirspaceFile, type Area, type ChartName, type Kind } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import type { Camera, Resolved } from "./scene.js";
+/** over: drawn over the rest, without hiding what is behind it. */
 type Style = {
     color: number;
     wall: number;
     roof: number;
     line: "solid" | "dashed" | "hatch" | "none";
     walls: boolean;
+    over?: true;
 };
 export declare const STYLE: Record<Kind, Style>;
 export declare const START_SCALE = 1;

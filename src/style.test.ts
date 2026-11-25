@@ -1,4 +1,4 @@
-// The stylesheet rules the UI audit's fixes rely on (UI_AUDIT.md): the area close in the phone header, the airspace
+// The stylesheet rules the UI audit's fixes rely on (UI_AUDIT.md): the area close (desktop and phone header), the airspace
 // sheet on its tab bar, the airport names in the picker.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -24,8 +24,9 @@ const outside = (selector: string) => {
   return rule(rest, selector);
 };
 
-test("the area's Close is hidden outside the phone layout and shown, a full row high, in the phone header", () => {
-  assert.match(outside(".skycake .sc-area-close, .skycake .sc-find") ?? "", /display: none/);
+test("the area's Close is a button left of the area card on desktop and a full row high in the phone header", () => {
+  assert.match(outside(".skycake .sc-find") ?? "", /display: none/);
+  assert.match(outside(".skycake .sc-area-close") ?? "", /display: inline-flex;.*width: var\(--sc-row\)/);
   const phone = blocks("@media (max-width: 860px) {").find((b) => b.includes(".sc-area-close {"));
   assert.ok(phone);
   assert.match(rule(phone, ".skycake .sc-area-close")!, /display: inline-flex;.*height: var\(--sc-row\)/);

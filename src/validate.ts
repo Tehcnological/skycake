@@ -1,6 +1,6 @@
 // Checks content against the area's data before it ships. Pure and DOM-free, so a site runs it in Node.
 // Unknown extra fields are ignored: sites keep their own tags.
-import type { AirspaceFile } from "./airspace.js";
+import { tappable, type AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { maker, type Quiz } from "./quiz.js";
 import { seeded } from "./generate.js";
@@ -59,7 +59,7 @@ function answerProblems(q: Extract<Question, { type: "find" }>, data: AirspaceFi
   const right = [area, ...more];
   for (const id of right) {
     const kind = data.areas.find((a) => a.id === id)?.kind;
-    if (kind === "E700" || kind === "MODEC") out.push(`area ${id} is ${kind}, which cannot be tapped`);
+    if (kind && !tappable(kind)) out.push(`area ${id} is ${kind}, which cannot be tapped`);
   }
   if ("fix" in q.answer && !fixesIn(data, loaded, questionScene(q))(q.answer.fix)) out.push(`fix ${q.answer.fix} is not on the question's procedures or the area's waypoints`);
   return out;

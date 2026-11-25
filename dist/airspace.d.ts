@@ -1,8 +1,11 @@
 import type { Airway, Waypoint } from "./airway.js";
 import type { Airport } from "./procedure.js";
 /** One toggle each. Order is the legend order. */
-export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA", "A"];
+export declare const KINDS: readonly ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "PARK"];
 export type Kind = (typeof KINDS)[number];
+/** Drawn as a sheet (E700: 700 ft above the ground; EFLOOR: Class E from any other floor) or a line (Mode C veils, the ADIZ,
+ * parks, refuges, wilderness and marine sanctuaries), not a volume: nothing to tap. */
+export declare const tappable: (k: Kind) => boolean;
 export type Ring = [lat: number, lon: number][];
 /** id: stable across data rebuilds while the FAA record stays the same (areaIds), so content can name one area. */
 export type Area = {
@@ -44,7 +47,7 @@ export type ChartName = "tac" | "sectional" | "area" | "low";
 export declare const chartsOf: (c: Charts) => ChartName[];
 /** The chart asked for if the area has it, else its first. */
 export declare const pickChart: (c: Charts, wanted?: ChartName) => ChartName;
-/** VFR: the visual charts and all the airspace. IFR: the enroute charts, special use airspace, airways and their fixes. */
+/** VFR: the visual charts and all the airspace. IFR: the enroute charts, special use airspace, SFRAs, airways and their fixes. */
 export type Mode = "vfr" | "ifr";
 export declare const modeOf: (c: ChartName) => Mode;
 export declare const chartsIn: (c: Charts, m: Mode) => ChartName[];
@@ -70,7 +73,10 @@ export declare const TOP = 18000;
 export declare function classKind(cls: string | null, localType: string | null, lowerVal: number, lowerCode: string | null): Kind | null;
 /** Special use airspace type code to a kind. */
 export declare function suaKind(typeCode: string | null): Kind | null;
-/** An altitude in feet MSL. SFC values are heights above the ground; FL values are hundreds of feet. */
+/** Boundary airspace record (TYPE_CODE, LOCAL_TYPE) to a kind: TRSAs, SFRAs, special air traffic rule areas, offshore
+ * Class E, permanent national defense TFRs, national security areas and the ADIZ. */
+export declare function boundaryKind(typeCode: string | null, localType: string | null): Kind | null;
+/** An altitude in feet MSL. SFC values are heights above the ground; FL values are hundreds of feet; unlimited is Infinity. */
 export declare function feet(val: number, uom: string | null, code: string | null, ground: number): number;
 /** An altitude as the answer card says it: SFC at the surface, else feet with a thousands comma (5,000). */
 export declare const feetText: (ft: number, ground: number) => string;

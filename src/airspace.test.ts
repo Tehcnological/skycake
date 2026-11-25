@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { KINDS, areaIds, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
+import { KINDS, areaIds, boundaryKind, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
 
 test("FAA records map to chart kinds; default 1,200 ft Class E and Class A are left out", () => {
   assert.equal(classKind("B", "CLASS_B", 0, "SFC"), "B");
@@ -15,12 +15,26 @@ test("FAA records map to chart kinds; default 1,200 ft Class E and Class A are l
   assert.equal(suaKind("R"), "R");
   assert.equal(suaKind("MOA"), "MOA");
   assert.equal(suaKind("NSA"), null);
+  assert.equal(boundaryKind("TRSA", "TRSA"), "TRSA");
+  assert.equal(boundaryKind("SATA", "SFRA"), "SFRA");
+  assert.equal(boundaryKind("SATA", "SPEC_AT_RULES"), "SATR");
+  assert.equal(boundaryKind("ARTCC", "ARTCC_L"), null);
+  assert.equal(boundaryKind("CLASS", "CLASS_E7"), "EFLOOR");
+  assert.equal(boundaryKind("CLASS", "CLASS_A_OFFSHORE"), null);
+  assert.equal(boundaryKind("DEF", "NDA_TFR"), "TFR");
+  assert.equal(boundaryKind("NSA", "NAT_SEC_AREA"), "NSA");
+  assert.equal(boundaryKind("ADIZ", "ADIZ"), "ADIZ");
+  // Class E from a floor other than 700 or 1,200 AGL is charted; the 14,500 MSL floor everywhere is not.
+  assert.equal(classKind("E", "CLASS_E5", 9500, "MSL"), "EFLOOR");
+  assert.equal(classKind("E", "CLASS_E5", 1200, "SFC"), null);
+  assert.equal(classKind("E", "CLASS_E", 14500, "MSL"), null);
 });
 
 test("altitudes: SFC is above the ground, FL is hundreds", () => {
   assert.equal(feet(500, "FT", "SFC", 1135), 1635);
   assert.equal(feet(180, "FL", "STD", 1135), 18000);
   assert.equal(feet(10000, "FT", "MSL", 1135), 10000);
+  assert.equal(feet(-9998, null, "UNLTD", 1135), Infinity);
 });
 
 test("clipping keeps the inside part and drops rings outside", () => {
@@ -117,3 +131,13 @@ for (const name of readdirSync(new URL("../data/", import.meta.url))) {
     assert.equal(new Set(ids).size, ids.length);
   });
 }
+
+test("built data: DC's SFRA and FRZ, R-4001A to the top, Luke's SATR, and Dahlonega's alert area clear of the hills", () => {
+  const f = (name: string): AirspaceFile => JSON.parse(readFileSync(new URL(`../data/${name}/area.json`, import.meta.url), "utf8"));
+  const dc = f("washington"), phx = f("phoenix"), atl = f("atlanta");
+  assert.deepEqual(dc.areas.filter((a) => a.kind === "SFRA").map((a) => a.name.match(/\((.+)\)/)?.[1]).sort(), ["DC FRZ", "DC SFRA"]);
+  assert.equal(dc.areas.find((a) => a.name === "R-4001A")?.ceiling, 18000);
+  assert.ok(phx.areas.some((a) => a.kind === "SATR" && a.name.includes("LUKE")));
+  // 700 AGL over ground that reaches past 2,000 ft: drawn over the highest ground under it, not the area's 1,026.
+  assert.ok(atl.areas.find((a) => a.name === "A-685")!.ceiling > 2700);
+});

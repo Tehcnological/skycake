@@ -19,9 +19,9 @@ test("procedures add up, from any airport, without repeats", () => {
   assert.deepEqual(sceneOf(r).camera, { frame: [{ procedure: eagul }, { procedure: ils }, { procedure: rnp }] });
 });
 
-test("removing the last one goes back to the first scene", () => {
+test("removing the last one goes back to the first scene, camera where it is", () => {
   const r = remove(add(start(first), ils), ils);
-  assert.deepEqual(sceneOf(r), first);
+  assert.deepEqual(sceneOf(r), { ...first, camera: null });
 });
 
 test("the diagram follows the current airport and turns off where there is none", () => {
@@ -55,14 +55,16 @@ test("the first scene's procedures and diagram are part of the state, with their
   assert.equal(sceneOf(r).diagram, undefined);
 });
 
-test("camera: an airport pick keeps it, the diagram keeps it, removing the last procedure goes back to the first view", () => {
+test("camera: an airport pick keeps it, the diagram keeps it, removing a procedure keeps it", () => {
   const has = (a: string) => a === "KPHX";
   let r = pickAirport(start(first), "KSDL", has);
   assert.equal(sceneOf(r).camera, null);
   r = toggleDiagram(pickAirport(r, "KPHX", has), has);
   assert.equal(sceneOf(r).camera, null);
-  r = remove(add(r, ils), ils);
-  assert.deepEqual(sceneOf(r).camera, "fit");
+  r = remove(add(add(r, ils), eagul), ils);
+  assert.equal(sceneOf(r).camera, null);
+  r = remove(r, eagul);
+  assert.equal(sceneOf(r).camera, null);
 });
 
 test("fix tags: the same runway fix name at two airports keeps both", () => {

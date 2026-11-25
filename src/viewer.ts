@@ -1,9 +1,10 @@
 // 3D airspace over the FAA TAC: the chart, draped over real terrain, is the ground. Areas lie flat (the chart prints them)
 // until raised, then stand from floor to ceiling in the chart's own colors and line styles. Approaches draw over it.
 // Mouse: drag to orbit, scroll to zoom. Touch: one finger moves the map, pinch zooms, a twist turns, two fingers up or
-// down tilt. Hover or tap for a label, tap to raise or lower. Units are nautical miles;
+// down tilt. Hover or tap for a label, tap to raise. Units are nautical miles;
 // heights are stretched (exaggerate) so shelves read. Draw order: terrain, then lines and approaches, then a depth-only
-// pass, then the fills, so only the nearest surface of a stack is tinted and shelves read as one piece of glass.
+// pass, then the fills, so only the nearest surface of a stack is tinted and shelves read as one piece of glass. Hatched
+// areas and the SFRA draw last, over that, so what is behind them still shows.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -13,7 +14,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { groundFt } from "./airclass.js";
-import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
+import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, tappable as canTap, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
 import { dragZoom, isSecondTap, isTap, TAP_SLOP, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
@@ -24,21 +25,37 @@ import { PLANE_GLB } from "./plane.js";
 const FT_PER_NM = 6076;
 const BLUE = 0x2f6bff;
 const MAGENTA = 0xd0349c;
-type Style = { color: number; wall: number; roof: number; line: "solid" | "dashed" | "hatch" | "none"; walls: boolean };
+const GRAY = 0x7d8a96;
+const ORANGE = 0xff7a1a;
+const RED = 0xc8303c;
+const PARK_BLUE = 0x2b8fd6;
+/** over: drawn over the rest, without hiding what is behind it. */
+type Style = { color: number; wall: number; roof: number; line: "solid" | "dashed" | "hatch" | "none"; walls: boolean; over?: true };
 // After the chart legend: B solid blue, C solid magenta, D dashed blue, E dashed magenta, E 700 ft a magenta tint,
-// Mode C a thin magenta outline, restricted/prohibited/warning hatched blue, MOA/alert hatched magenta.
+// Mode C a thin magenta outline, TRSA gray, restricted/prohibited/warning and special air traffic rules hatched blue,
+// MOA/alert hatched magenta, permanent TFRs hatched red, national security areas dashed magenta, the ADIZ a red line,
+// parks and wilderness a blue dashed line on the ground, Class E from other floors a faint blue sheet at that floor.
+// The SFRA is orange, not the chart's blue, so it stands apart from Class B in both modes.
 export const STYLE: Record<Kind, Style> = {
   B: { color: BLUE, wall: 0.42, roof: 0.24, line: "solid", walls: true },
   C: { color: MAGENTA, wall: 0.42, roof: 0.24, line: "solid", walls: true },
   D: { color: BLUE, wall: 0.34, roof: 0.2, line: "dashed", walls: true },
   E: { color: MAGENTA, wall: 0.28, roof: 0.14, line: "dashed", walls: true },
   E700: { color: MAGENTA, wall: 0, roof: 0.1, line: "none", walls: false },
+  EFLOOR: { color: BLUE, wall: 0, roof: 0.07, line: "solid", walls: false },
   MODEC: { color: MAGENTA, wall: 0, roof: 0, line: "solid", walls: false },
-  R: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true },
-  P: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true },
-  W: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true },
-  MOA: { color: MAGENTA, wall: 0.45, roof: 0.08, line: "hatch", walls: true },
-  A: { color: MAGENTA, wall: 0.45, roof: 0.08, line: "hatch", walls: true },
+  TRSA: { color: GRAY, wall: 0.36, roof: 0.2, line: "solid", walls: true },
+  SFRA: { color: ORANGE, wall: 0.16, roof: 0.06, line: "solid", walls: true, over: true },
+  SATR: { color: BLUE, wall: 0.4, roof: 0.08, line: "hatch", walls: true, over: true },
+  R: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true, over: true },
+  P: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true, over: true },
+  W: { color: BLUE, wall: 0.5, roof: 0.1, line: "hatch", walls: true, over: true },
+  MOA: { color: MAGENTA, wall: 0.45, roof: 0.08, line: "hatch", walls: true, over: true },
+  A: { color: MAGENTA, wall: 0.45, roof: 0.08, line: "hatch", walls: true, over: true },
+  TFR: { color: RED, wall: 0.45, roof: 0.08, line: "hatch", walls: true, over: true },
+  NSA: { color: MAGENTA, wall: 0.3, roof: 0.06, line: "dashed", walls: true, over: true },
+  ADIZ: { color: RED, wall: 0, roof: 0, line: "dashed", walls: false },
+  PARK: { color: PARK_BLUE, wall: 0, roof: 0, line: "dashed", walls: false },
 };
 // Approaches: white transitions, green final, yellow missed. Departures and arrivals: white transitions, green common route.
 // Radar vectors between the field and a departure or arrival: white and black dashes.
@@ -381,6 +398,12 @@ export async function build(
   const oneLayer = { stencilWrite: true, stencilFunc: THREE.NotEqualStencilFunc, stencilRef: 1, stencilZPass: THREE.ReplaceStencilOp };
   // Every area stands in its own group, squashed into the ground while flat.
   const lives: Live[] = [];
+  // Mode C veils that overlap draw as one: the part of an edge inside another veil hides while that veil shows.
+  const veils = data.areas.filter((a) => a.kind === "MODEC").map((a) => ({ a, rings: a.rings.map((ring) => ring.map(([lat, lon]) => [X(lon), Z(lat)])) }));
+  const veiledBy = (a: Area, p: number[], n: number[]) => veils.find((o) => o.a !== a && o.rings.some((r) => inRing([(p[0] + n[0]) / 2, (p[1] + n[1]) / 2], r)))?.a;
+  const inside: { line: LineSegments2; by: Area }[] = [];
+  // Where an outline was cut at the map's edge, the cut is not part of it.
+  const onEdge = (p: number[], n: number[]) => [[0, width / 2], [1, depth / 2]].some(([i, h]) => Math.abs(Math.abs(p[i]) - h) < 1e-3 && Math.abs(n[i] - p[i]) < 1e-3);
   for (const area of data.areas) {
     const s = STYLE[area.kind];
     const group = new THREE.Group();
@@ -393,20 +416,66 @@ export async function build(
     live.size = (Math.max(...xs) - Math.min(...xs)) * (Math.max(...zs) - Math.min(...zs));
     lives.push(live);
     if (area.kind === "MODEC") {
-      const pts = rings.flatMap((r) => r.flatMap((p, i) => {
-        const n = r[(i + 1) % r.length];
-        return [area.floor, area.ceiling].flatMap((alt) => [p[0], nm(alt), p[1], n[0], nm(alt), n[1]]);
-      }));
-      group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(pts), fat(s.color, 1, false, 0.6)));
+      const parts = new Map<Area | undefined, number[]>();
+      for (const r of rings) {
+        r.forEach((p, i) => {
+          const n = r[(i + 1) % r.length];
+          if (onEdge(p, n)) return;
+          const by = veiledBy(area, p, n);
+          if (!parts.has(by)) parts.set(by, []);
+          parts.get(by)!.push(...[area.floor, area.ceiling].flatMap((alt) => [p[0], nm(alt), p[1], n[0], nm(alt), n[1]]));
+        });
+      }
+      for (const [by, pts] of parts) {
+        const line = new LineSegments2(new LineSegmentsGeometry().setPositions(pts), fat(s.color, 1, false, 0.6));
+        group.add(line);
+        if (by) inside.push({ line, by });
+      }
+      continue;
+    }
+    if (area.kind === "ADIZ" || area.kind === "PARK") {
+      // On the ground, as the chart prints it, in steps of about a mile so it follows the hills.
+      const pts: number[] = [];
+      for (const r of rings) {
+        r.forEach((p, i) => {
+          const n = r[(i + 1) % r.length];
+          if (onEdge(p, n)) return;
+          const steps = Math.max(1, Math.ceil(Math.hypot(n[0] - p[0], n[1] - p[1])));
+          for (let k = 0; k < steps; k++) {
+            const [xa, za, xb, zb] = [p[0] + ((n[0] - p[0]) * k) / steps, p[1] + ((n[1] - p[1]) * k) / steps, p[0] + ((n[0] - p[0]) * (k + 1)) / steps, p[1] + ((n[1] - p[1]) * (k + 1)) / steps];
+            pts.push(xa, groundAt(xa, za) + nm(100), za, xb, groundAt(xb, zb) + nm(100), zb);
+          }
+        });
+      }
+      if (!pts.length) continue;
+      const line = new LineSegments2(new LineSegmentsGeometry().setPositions(pts), wide(fat(s.color, 1.8, true)));
+      line.computeLineDistances();
+      group.add(line);
       continue;
     }
     // SFC runs down into the terrain, which hides it.
     const floor = area.floor <= data.ground ? 0 : area.floor;
     for (const r of rings) {
       const shape = new THREE.Shape(r.map((p) => new THREE.Vector2(p[0], -p[1])));
+      if (area.kind === "EFLOOR") {
+        // Flat at its floor (9,500 MSL, 2,000 MSL offshore), with a rim.
+        const sheet = new THREE.ShapeGeometry(shape);
+        sheet.rotateX(-Math.PI / 2);
+        sheet.translate(0, nm(area.floor), 0);
+        const mesh = new THREE.Mesh(sheet, new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...oneLayer }));
+        mesh.renderOrder = 2;
+        group.add(mesh);
+        const rim = r.flatMap((p, i) => {
+          const n = r[(i + 1) % r.length];
+          return onEdge(p, n) ? [] : [p[0], nm(area.floor), p[1], n[0], nm(area.floor), n[1]];
+        });
+        if (rim.length) group.add(new LineSegments2(new LineSegmentsGeometry().setPositions(rim), wide(fat(s.color, 1, false, 0.7))));
+        continue;
+      }
       if (!s.walls) {
         const sheet = drape(r, nm(area.floor - data.ground));
-        const mesh = new THREE.Mesh(sheet, new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide }));
+        // One layer, as the fills: overlapping 700 ft areas at one height tint once and don't fight.
+        const mesh = new THREE.Mesh(sheet, new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...oneLayer }));
         mesh.renderOrder = 2;
         live.picks.push(mesh);
         group.add(mesh);
@@ -415,13 +484,16 @@ export async function build(
       const geo = new THREE.ExtrudeGeometry(shape, { depth: Math.max(nm(area.ceiling - floor), 0.01), bevelEnabled: false });
       geo.rotateX(-Math.PI / 2);
       geo.translate(0, nm(floor), 0);
-      const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-      pre.renderOrder = 1;
-      group.add(pre);
-      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...oneLayer });
-      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...oneLayer, ...(s.line === "hatch" ? { map: hatch } : {}) });
+      const layer = s.over ? {} : oneLayer;
+      if (!s.over) {
+        const pre = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false, transparent: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
+        pre.renderOrder = 1;
+        group.add(pre);
+      }
+      const roof = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.roof, depthWrite: false, side: THREE.DoubleSide, ...layer });
+      const wall = new THREE.MeshBasicMaterial({ color: s.color, transparent: true, opacity: s.wall, depthWrite: false, side: THREE.DoubleSide, ...layer, ...(s.line === "hatch" ? { map: hatch } : {}) });
       const fill = new THREE.Mesh(geo, [roof, wall]);
-      fill.renderOrder = 2;
+      fill.renderOrder = s.over ? 3 : 2;
       live.picks.push(fill);
       group.add(fill);
       // Rims top and bottom, then ribs on corners and every 2.5 NM along the wall.
@@ -468,7 +540,7 @@ export async function build(
     node.addEventListener("click", () => tapAirport(a.id));
     addTag(node, new THREE.Vector3(X(a.lon), nm(a.elev), Z(a.lat)), 0, () => true, airportTags);
   }
-  const tappable = lives.filter((l) => l.area.kind !== "E700" && l.area.kind !== "MODEC").sort((a, c) => a.size - c.size);
+  const tappable = lives.filter((l) => canTap(l.area.kind)).sort((a, c) => a.size - c.size);
 
   // Airways stand at their minimum enroute altitude; a leg with none lies on the chart. A stem from the ground up to each
   // fix shows its height and joins legs at different heights. Built once: only the mode shows or hides them.
@@ -1027,8 +1099,8 @@ export async function build(
       if (fix || p) tapFn({ area: l?.area.id ?? null, at: fix ?? latLon(p!.x, p!.z) });
       return tell(l, e);
     }
-    if (l && l.goal === 1 && picked === l) {
-      set(l, false);
+    // A second tap on the same area only hides its label; areas are lowered from the Airspace list.
+    if (l && picked === l) {
       picked = null;
       return label(null, 0, 0);
     }
@@ -1342,6 +1414,7 @@ export async function build(
       l.group.visible = l.t > 0 && inMode(l);
       l.group.scale.y = Math.max(ease, 0.001);
     }
+    for (const v of inside) v.line.visible = !lives.find((l) => l.area === v.by)!.group.visible;
     if (twoMoved) readTwoFingers();
     if (fly) {
       fly.t = Math.min(1, fly.t + dt / 0.7);

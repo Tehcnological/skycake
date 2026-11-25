@@ -35,10 +35,13 @@ export function parseAirways(text, b) {
             const [p, q] = [at.get(keyOf(from)), at.get(keyOf(to))];
             if (!p || !q || Math.abs(p[1] - q[1]) > 180)
                 continue;
+            const ft = legMinimum(from);
+            // At 18,000 and up it is Class A, on the high charts, which no area has.
+            if (ft !== null && ft >= 18000)
+                continue;
             const pieces = clipPath([[p[0], p[1], 0], [q[0], q[1], 0]], b);
             if (!pieces.length)
                 continue;
-            const ft = legMinimum(from);
             const name = from.slice(13, 18).trim();
             if (!airways.has(name))
                 airways.set(name, { name, legs: [] });

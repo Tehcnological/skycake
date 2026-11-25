@@ -1,13 +1,16 @@
 /** One toggle each. Order is the legend order. */
-export const KINDS = ["B", "C", "D", "E", "E700", "MODEC", "R", "P", "W", "MOA", "A"];
+export const KINDS = ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SFRA", "SATR", "R", "P", "W", "MOA", "A", "TFR", "NSA", "ADIZ", "PARK"];
+/** Drawn as a sheet (E700: 700 ft above the ground; EFLOOR: Class E from any other floor) or a line (Mode C veils, the ADIZ,
+ * parks, refuges, wilderness and marine sanctuaries), not a volume: nothing to tap. */
+export const tappable = (k) => !["E700", "EFLOOR", "MODEC", "ADIZ", "PARK"].includes(k);
 /** An area's charts in the chart button's order. The area chart only covers its own map, so it needs the low around it. */
 export const chartsOf = (c) => [...(c.tac ? ["tac"] : []), "sectional", ...(c.low && c.area ? ["area"] : []), ...(c.low ? ["low"] : [])];
 /** The chart asked for if the area has it, else its first. */
 export const pickChart = (c, wanted) => (wanted && chartsOf(c).includes(wanted) ? wanted : chartsOf(c)[0]);
 export const modeOf = (c) => (c === "area" || c === "low" ? "ifr" : "vfr");
 export const chartsIn = (c, m) => chartsOf(c).filter((x) => modeOf(x) === m);
-const SPECIAL_USE = ["R", "P", "W", "MOA", "A"];
-export const shownIn = (m, k) => m === "vfr" || SPECIAL_USE.includes(k);
+const IFR_TOO = ["SFRA", "R", "P", "W", "MOA", "A", "TFR", "ADIZ"];
+export const shownIn = (m, k) => m === "vfr" || IFR_TOO.includes(k);
 /** Class E reaches 17,999 MSL; the view stops walls here so the chart stays readable. */
 export const TOP = 18000;
 /** NASR class airspace record to a kind. Class E with a 1,200 ft floor is everywhere and not drawn, as on the chart. */
@@ -20,14 +23,36 @@ export function classKind(cls, localType, lowerVal, lowerCode) {
         return "E";
     if (localType === "CLASS_E5" && lowerCode === "SFC" && lowerVal === 700)
         return "E700";
+    // Any other floor (9,500 MSL in the mountains) is charted; 1,200 AGL is the default and 14,500 MSL everywhere.
+    if (["CLASS_E5", "CLASS_E6", "CLASS_E"].includes(localType ?? "") && !(lowerCode === "SFC" && lowerVal === 1200) && lowerVal > 0 && lowerVal < 14500)
+        return "EFLOOR";
     return null;
 }
 /** Special use airspace type code to a kind. */
 export function suaKind(typeCode) {
     return { R: "R", P: "P", W: "W", MOA: "MOA", A: "A" }[typeCode ?? ""] ?? null;
 }
-/** An altitude in feet MSL. SFC values are heights above the ground; FL values are hundreds of feet. */
+/** Boundary airspace record (TYPE_CODE, LOCAL_TYPE) to a kind: TRSAs, SFRAs, special air traffic rule areas, offshore
+ * Class E, permanent national defense TFRs, national security areas and the ADIZ. */
+export function boundaryKind(typeCode, localType) {
+    if (typeCode === "TRSA")
+        return "TRSA";
+    if (localType === "CLASS_E7")
+        return "EFLOOR";
+    if (localType === "NDA_TFR")
+        return "TFR";
+    if (typeCode === "NSA")
+        return "NSA";
+    if (typeCode === "ADIZ")
+        return "ADIZ";
+    if (typeCode !== "SATA")
+        return null;
+    return localType === "SFRA" ? "SFRA" : localType === "SPEC_AT_RULES" ? "SATR" : null;
+}
+/** An altitude in feet MSL. SFC values are heights above the ground; FL values are hundreds of feet; unlimited is Infinity. */
 export function feet(val, uom, code, ground) {
+    if (code === "UNLTD")
+        return Infinity;
     if (code === "SFC")
         return ground + val;
     return uom === "FL" ? val * 100 : val;

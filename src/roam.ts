@@ -32,11 +32,9 @@ export function add(r: Roam, p: ProcedureRef, hasDiagram: (airport: string) => b
   return { ...r, procedures, airport: p.airport, diagram: r.diagram && hasDiagram(p.airport), camera: undefined };
 }
 
-/** Removing the last one goes back to the first view. */
+/** Removing one leaves the camera where it is. */
 export function remove(r: Roam, p: ProcedureRef): Roam {
-  const procedures = r.procedures.filter((q) => !same(q, p));
-  const back = r.first.procedures?.length ? "fit" : (r.first.camera ?? "fit");
-  return { ...r, procedures, camera: procedures.length ? undefined : back };
+  return { ...r, procedures: r.procedures.filter((q) => !same(q, p)), camera: null };
 }
 
 /** Makes an airport current; its diagram stays on only if it has one. */

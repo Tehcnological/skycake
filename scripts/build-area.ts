@@ -29,7 +29,7 @@ import { fromArrayBuffer, fromUrl } from "geotiff";
 import proj4 from "proj4";
 import sharp from "sharp";
 import simplify from "simplify-js";
-import { TOP, areaIds, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Ring } from "../src/airspace.js";
+import { TOP, areaIds, boundaryKind, classKind, clipRing, feet, suaKind, type AirspaceFile, type Area, type Bounds, type Kind, type Ring } from "../src/airspace.js";
 import { parseAirways } from "../src/airway.js";
 import { boundsOf, fitLabels, frame, labelValue, northUp, readOutlines, type Glyph } from "../src/diagram.js";
 import { airportsOffMap, parseProcedures, type Airport } from "../src/procedure.js";
@@ -103,6 +103,7 @@ const now = date ? Date.parse(date) : Date.now();
 const edition = new Date(KNOWN_EDITION + Math.floor((now - KNOWN_EDITION) / (56 * DAY)) * 56 * DAY);
 const [y, m, d] = edition.toISOString().slice(0, 10).split("-");
 const ADDS = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services";
+const PADUS = "https://services.arcgis.com/v01gqwM5QqNysAAi/ArcGIS/rest/services/Federal_Management_Agencies/FeatureServer/0";
 const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
 // The area being built.
 let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, LAKE: number, OUT: string;
@@ -201,9 +202,9 @@ async function chart(sources: ChartSource[], area: Bounds, name: string) {
 
 // ---- Airspace from ADDS, as GeoJSON in lat/lon.
 type Feature = { properties: Record<string, string | number | null>; geometry: { type: "Polygon" | "MultiPolygon"; coordinates: number[][][] | number[][][][] } | null };
-async function query(layer: string): Promise<Feature[]> {
+async function query(layer: string, url = `${ADDS}/${layer}/FeatureServer/0`, where = "1=1"): Promise<Feature[]> {
   const q = new URLSearchParams({
-    where: "1=1",
+    where,
     geometry: `${BOUNDS.w},${BOUNDS.s},${BOUNDS.e},${BOUNDS.n}`,
     geometryType: "esriGeometryEnvelope",
     inSR: "4326",
@@ -213,11 +214,15 @@ async function query(layer: string): Promise<Feature[]> {
     geometryPrecision: "5",
     f: "geojson",
   });
-  const res = await fetch(`${ADDS}/${layer}/FeatureServer/0/query?${q}`);
-  if (!res.ok) throw new Error(`${res.status} for ${layer}`);
-  const body = (await res.json()) as { features: Feature[]; exceededTransferLimit?: boolean };
-  if (body.exceededTransferLimit) throw new Error(`${layer}: too many features for one page`);
-  return body.features;
+  // ArcGIS answers a busy moment with an error body and status 200; three tries, then stop.
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(`${url}/query?${q}`);
+    const body = (res.ok ? await res.json().catch(() => ({})) : {}) as { features?: Feature[]; exceededTransferLimit?: boolean; error?: unknown };
+    if (body.exceededTransferLimit) throw new Error(`${layer}: too many features for one page`);
+    if (body.features) return body.features;
+    if (attempt === 3) throw new Error(`${layer}: ${res.status} ${JSON.stringify(body.error ?? body).slice(0, 200)}`);
+    await new Promise((done) => setTimeout(done, 5000 * attempt));
+  }
 }
 
 const polygons = (g: NonNullable<Feature["geometry"]>) => (g.type === "Polygon" ? [g.coordinates as number[][][]] : (g.coordinates as number[][][][]));
@@ -231,10 +236,10 @@ function rings(g: Feature["geometry"]): Ring[] {
   );
 }
 
-// The highest ground under a set of rings ([lat, lon]), from the terrain grid: the base of a Class E surface area, whose
-// top is drawn where the 700 ft floor around it starts.
-function highestGround(ft: Int16Array, rs: Ring[]): number {
-  let top = -Infinity;
+// The lowest and highest ground under a set of rings ([lat, lon]), from the terrain grid. The highest is the base of a
+// Class E surface area, whose top is drawn where the 700 ft floor around it starts.
+function groundRange(ft: Int16Array, rs: Ring[]): [low: number, high: number] {
+  let top = -Infinity, low = Infinity;
   for (const ring of rs) {
     const lats = ring.map((p) => p[0]), lons = ring.map((p) => p[1]);
     const j0 = Math.max(0, Math.floor(((BOUNDS.n - Math.max(...lats)) / (BOUNDS.n - BOUNDS.s)) * (DEM.ny - 1)));
@@ -249,11 +254,11 @@ function highestGround(ft: Int16Array, rs: Ring[]): number {
           const [ya, xa] = ring[k], [yb, xb] = ring[m];
           if (ya > lat !== yb > lat && lon < ((xb - xa) * (lat - ya)) / (yb - ya) + xa) inside = !inside;
         }
-        if (inside) top = Math.max(top, ft[j * DEM.nx + i]);
+        if (inside) [low, top] = [Math.min(low, ft[j * DEM.nx + i]), Math.max(top, ft[j * DEM.nx + i])];
       }
     }
   }
-  return Number.isFinite(top) ? top : GROUND;
+  return Number.isFinite(top) ? [low, top] : [GROUND, GROUND];
 }
 
 async function airspace(ground: Int16Array): Promise<Area[]> {
@@ -269,19 +274,50 @@ async function airspace(ground: Int16Array): Promise<Area[]> {
     const rs = rings(f.geometry);
     // TNI: up to but not including, charted with a minus (-30, under a Class B floor at 3,000): the ceiling is 2,999.
     const tni = p.UPPER_DESC === "TNI" && ["B", "C", "D"].includes(kind) ? 1 : 0;
-    const ceiling = kind === "E" ? highestGround(ground, rs) + 700 : kind === "E700" ? floor : Math.min(TOP, feet(upper, p.UPPER_UOM as string, p.UPPER_CODE as string, GROUND)) - tni;
+    const ceiling = kind === "E" ? groundRange(ground, rs)[1] + 700 : kind === "E700" ? floor : kind === "EFLOOR" ? TOP : Math.min(TOP, feet(upper, p.UPPER_UOM as string, p.UPPER_CODE as string, GROUND)) - tni;
     areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rs });
   }
-  for (const f of await query("Special_Use_Airspace")) {
-    const p = f.properties;
-    const kind = suaKind(p.TYPE_CODE as string);
-    if (!kind) continue;
-    const floor = feet(Number(p.LOWER_VAL), p.LOWER_UOM as string, p.LOWER_CODE as string, GROUND);
-    const ceiling = Math.min(TOP, feet(Number(p.UPPER_VAL), p.UPPER_UOM as string, p.UPPER_CODE as string, GROUND));
-    // Some records carry a placeholder SFC-to-SFC shape; nothing to draw.
-    if (ceiling <= floor) continue;
-    areas.push({ kind, name: String(p.NAME), floor, ceiling, rings: rings(f.geometry) });
+  // A height above the ground (500 AGL) over terrain that varies, as one height: a floor over the lowest ground under the
+  // area and a ceiling over the highest, so the drawn volume holds the real one and neither sinks into hills.
+  // No value (-9998: the ADIZ, offshore Class E's ceiling) is the surface for a floor and the top for a ceiling.
+  const msl = (val: number, uom: string, code: string, rs: Ring[], end: 0 | 1) =>
+    val === -9998 && code !== "UNLTD" ? [GROUND, TOP][end] : code === "SFC" && val > 0 ? groundRange(ground, rs)[end] + val : feet(val, uom, code, GROUND);
+  const special = async (layer: string, kindOf: (p: Feature["properties"]) => Kind | null, named: (p: Feature["properties"]) => string, features?: Feature[]) => {
+    for (const f of features ?? (await query(layer))) {
+      const p = f.properties;
+      const kind = kindOf(p);
+      if (!kind) continue;
+      const rs = rings(f.geometry);
+      const floor = msl(Number(p.LOWER_VAL), p.LOWER_UOM as string, p.LOWER_CODE as string, rs, 0);
+      const tni = p.UPPER_DESC === "TNI" ? 1 : 0;
+      const ceiling = Math.min(TOP, msl(Number(p.UPPER_VAL), p.UPPER_UOM as string, p.UPPER_CODE as string, rs, 1)) - tni;
+      // Some records carry a placeholder SFC-to-SFC shape; nothing to draw.
+      if (ceiling <= floor) continue;
+      areas.push({ kind, name: named(p), floor, ceiling, rings: rs });
+    }
+  };
+  await special("Special_Use_Airspace", (p) => suaKind(p.TYPE_CODE as string), (p) => String(p.NAME));
+  // TRSAs, SFRAs (DC's, with its flight restricted zone) and special air traffic rule areas (Luke's sectors, DCA's).
+  // Offshore Class E, permanent national defense TFRs, national security areas and the ADIZ are there too.
+  await special("Boundary_Airspace", (p) => boundaryKind(p.TYPE_CODE as string, p.LOCAL_TYPE as string), (p) => (p.TYPE_CODE === "SATA" && p.SECTOR ? `${p.NAME} (${p.SECTOR})` : String(p.NAME)));
+  // National parks, wildlife refuges, wilderness and NOAA marine sanctuaries, where the chart asks for 2,000 ft above the
+  // ground: from USGS's Protected Areas Database (PAD-US), not FAA data.
+  // Waterfowl production areas come under NWR here but are not charted.
+  const parks = await query("PAD-US", PADUS, "(Des_Tp IN ('NP','NWR','WA') OR (Des_Tp = 'MPA' AND Mang_Name = 'NOAA')) AND Unit_Nm NOT LIKE '%Waterfowl Production%'");
+  // One area per name (a refuge comes in many parcels, a park as land and as designation), without specks under ~0.3 NM.
+  const byName = new Map<string, Feature>();
+  for (const f of parks) {
+    if (!f.geometry) continue;
+    const big = polygons(f.geometry).filter((poly) => {
+      const lats = poly[0].map((p) => p[1]), lons = poly[0].map((p) => p[0]);
+      return Math.max(...lats) - Math.min(...lats) > 0.005 || Math.max(...lons) - Math.min(...lons) > 0.005;
+    });
+    const name = String(f.properties.Unit_Nm);
+    const had = byName.get(name);
+    if (had) (had.geometry!.coordinates as number[][][][]).push(...big);
+    else byName.set(name, { properties: { ...f.properties, LOWER_VAL: 0, LOWER_CODE: "SFC", UPPER_VAL: 2000, UPPER_UOM: "FT", UPPER_CODE: "SFC" }, geometry: { type: "MultiPolygon", coordinates: big } });
   }
+  await special("PAD-US", () => "PARK", (p) => String(p.Unit_Nm), [...byName.values()]);
   // A shelf two airports share can come twice, once under each name (Tucson International and Davis-Monthan's
   // Class C); the first one is kept.
   const seen = new Set<string>();
