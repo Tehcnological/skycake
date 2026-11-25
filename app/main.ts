@@ -30,7 +30,7 @@ const TEXT = {
   a11y: "accessibility mode",
   a11yNote: "larger text and controls",
   a11yHelp: "accessibility",
-  install: "install",
+  install: "install viewer",
   installIos: "tap Share, then Add to Home Screen",
   installMac: "choose File, then Add to Dock",
 };
