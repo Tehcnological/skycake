@@ -51,6 +51,8 @@ export const ICONS = {
     map: ["M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2Z", "M9 4v14", "M15 6v14"],
     a11y: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z", "M12 8.5a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z", "M7.5 10.5c3 1 6 1 9 0", "M12 11.2v3.3", "m9.5 18 2.5-3.5 2.5 3.5"],
 };
+// Counts mounts, for ids unique to each viewer on a page.
+let mounts = 0;
 /** Resolves once the first scene is showing. */
 export function freeRoam(c) {
     const { fig, view: v, data, labels: L } = c;
@@ -70,7 +72,7 @@ export function freeRoam(c) {
     const present = KINDS.filter((k) => data.areas.some((a) => a.kind === k));
     // Airspace: a button and its list (desktop top left; phone: a sheet from the Airspace tab).
     // Ids for aria-controls, unique to this mount: two viewers can share a page.
-    const uid = Math.random().toString(36).slice(2);
+    const uid = String(++mounts);
     const rows = new Map(present.map((k) => {
         const box = h("input", { type: "checkbox" });
         const row = h("label", { class: `sc-row s-${k}` }, h("i", { "aria-hidden": "true" }), h("span", {}, L.kinds[k]), box);
@@ -208,7 +210,7 @@ export function freeRoam(c) {
     // The map in words, read by a screen reader on reaching the view; written now (browse mode reaches it without focus)
     // and again as the view takes focus, so it is current.
     const viewEl = fig.querySelector(".view");
-    const summary = h("p", { class: "sc-hidden", id: `sc-summary-${Math.random().toString(36).slice(2)}` });
+    const summary = h("p", { class: "sc-hidden", id: `sc-summary-${uid}` });
     viewEl.after(summary);
     viewEl.setAttribute("aria-describedby", summary.id);
     const writeSummary = () => {
