@@ -16,7 +16,7 @@ import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeome
 import { groundFt } from "./airclass.js";
 import { clipRing, deepest, feetText, hundreds, inRing, modeOf, shownIn, tappable as canTap, type AirspaceFile, type Area, type Bounds, type ChartName, type Kind, type Mode } from "./airspace.js";
 import type { Fix, Point, Procedure, Segment } from "./procedure.js";
-import { dragZoom, isSecondTap, isTap, TAP_SLOP, twoFingers, type Pt } from "./gesture.js";
+import { isTap, twoFingers, type Pt } from "./gesture.js";
 import { fixTags } from "./roam.js";
 import type { Camera, ProcedureRef, Resolved, Target } from "./scene.js";
 import { along, flightLine, flightShares } from "./fly.js";
@@ -914,7 +914,7 @@ export async function build(
     return [onGround(...t.point)];
   };
 
-  // Hover or tap shows the area under the pointer: a raised one first, else the flat one printed on the chart there.
+  // Hover or tap picks raised airspace before flat airspace, with SFRAs yielding to smaller areas behind them.
   const ray = new THREE.Raycaster();
   // The ground under the ray. A march down it to the terrain; three's own raycast would test every triangle.
   const groundHit = (): THREE.Vector3 | null => {
@@ -953,17 +953,38 @@ export async function build(
     const r = renderer.domElement.getBoundingClientRect();
     ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
     const up = lives.filter((l) => l.goal === 1 && inMode(l));
-    const hit = ray.intersectObjects(up.flatMap((l) => l.picks))[0];
-    if (hit) return up.find((l) => l.picks.includes(hit.object as THREE.Mesh)) ?? null;
+    let sfra: Live | undefined;
+    for (const hit of ray.intersectObjects(up.flatMap((l) => l.picks))) {
+      const l = up.find((l) => l.picks.includes(hit.object as THREE.Mesh));
+      if (!l || (sfra && l.size >= sfra.size)) continue;
+      if (l.area.kind !== "SFRA") return l;
+      sfra = l;
+    }
     const p = groundHit();
-    return (p && tappable.find((l) => l.goal === 0 && inMode(l) && l.rings.some((ring) => inRing([p.x, p.z], ring)))) ?? null;
+    const flat = p && tappable.find((l) => l.goal === 0 && (!sfra || l.size < sfra.size) && inMode(l) && l.rings.some((ring) => inRing([p.x, p.z], ring)));
+    return flat ?? sfra ?? null;
   };
   const tell = (l: Live | null, e: MouseEvent) => {
     const r = renderer.domElement.getBoundingClientRect();
     label(l && l.area, e.clientX - r.left, e.clientY - r.top);
   };
   const el3d = renderer.domElement;
-  el3d.addEventListener("pointermove", (e) => e.pointerType === "mouse" && !e.buttons && tell(pick(e), e));
+  const usePointer = (e: PointerEvent) => {
+    const pen = e.pointerType === "pen";
+    if (pen === host.hasAttribute("data-pen")) return;
+    host.toggleAttribute("data-pen", pen);
+    controls.enableZoom = !pen;
+    label(null, 0, 0);
+  };
+  el3d.addEventListener("pointerover", usePointer);
+  el3d.addEventListener("pointerdown", usePointer, { capture: true });
+  el3d.addEventListener("wheel", (e) => {
+    if (host.hasAttribute("data-pen")) e.preventDefault();
+  }, { passive: false });
+  el3d.addEventListener("pointermove", (e) => {
+    usePointer(e);
+    if (e.pointerType === "mouse" && !e.buttons) tell(pick(e), e);
+  });
   el3d.addEventListener("pointerleave", () => label(null, 0, 0));
   // A tap (not a drag): a flat area rises; a raised one is picked, then lowers on the next tap.
   let down = [0, 0], downAt = 0, most = 0;
@@ -980,53 +1001,6 @@ export async function build(
     const r = el3d.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   };
-  // A pen can double-tap and drag to zoom without a wheel. Keep its second press out of OrbitControls.
-  const zoomButton = (e: PointerEvent) =>
-    e.pointerType === "pen" && (e.button === 0 || e.button === 2);
-  let press: { id: number; button: number; at: Pt } | null = null;
-  let firstUp: { id: number; button: number; at: Pt; ms: number } | null = null;
-  let zoomDrag: { id: number; y: number; off: number; p: THREE.Vector3 } | null = null;
-  const zoomTo = (p: THREE.Vector3, off: number) => {
-    takeOver();
-    const want = THREE.MathUtils.clamp(off, controls.minDistance, controls.maxDistance);
-    const now = camera.position.distanceTo(controls.target);
-    for (const q of [camera.position, controls.target]) q.sub(p).multiplyScalar(want / now).add(p);
-    touchMoved();
-  };
-  el3d.addEventListener("pointerdown", (e) => {
-    if (zoomDrag) return;
-    press = zoomButton(e) ? { id: e.pointerId, button: e.button, at: at(e) } : null;
-    const pair = press && firstUp?.id === press.id && firstUp.button === press.button &&
-      isSecondTap(firstUp, press.at, e.timeStamp);
-    firstUp = null;
-    if (!pair) return;
-    e.stopImmediatePropagation();
-    zoomDrag = { id: e.pointerId, y: e.clientY, off: camera.position.distanceTo(controls.target), p: groundUnder(at(e)) ?? controls.target.clone() };
-    el3d.setPointerCapture(e.pointerId);
-  }, { capture: true });
-  el3d.addEventListener("pointermove", (e) => {
-    if (zoomDrag?.id !== e.pointerId || Math.abs(e.clientY - zoomDrag.y) < TAP_SLOP) return;
-    zoomTo(zoomDrag.p, zoomDrag.off / dragZoom(e.clientY - zoomDrag.y));
-  });
-  const pointerDone = (e: PointerEvent) => {
-    if (press?.id === e.pointerId) {
-      const end = at(e);
-      if (!zoomDrag && e.type === "pointerup" && e.button === press.button &&
-          Math.hypot(end[0] - press.at[0], end[1] - press.at[1]) <= TAP_SLOP) {
-        firstUp = { id: press.id, button: press.button, at: end, ms: e.timeStamp };
-      }
-      press = null;
-    }
-    if (zoomDrag?.id !== e.pointerId) return;
-    zoomDrag = null;
-    most = 0; // the second press is not a tap
-  };
-  el3d.addEventListener("lostpointercapture", (e) => {
-    if (zoomDrag?.id === e.pointerId) zoomDrag = null;
-    if (press?.id === e.pointerId) press = null;
-  });
-  el3d.addEventListener("pointerup", pointerDone, { capture: true });
-  el3d.addEventListener("pointercancel", pointerDone, { capture: true });
   el3d.addEventListener("pointerdown", (e) => {
     downType = e.pointerType;
     if (!fingers.size) {
