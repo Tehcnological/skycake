@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { KINDS, areaIds, classKind, clipRing, deepest, feet, hundreds, inRing, suaKind, type AirspaceFile, type Ring } from "./airspace.js";
 
 test("FAA records map to chart kinds; default 1,200 ft Class E and Class A are left out", () => {
@@ -102,3 +102,16 @@ test("built Phoenix data: every area has a unique id", () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.includes("d-chandler-municipal-airport-class-d"));
 });
+
+for (const name of readdirSync(new URL("../data/", import.meta.url))) {
+  test(`built ${name} data: its charts exist, the TAC and area chart inside the area, and unique area ids`, () => {
+    const dir = new URL(`../data/${name}/`, import.meta.url);
+    const f: AirspaceFile = JSON.parse(readFileSync(new URL("area.json", dir), "utf8"));
+    const { sectional, tac, low, area } = f.charts;
+    for (const url of [sectional, tac?.url, low, area?.url]) if (url) assert.ok(existsSync(new URL(url, dir)), `${name}: ${url}`);
+    for (const b of [tac?.bounds, area?.bounds]) if (b) assert.ok(b.s >= f.bounds.s && b.n <= f.bounds.n && b.w >= f.bounds.w && b.e <= f.bounds.e && b.s < b.n && b.w < b.e, `${name}: ${JSON.stringify(b)}`);
+    assert.ok(f.areas.some((a) => a.kind === "B" || a.kind === "C" || a.kind === "D"), `${name}: no towered airspace`);
+    const ids = f.areas.map((a) => a.id);
+    assert.equal(new Set(ids).size, ids.length);
+  });
+}

@@ -13,7 +13,7 @@ const TEXT = {
   title: "skycake viewer",
   choose: "choose an area",
   open: (name: string) => `open ${name}`,
-  names: { phoenix: "phoenix", miami: "miami" } as Record<string, string>,
+  names: { atlanta: "atlanta", boston: "boston", chicago: "chicago", "dallas-fort-worth": "dallas-fort worth", denver: "denver", "grand-forks": "grand forks", houston: "houston", "las-vegas": "las vegas", "los-angeles": "los angeles", miami: "miami", "new-york": "new york", phoenix: "phoenix", "san-diego": "san diego", "san-francisco": "san francisco", seattle: "seattle", washington: "washington" } as Record<string, string>,
   through: (d: string) => `current through ${d}`,
   expired: (d: string) => `out of date since ${d}`,
   download: (mb: number) => `save offline · ${mb} MB`,

@@ -10,7 +10,7 @@ labels: bug
 
 **How to reproduce**
 
-1. Area (Phoenix or Miami), and the scene or app URL if you have one:
+1. Area, and the scene or app URL if you have one:
 2. What you did (buttons, search, gestures):
 3.
 

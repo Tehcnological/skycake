@@ -38,19 +38,60 @@ import { airportBlock, chartGroups, chartRecords, noChart, pageFile, pageTurn, p
 const ROOT = join(import.meta.dirname, "..");
 const DAY = 86_400_000;
 const KNOWN_EDITION = Date.UTC(2026, 9, 29); // VFR charts repeat every 56 days.
-// Each area: bounds holding every approach at its airports, clear of the chart's fade (viewer.ts); the TAC's map, inside
-// its neatline so no collar shows; the field elevation where heights written above the ground start; terrain cells
-// about 0.25 NM square; the FAA's name for its charts; its IFR area chart, with the map inside its neatline as for the TAC;
-// its IFR low sheet, with the map panel in pixels (the sheets are tilted and also hold tables and a second side).
-type AreaSetup = { bounds: Bounds; tac: Bounds; ground: number; dem: { nx: number; ny: number }; charts: string; sea?: boolean; ifrArea: { zip: string; tif: string; bounds: Bounds }; low: { zip: string; tif: string; panel: Panel } };
+// Each area: bounds holding every approach at its airports, clear of the chart's fade (viewer.ts); the field elevation where
+// heights written above the ground start; terrain cells about 0.25 NM square; its sectionals; its TAC (FAA file name) with
+// the map inside the neatline so no collar shows, where there is one; its IFR area chart, the map inside its neatline as
+// for the TAC, where there is one; its IFR low sheets, each with its map panels in pixels (the sheets are tilted and also
+// hold tables, insets and a second side). Each point of a chart image comes from the first source that holds it: a
+// sectional past its box is a neighbour's (a sectional's picture runs on past its edge, so the seam is the edge itself),
+// a point on no low sheet's map is white. TAC and area chart bounds are cut to the area's. lake: a lake's surface, feet;
+// 3DEP carries the Great Lakes' beds, drawn at the surface instead.
+// The panels and boxes were read off the charts of the 2026-10-29 edition; the FAA keeps sheet layouts between editions.
+type Source = [name: string, box?: Partial<Bounds>];
+type Sheet = [name: string, ...panels: Panel[]];
+type AreaSetup = { bounds: Bounds; ground: number; dem: { nx: number; ny: number }; sea?: boolean; lake?: number; sectional: Source[]; tac?: [name: string, bounds: Bounds]; ifrArea?: { zip: string; tif: string; bounds: Bounds }; low: Sheet[] };
 type Panel = [c0: number, r0: number, c1: number, r1: number];
+// Low sheet map panels, between the sheet's neatlines. L-34's top right corner is its Boston inset, not drawn where Boston is.
+const L: Record<string, Sheet> = {
+  L01: ["L01", [2205, 265, 21791, 7733]], L02: ["L02", [2205, 267, 19795, 7735]], L03: ["L03", [2205, 265, 21795, 7735]], L04: ["L04", [4204, 265, 21795, 7735]],
+  L05: ["L05", [6205, 265, 21795, 7735]], L07: ["L07", [2204, 265, 21794, 7735]], L08: ["L08", [2205, 265, 19795, 7735]], L09: ["L09", [2204, 265, 21793, 7735]],
+  L10: ["L10", [4205, 265, 21795, 7735]], L12: ["L12", [4206, 265, 21795, 7735]], L13: ["L13", [2204, 265, 21794, 7735]], L14: ["L14", [4205, 265, 21794, 7735]],
+  L17: ["L17", [4205, 265, 21795, 7735]], L18: ["L18", [4205, 265, 23795, 7735]], L19: ["L19", [2205, 265, 21795, 7735]], L20: ["L20", [2205, 265, 19795, 7735]],
+  L23: ["L23", [5185, 265, 21795, 7735]], L25: ["L25", [2205, 265, 19795, 7735]], L26: ["L26", [204, 262, 19794, 7735]], L27: ["L27", [2205, 264, 21795, 7734]],
+  L28: ["L28", [2205, 265, 19795, 7735]], L29: ["L29", [2205, 264, 21795, 7734]], L32: ["L32", [4205, 265, 23795, 7735]], L33: ["L33", [2206, 265, 17794, 7731]],
+  L34: ["L34", [205, 260, 21950, 7731], [21950, 4750, 23797, 7731]], L36: ["L36", [205, 265, 21794, 7731]],
+};
 const AREAS: Record<string, AreaSetup> = {
   // Phoenix to Tucson. The TAC's neatline is 34°05' N, 32°47' N; its east and west edges lean slightly.
-  phoenix: { bounds: { s: 31.8, w: -113, n: 34.25, e: -110.27 }, tac: { s: 32.795, w: -112.845, n: 34.07, e: -111.195 }, ground: 1135, dem: { nx: 548, ny: 587 }, charts: "Phoenix", ifrArea: { zip: "enr_a02", tif: "ENR_A02_PHX.tif", bounds: { s: 32.794, w: -112.834, n: 34.093, e: -111.259 } }, low: { zip: "enr_l05", tif: "ENR_L05.tif", panel: [6205, 265, 21795, 7735] } },
+  phoenix: { bounds: { s: 31.8, w: -113, n: 34.25, e: -110.27 }, ground: 1135, dem: { nx: 548, ny: 587 }, sectional: [["Phoenix"]], tac: ["Phoenix", { s: 32.795, w: -112.845, n: 34.07, e: -111.195 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_PHX.tif", bounds: { s: 32.794, w: -112.834, n: 34.093, e: -111.259 } }, low: [L.L05] },
   // Key West to Palm Beach; Lantana's RNAV (GPS)-B sets the north edge and Opa-locka's transitions the east. The TAC stops
   // at 25.49 N, above its Florida Keys inset, which is not drawn where the Keys are; the sectional shows them. L-23 ends just
   // south of Key West, short of the area's south edge, and the sheet that holds that water (L-21) stops at Key West: white there.
-  miami: { bounds: { s: 24.4, w: -82.03, n: 27.32, e: -79.55 }, tac: { s: 25.49, w: -81.16, n: 26.76, e: -79.55 }, ground: 9, dem: { nx: 537, ny: 702 }, charts: "Miami", sea: true, ifrArea: { zip: "enr_a01", tif: "ENR_A01_MIA.tif", bounds: { s: 25.408, w: -80.828, n: 26.308, e: -79.816 } }, low: { zip: "enr_l23", tif: "ENR_L23.tif", panel: [5185, 265, 21795, 7735] } },
+  miami: { bounds: { s: 24.4, w: -82.03, n: 27.32, e: -79.55 }, ground: 9, dem: { nx: 537, ny: 702 }, sea: true, sectional: [["Miami"]], tac: ["Miami", { s: 25.49, w: -81.16, n: 26.76, e: -79.55 }], ifrArea: { zip: "enr_a01", tif: "ENR_A01_MIA.tif", bounds: { s: 25.408, w: -80.828, n: 26.308, e: -79.816 } }, low: [L.L23] },
+  // Washington, Baltimore and the Flight Restricted Zone, Dulles to the Eastern Shore.
+  washington: { bounds: { s: 37.9, w: -78.6, n: 40, e: -75.9 }, ground: 14, dem: { nx: 504, ny: 504 }, sea: true, sectional: [["Washington", { n: 40 }], ["New_York"]], tac: ["Baltimore-Washington", { s: 38.2, w: -78.303, n: 39.786, e: -75.795 }], ifrArea: { zip: "enr_a01", tif: "ENR_A01_DCA.tif", bounds: { s: 38.221, w: -78.355, n: 40.395, e: -74.729 } }, low: [L.L34, L.L29, L.L36, L.L26] },
+  // New York: Kennedy, LaGuardia, Newark, Teterboro and White Plains, Trenton to Long Island. No IFR area chart; the sea past the lows is white.
+  "new-york": { bounds: { s: 39.7, w: -75.3, n: 41.9, e: -72.3 }, ground: 13, dem: { nx: 545, ny: 528 }, sea: true, sectional: [["New_York", { s: 40 }], ["Washington"]], tac: ["New_York", { s: 40.231, w: -74.879, n: 41.249, e: -72.673 }], low: [L.L34, L.L33] },
+  // Boston, Cape Cod and the islands.
+  boston: { bounds: { s: 41.2, w: -72.6, n: 43.4, e: -69.9 }, ground: 19, dem: { nx: 479, ny: 528 }, sea: true, sectional: [["New_York"]], tac: ["Boston", { s: 41.267, w: -71.847, n: 42.855, e: -69.606 }], low: [L.L33, L.L32, L.L34] },
+  "los-angeles": { bounds: { s: 33.2, w: -119.4, n: 35.1, e: -116.6 }, ground: 128, dem: { nx: 556, ny: 456 }, sea: true, sectional: [["Los_Angeles"]], tac: ["Los_Angeles", { s: 33.427, w: -119.124, n: 34.506, e: -116.82 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_LAX.tif", bounds: { s: 33.809, w: -118.992, n: 34.324, e: -117.205 } }, low: [L.L04, L.L07, L.L03, L.L05] },
+  // San Diego to Oceanside and the border; Mexico is off the lows, white there.
+  "san-diego": { bounds: { s: 32.3, w: -118, n: 33.6, e: -116.2 }, ground: 17, dem: { nx: 363, ny: 312 }, sea: true, sectional: [["Los_Angeles"]], tac: ["San_Diego", { s: 32.514, w: -117.959, n: 33.6, e: -116.31 }], low: [L.L04, L.L05] },
+  // Seattle-Tacoma, Puget Sound to Mount Rainier.
+  seattle: { bounds: { s: 46.6, w: -123.6, n: 48.6, e: -121 }, ground: 432, dem: { nx: 421, ny: 480 }, sea: true, sectional: [["Seattle"]], tac: ["Seattle", { s: 46.761, w: -123.172, n: 48.051, e: -121.559 }], low: [L.L01, L.L13] },
+  // Grand Forks, its Air Force Base and Fargo. No TAC or IFR area chart.
+  "grand-forks": { bounds: { s: 46.3, w: -98.6, n: 48.9, e: -95.9 }, ground: 845, dem: { nx: 437, ny: 624 }, sectional: [["Twin_Cities"]], low: [L.L14] },
+  // Lake Michigan stands at 577 ft.
+  chicago: { bounds: { s: 41, w: -89.3, n: 43, e: -86.9 }, ground: 680, dem: { nx: 428, ny: 480 }, lake: 577, sectional: [["Chicago"]], tac: ["Chicago", { s: 41.469, w: -88.755, n: 42.478, e: -87.273 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_ORD.tif", bounds: { s: 41.372, w: -88.585, n: 43.275, e: -87.335 } }, low: [L.L28, L.L27] },
+  atlanta: { bounds: { s: 32.6, w: -85.6, n: 34.7, e: -83.2 }, ground: 1026, dem: { nx: 479, ny: 504 }, sectional: [["Atlanta"]], tac: ["Atlanta", { s: 32.992, w: -85.278, n: 34.298, e: -83.618 }], ifrArea: { zip: "enr_a01", tif: "ENR_A01_ATL.tif", bounds: { s: 33.18, w: -84.956, n: 34.095, e: -83.839 } }, low: [L.L18, L.L25] },
+  // The sectional's south edge is 32 N.
+  "dallas-fort-worth": { bounds: { s: 32.01, w: -98.3, n: 33.9, e: -95.8 }, ground: 606, dem: { nx: 503, ny: 454 }, sectional: [["Dallas-Ft_Worth"]], tac: ["Dallas-Ft_Worth", { s: 32.067, w: -98.19, n: 33.656, e: -95.911 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_DFW.tif", bounds: { s: 31.505, w: -98.092, n: 33.712, e: -96.136 } }, low: [L.L17, L.L19] },
+  // Colorado Springs to Fort Collins: three sectionals meet at 40 N, 104 W.
+  denver: { bounds: { s: 38.3, w: -106, n: 40.9, e: -103.6 }, ground: 5434, dem: { nx: 444, ny: 624 }, sectional: [["Denver", { n: 40, e: -104 }], ["Cheyenne", { s: 40 }], ["Wichita"]], tac: ["Denver", { s: 39.259, w: -105.562, n: 40.556, e: -103.755 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_DEN.tif", bounds: { s: 39.301, w: -105.371, n: 40.373, e: -103.956 } }, low: [L.L10, L.L09, L.L12] },
+  houston: { bounds: { s: 28.8, w: -96.4, n: 30.9, e: -94 }, ground: 96, dem: { nx: 500, ny: 504 }, sea: true, sectional: [["Houston"]], tac: ["Houston", { s: 29.104, w: -96.123, n: 30.496, e: -94.539 }], low: [L.L19, L.L20] },
+  "san-francisco": { bounds: { s: 36.7, w: -123.4, n: 38.9, e: -120.9 }, ground: 13, dem: { nx: 474, ny: 528 }, sea: true, sectional: [["San_Francisco"]], tac: ["San_Francisco", { s: 37.021, w: -123.138, n: 38.178, e: -121.396 }], ifrArea: { zip: "enr_a02", tif: "ENR_A02_SFO.tif", bounds: { s: 37.349, w: -122.886, n: 38.27, e: -121.705 } }, low: [L.L03, L.L02] },
+  // Las Vegas sits on its sectional's south edge, about 35.66 N here: below it the Los Angeles sectional west of 115 W and Phoenix's east.
+  "las-vegas": { bounds: { s: 35.2, w: -116.4, n: 37.2, e: -114 }, ground: 2183, dem: { nx: 465, ny: 480 }, sectional: [["Las_Vegas", { s: 35.66 }], ["Los_Angeles", { e: -115 }], ["Phoenix"]], tac: ["Las_Vegas", { s: 35.713, w: -115.603, n: 36.718, e: -113.891 }], low: [L.L07, L.L09, L.L08] },
 };
 // The longer side of each chart image; 4096 is the largest texture every phone takes.
 const SIDE = 4096;
@@ -64,7 +105,7 @@ const [y, m, d] = edition.toISOString().slice(0, 10).split("-");
 const ADDS = "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services";
 const cache = join(ROOT, ".cache", "charts", `${y}-${m}-${d}`);
 // The area being built.
-let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, OUT: string;
+let BOUNDS: Bounds, GROUND: number, DEM: { nx: number; ny: number }, SEA: boolean, LAKE: number, OUT: string;
 
 async function download(url: string, dir = cache): Promise<Uint8Array> {
   const file = join(dir, url.split("/").pop()!);
@@ -78,66 +119,73 @@ async function download(url: string, dir = cache): Promise<Uint8Array> {
   return new Uint8Array(await readFile(file));
 }
 
-// ---- Charts: a Lambert conformal conic image (palette or RGB, north up or tilted) to an equirectangular RGB texture over an
-// area. Anything outside the panel, if given, is left white.
-async function chart(url: string, tifName: string, area: Bounds, name: string, panel?: Panel) {
-  const zip = unzipSync(await download(url), { filter: (f) => f.name.endsWith(tifName) });
-  const tif = Object.values(zip)[0];
-  if (!tif) throw new Error(`no ${tifName} in ${url}`);
-  const img = await (await fromArrayBuffer(tif.buffer.slice(tif.byteOffset, tif.byteOffset + tif.byteLength) as ArrayBuffer)).getImage();
-  const k = img.getGeoKeys();
-  if (k.ProjCoordTransGeoKey !== 8) throw new Error("expected a Lambert conformal conic chart");
-  const lcc = `+proj=lcc +lat_1=${k.ProjStdParallel1GeoKey} +lat_2=${k.ProjStdParallel2GeoKey} +lat_0=${k.ProjFalseOriginLatGeoKey} +lon_0=${k.ProjFalseOriginLongGeoKey} +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs`;
-  const toChart = proj4("EPSG:4326", lcc);
-  const [ox, oy] = img.getOrigin();
-  const [rx, ry] = img.getResolution();
-  // World from pixel: x = t0 c + t1 r + t3, y = t4 c + t5 r + t7. The VFR charts are north up; the IFR sheets carry a tilt.
-  const tf: number[] = img.fileDirectory.ModelTransformation ?? [rx, 0, 0, ox, 0, ry, 0, oy];
-  const det = tf[0] * tf[5] - tf[1] * tf[4];
-  const toPixel = ([x, y]: number[]) => [(tf[5] * (x - tf[3]) - tf[1] * (y - tf[7])) / det, (tf[0] * (y - tf[7]) - tf[4] * (x - tf[3])) / det];
-  // Only the window the area needs: a sectional is 18,000 pixels across.
-  const edge: [number, number][] = [];
-  for (let t = 0; t <= 1; t += 0.125) edge.push([area.w + t * (area.e - area.w), area.s], [area.w + t * (area.e - area.w), area.n], [area.w, area.s + t * (area.n - area.s)], [area.e, area.s + t * (area.n - area.s)]);
-  const at = edge.map((p) => toChart.forward(p)).map(toPixel);
-  const c0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[0]))) - 2), r0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[1]))) - 2);
-  const c1 = Math.min(img.getWidth(), Math.ceil(Math.max(...at.map((p) => p[0]))) + 2), r1 = Math.min(img.getHeight(), Math.ceil(Math.max(...at.map((p) => p[1]))) + 2);
-  const sw = c1 - c0, sh = r1 - r0;
-  const src = (await img.readRasters({ interleave: true, window: [c0, r0, c1, r1] })) as Uint8Array;
-  const cmap = img.fileDirectory.ColorMap as Uint16Array | undefined; // R, G, B planes of 256, 16-bit; the IFR sheets are RGB
-  const n = cmap ? cmap.length / 3 : 0;
-
+// ---- Charts: Lambert conformal conic images (palette or RGB, north up or tilted) to one equirectangular RGB texture over an
+// area. Each point comes from the first source whose box (lat/lon) and panels (pixels), where given, hold it; white if none.
+type ChartSource = { url: string; tif: string; box?: Partial<Bounds>; panels?: Panel[] };
+async function chart(sources: ChartSource[], area: Bounds, name: string) {
   // Pixels square on the ground, the longer side SIDE.
   const aspect = (area.n - area.s) / ((area.e - area.w) * Math.cos((((area.s + area.n) / 2) * Math.PI) / 180));
   const WIDTH = aspect > 1 ? Math.round(SIDE / aspect) : SIDE;
   const height = aspect > 1 ? SIDE : Math.round(SIDE * aspect);
   const out = new Uint8Array(WIDTH * height * 3);
-  // Source pixel for an output position; the projection is smooth, so a 2x2 supersample is plenty.
-  const pixel = (u: number, v: number) => {
-    const [c, r] = toPixel(toChart.forward([area.w + (u / WIDTH) * (area.e - area.w), area.n - (v / height) * (area.n - area.s)]));
-    return [c - c0, r - r0];
+  // Per source: its color at a point, or nothing where it doesn't hold the point.
+  const charts: ((lon: number, lat: number) => number[] | undefined)[] = [];
+  for (const { url, tif: tifName, box = {}, panels } of sources) {
+    // The part of the area this source can give.
+    const part = { s: Math.max(area.s, box.s ?? -90), w: Math.max(area.w, box.w ?? -180), n: Math.min(area.n, box.n ?? 90), e: Math.min(area.e, box.e ?? 180) };
+    if (part.s >= part.n || part.w >= part.e) continue;
+    const zip = unzipSync(await download(url), { filter: (f) => f.name.endsWith(tifName) });
+    const tif = Object.values(zip)[0];
+    if (!tif) throw new Error(`no ${tifName} in ${url}`);
+    const img = await (await fromArrayBuffer(tif.buffer.slice(tif.byteOffset, tif.byteOffset + tif.byteLength) as ArrayBuffer)).getImage();
+    const k = img.getGeoKeys();
+    if (k.ProjCoordTransGeoKey !== 8) throw new Error("expected a Lambert conformal conic chart");
+    const lcc = `+proj=lcc +lat_1=${k.ProjStdParallel1GeoKey} +lat_2=${k.ProjStdParallel2GeoKey} +lat_0=${k.ProjFalseOriginLatGeoKey} +lon_0=${k.ProjFalseOriginLongGeoKey} +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs`;
+    const toChart = proj4("EPSG:4326", lcc);
+    const [ox, oy] = img.getOrigin();
+    const [rx, ry] = img.getResolution();
+    // World from pixel: x = t0 c + t1 r + t3, y = t4 c + t5 r + t7. The VFR charts are north up; the IFR sheets carry a tilt.
+    const tf: number[] = img.fileDirectory.ModelTransformation ?? [rx, 0, 0, ox, 0, ry, 0, oy];
+    const det = tf[0] * tf[5] - tf[1] * tf[4];
+    const toPixel = ([x, y]: number[]) => [(tf[5] * (x - tf[3]) - tf[1] * (y - tf[7])) / det, (tf[0] * (y - tf[7]) - tf[4] * (x - tf[3])) / det];
+    // Only the window the part needs: a sectional is 18,000 pixels across.
+    const edge: [number, number][] = [];
+    for (let t = 0; t <= 1; t += 0.125) edge.push([part.w + t * (part.e - part.w), part.s], [part.w + t * (part.e - part.w), part.n], [part.w, part.s + t * (part.n - part.s)], [part.e, part.s + t * (part.n - part.s)]);
+    const at = edge.map((p) => toChart.forward(p)).map(toPixel);
+    const c0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[0]))) - 2), r0 = Math.max(0, Math.floor(Math.min(...at.map((p) => p[1]))) - 2);
+    const c1 = Math.min(img.getWidth(), Math.ceil(Math.max(...at.map((p) => p[0]))) + 2), r1 = Math.min(img.getHeight(), Math.ceil(Math.max(...at.map((p) => p[1]))) + 2);
+    if (c1 <= c0 || r1 <= r0) continue;
+    const src = (await img.readRasters({ interleave: true, window: [c0, r0, c1, r1] })) as Uint8Array;
+    const cmap = img.fileDirectory.ColorMap as Uint16Array | undefined; // R, G, B planes of 256, 16-bit; the IFR sheets are RGB
+    const n = cmap ? cmap.length / 3 : 0, sw = c1 - c0, sh = r1 - r0;
+    const inside = panels ?? [[0, 0, img.getWidth(), img.getHeight()]];
+    charts.push((lon, lat) => {
+      if (lat < part.s || lat > part.n || lon < part.w || lon > part.e) return;
+      const [c, row] = toPixel(toChart.forward([lon, lat]));
+      if (!inside.some((p) => c >= p[0] && row >= p[1] && c <= p[2] && row <= p[3])) return;
+      const i = Math.min(sh - 1, Math.max(0, Math.floor(row - r0))) * sw + Math.min(sw - 1, Math.max(0, Math.floor(c - c0)));
+      if (!cmap) return [src[i * 3], src[i * 3 + 1], src[i * 3 + 2]];
+      return [cmap[src[i]] >> 8, cmap[src[i] + n] >> 8, cmap[src[i] + 2 * n] >> 8];
+    });
+  }
+  if (!charts.length) throw new Error(`${name}: no source covers the area`);
+
+  // An output position's color, from the first source that holds it; the projection is smooth, so a 2x2 supersample is plenty.
+  const color = (lon: number, lat: number): number[] => {
+    for (const at of charts) {
+      const rgb = at(lon, lat);
+      if (rgb) return rgb;
+    }
+    return [255, 255, 255];
   };
   for (let v = 0; v < height; v++) {
     for (let u = 0; u < WIDTH; u++) {
       let r = 0, g = 0, b = 0;
       for (const [du, dv] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
-        const [c, row] = pixel(u + du, v + dv);
-        if (panel && (c + c0 < panel[0] || row + r0 < panel[1] || c + c0 > panel[2] || row + r0 > panel[3])) {
-          r += 255;
-          g += 255;
-          b += 255;
-          continue;
-        }
-        const i = Math.min(sh - 1, Math.max(0, Math.floor(row))) * sw + Math.min(sw - 1, Math.max(0, Math.floor(c)));
-        if (cmap) {
-          const p = src[i];
-          r += cmap[p] >> 8;
-          g += cmap[p + n] >> 8;
-          b += cmap[p + 2 * n] >> 8;
-        } else {
-          r += src[i * 3];
-          g += src[i * 3 + 1];
-          b += src[i * 3 + 2];
-        }
+        const [cr, cg, cb] = color(area.w + ((u + du) / WIDTH) * (area.e - area.w), area.n - ((v + dv) / height) * (area.n - area.s));
+        r += cr;
+        g += cg;
+        b += cb;
       }
       const o = (v * WIDTH + u) * 3;
       out[o] = r >> 2;
@@ -293,7 +341,7 @@ async function terrain() {
   for (let j = 0; j < DEM.ny; j++) {
     for (let i = 0; i < DEM.nx; i++) {
       const lat = BOUNDS.n - (j / (DEM.ny - 1)) * (BOUNDS.n - BOUNDS.s), lon = BOUNDS.w + (i / (DEM.nx - 1)) * (BOUNDS.e - BOUNDS.w);
-      ft[j * DEM.nx + i] = Math.round(meters(lat, lon) * 3.28084);
+      ft[j * DEM.nx + i] = Math.round(Math.max(LAKE, meters(lat, lon) * 3.28084));
     }
   }
   await mkdir(OUT, { recursive: true });
@@ -470,12 +518,16 @@ const named = args.filter((a) => a in AREAS);
 for (const name of named.length ? named : Object.keys(AREAS)) {
   const area = AREAS[name];
   console.log(name);
-  [BOUNDS, GROUND, DEM, SEA, OUT] = [area.bounds, area.ground, area.dem, !!area.sea, join(ROOT, "data", name)];
+  [BOUNDS, GROUND, DEM, SEA, LAKE, OUT] = [area.bounds, area.ground, area.dem, !!area.sea, area.lake ?? -Infinity, join(ROOT, "data", name)];
+  const cut = (b: Bounds): Bounds => ({ s: Math.max(b.s, BOUNDS.s), w: Math.max(b.w, BOUNDS.w), n: Math.min(b.n, BOUNDS.n), e: Math.min(b.e, BOUNDS.e) });
+  const tac = area.tac && { name: area.tac[0], bounds: cut(area.tac[1]) };
+  const ifrArea = area.ifrArea && { ...area.ifrArea, bounds: cut(area.ifrArea.bounds) };
   if (!process.argv.includes("--no-chart") && !process.argv.includes("--terrain-only")) {
-    await chart(`https://aeronav.faa.gov/visual/${m}-${d}-${y}/sectional-files/${area.charts}.zip`, "SEC.tif", BOUNDS, "sectional.webp");
-    await chart(`https://aeronav.faa.gov/visual/${m}-${d}-${y}/tac-files/${area.charts}_TAC.zip`, "TAC.tif", area.tac, "tac.webp");
-    await chart(`https://aeronav.faa.gov/enroute/${m}-${d}-${y}/${area.low.zip}.zip`, area.low.tif, BOUNDS, "low.webp", area.low.panel);
-    await chart(`https://aeronav.faa.gov/enroute/${m}-${d}-${y}/${area.ifrArea.zip}.zip`, area.ifrArea.tif, area.ifrArea.bounds, "area.webp");
+    const VFR = `https://aeronav.faa.gov/visual/${m}-${d}-${y}`, ENR = `https://aeronav.faa.gov/enroute/${m}-${d}-${y}`;
+    await chart(area.sectional.map(([n, box]) => ({ url: `${VFR}/sectional-files/${n}.zip`, tif: "SEC.tif", box })), BOUNDS, "sectional.webp");
+    if (tac) await chart([{ url: `${VFR}/tac-files/${tac.name}_TAC.zip`, tif: "TAC.tif" }], tac.bounds, "tac.webp");
+    await chart(area.low.map(([n, ...panels]) => ({ url: `${ENR}/enr_${n.toLowerCase()}.zip`, tif: `ENR_${n}.tif`, panels })), BOUNDS, "low.webp");
+    if (ifrArea) await chart([{ url: `${ENR}/${ifrArea.zip}.zip`, tif: ifrArea.tif }], ifrArea.bounds, "area.webp");
   }
   const ground = await terrain();
   if (process.argv.includes("--terrain-only")) continue;
@@ -484,7 +536,8 @@ for (const name of named.length ? named : Object.keys(AREAS)) {
   const t = await dtpp();
   await diagrams(airports, t);
   const hasPlates = await plates(airports, t);
-  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, cycle: cycleDate.toISOString().slice(0, 10), bounds: BOUNDS, ground: GROUND, charts: { sectional: "sectional.webp", tac: { url: "tac.webp", bounds: area.tac }, low: "low.webp", area: { url: "area.webp", bounds: area.ifrArea.bounds } }, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints, ...(hasPlates && { plates: true as const }) };
+  const charts = { sectional: "sectional.webp", ...(tac && { tac: { url: "tac.webp", bounds: tac.bounds } }), low: "low.webp", ...(ifrArea && { area: { url: "area.webp", bounds: ifrArea.bounds } }) };
+  const file: AirspaceFile = { edition: `${y}-${m}-${d}`, cycle: cycleDate.toISOString().slice(0, 10), bounds: BOUNDS, ground: GROUND, charts, dem: { url: "dem.bin", ...DEM }, areas, airports, airways, waypoints, ...(hasPlates && { plates: true as const }) };
   await writeFile(join(OUT, "area.json"), JSON.stringify(file));
   console.log([...new Set(areas.map((a) => a.kind))].map((k) => `${k} ${areas.filter((a) => a.kind === k).length}`).join(", "));
   console.log(`airways ${airways.length}, legs ${airways.reduce((n, a) => n + a.legs.length, 0)}, no MEA ${airways.flatMap((a) => a.legs).filter((l) => l.ft === null).length}, waypoints ${waypoints.length}`);

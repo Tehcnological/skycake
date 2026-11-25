@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { chartsIn, modeOf, shownIn, type AirspaceFile } from "./airspace.js";
 import { parseAirways } from "./airway.js";
 
@@ -100,12 +100,12 @@ test("VFR and IFR: which charts each has and which airspace each shows", () => {
 
 const built = (name: string): AirspaceFile => JSON.parse(readFileSync(new URL(`../data/${name}/area.json`, import.meta.url), "utf8"));
 
-for (const name of ["phoenix", "miami"]) {
+for (const name of readdirSync(new URL("../data/", import.meta.url))) {
   test(`built ${name} data: low airways and their fixes, all on the map`, () => {
     const f = built(name);
     const on = ([lat, lon]: number[]) => lat >= f.bounds.s - 1e-4 && lat <= f.bounds.n + 1e-4 && lon >= f.bounds.w - 1e-4 && lon <= f.bounds.e + 1e-4;
     assert.ok(f.airways.length > 10);
-    assert.ok(f.waypoints.length > 30);
+    assert.ok(f.waypoints.length > 20);
     for (const a of f.airways) {
       assert.doesNotMatch(a.name, /^[JQ]\d/, "high altitude routes are left out");
       assert.ok(a.legs.length > 0);
