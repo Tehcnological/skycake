@@ -4,6 +4,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- SkyCake Viewer's icons (install, Android, desktop, favicon) are the Liquid Glass render from `design/icon`, as the iPhone icon already was, in place of the flat `app/icon.png`.
 - A standalone app (a site's `close`) no longer repeats Close at the bottom of the tool rail; the header's Close at top left leaves.
 
 ## 1.0.0 (2026-11-25)

@@ -16,12 +16,13 @@ await build({ entryPoints: ["app/main.ts"], bundle: true, splitting: true, forma
 for (const f of ["index.html", "demo.html", "help.html", "privacy.html", "terms.html", "accessibility.html", "404.html", "app.css", "demo.css", "a11y.js", "manifest.webmanifest", "_headers"]) await cp(`app/${f}`, `${out}/${f}`);
 await cp("style.css", `${out}/style.css`);
 await cp("app/shots", `${out}/shots`, { recursive: true });
-// The icons: Android, desktop, and favicon come from flat 2D app/icon.png (1024x1024 source, not shipped directly);
-// iOS apple-touch-icon (icon-180.png) uses the Icon Composer Liquid Glass render flattened onto #0c0c0c.
-// Maskable pads the artwork inside Android's safe zone on #0c0c0c so adaptive circles never clip the emblem.
-await sharp("design/icon/export/png/skycake-liquidglass-1024.png").flatten({ background: "#0c0c0c" }).resize(180, 180).png({ palette: true, effort: 10 }).toFile(`${out}/icon-180.png`);
-for (const size of [192, 512]) await sharp("app/icon.png").resize(size, size).png({ palette: true, effort: 10 }).toFile(`${out}/icon-${size}.png`);
-const inner = await sharp("app/icon.png").resize(420, 420).toBuffer();
+// The icons all come from the Icon Composer Liquid Glass render (design/icon). Android, desktop and the favicon use it
+// with its own rounded corners; iOS's apple-touch-icon (icon-180.png) is flattened onto #0c0c0c, as iOS rounds it.
+// Maskable pads it inside Android's safe zone on #0c0c0c, so adaptive circles never clip the emblem or show its rim.
+const glass = "design/icon/export/png/skycake-liquidglass-1024.png";
+await sharp(glass).flatten({ background: "#0c0c0c" }).resize(180, 180).png({ palette: true, effort: 10 }).toFile(`${out}/icon-180.png`);
+for (const size of [192, 512]) await sharp(glass).resize(size, size).png({ palette: true, effort: 10 }).toFile(`${out}/icon-${size}.png`);
+const inner = await sharp(glass).flatten({ background: "#0c0c0c" }).resize(420, 420).toBuffer();
 await sharp({ create: { width: 512, height: 512, channels: 4, background: "#0c0c0c" } }).composite([{ input: inner, gravity: "center" }]).png({ palette: true, effort: 10 }).toFile(`${out}/icon-maskable-512.png`);
 // The start screen's contour lines: top-level files, so they are in the shell below and work offline. The still ones,
 // for reduced motion and accessibility mode, must not move.
