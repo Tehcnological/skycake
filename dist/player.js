@@ -25,9 +25,16 @@ export function player(c, w, nextLink, explore) {
     const text = h("p", { "aria-live": "polite" });
     const exploreEnd = h("button", { type: "button", class: "sc-pill" }, L.explore);
     // Only a web link: a javascript: URL from a site's content would run in that site.
-    const linkOk = nextLink && /^https?:$/.test(new URL(nextLink.href, location.href).protocol);
+    const linkOk = nextLink && (() => {
+        try {
+            return /^https?:$/.test(new URL(nextLink.href, location.href).protocol);
+        }
+        catch {
+            return false; // not a URL at all
+        }
+    })();
     if (nextLink && !linkOk)
-        console.warn(`skycake: next link ${nextLink.href} is not http(s); left out`);
+        console.warn(`skycake: next link ${nextLink.href} is not an http(s) link; left out`);
     const end = h("div", { class: "sc-end" }, exploreEnd, ...(nextLink && linkOk ? [h("a", { class: "sc-pill sc-next-link", href: nextLink.href }, nextLink.label)] : []));
     const stepCard = h("section", { class: "sc-step" }, text, end);
     const round = (label, paths, box) => h("button", { type: "button", class: "sc-round", "aria-label": label }, icon(paths, box));
