@@ -2,6 +2,10 @@
 
 Notable changes. Sites install skycake from GitHub, so a version here is the `version` in `package.json`, not an npm release.
 
+## Unreleased
+
+- A standalone app (a site's `close`) no longer repeats Close at the bottom of the tool rail; the header's Close at top left leaves.
+
 ## 1.0.0 (2026-11-25)
 
 First public release.
