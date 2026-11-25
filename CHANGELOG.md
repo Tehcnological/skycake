@@ -4,6 +4,9 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 
 ## Unreleased
 
+- Airspace: TRSAs, special air traffic rule areas (Luke, DCA), the DC SFRA with its flight restricted zone (orange, shown in IFR too), Class E from nonstandard floors (9,500 MSL in the mountains, offshore 2,000 MSL) as a sheet at that floor, permanent national defense TFRs, national security areas, the ADIZ, and national parks, wildlife refuges, wilderness and NOAA marine sanctuaries (outlines on the ground, from USGS PAD-US). Ceilings marked unlimited (R-4001A) reach the top. Heights above the ground (an alert area to 700 AGL, a MOA from 500 AGL) stand over the ground under the area, not the area's field elevation. Hatched areas and the SFRA no longer hide the airspace behind them, overlapping 700 ft Class E tints once, and overlapping Mode C veils draw only their outer edge.
+- Airways at 18,000 and up are left out; no area has the high charts.
+- Tapping a raised area no longer lowers it (the Airspace list does), removing a procedure leaves the camera where it is, and a standalone app's Close is also at the left of the header on desktop.
 - 14 new areas, 16 in all: Atlanta, Boston, Chicago, Dallas-Fort Worth, Denver, Grand Forks, Houston, Las Vegas, Los Angeles, New York, San Diego, San Francisco, Seattle and Washington. The TAC and IFR area chart are optional; an area may span several sectionals or low sheets.
 - Airport diagrams printed a quarter turn with only two latitude ticks now place (KATL, KJFK, KEWR, KDFW, KLAS, KHOU and others).
 - Quizzes: a wrong first answer gets a second try with the question's optional `hint`, the wrong choice struck out; only the first answer scores and `onResult` reports it once. Labels add `tryAgain` and `rightSecondTry`.

@@ -16,11 +16,9 @@ export function add(r, p, hasDiagram = () => true, typeOf) {
     const procedures = kept.some((q) => same(q, p)) ? kept : [...kept, { airport: p.airport, name: p.name }];
     return { ...r, procedures, airport: p.airport, diagram: r.diagram && hasDiagram(p.airport), camera: undefined };
 }
-/** Removing the last one goes back to the first view. */
+/** Removing one leaves the camera where it is. */
 export function remove(r, p) {
-    const procedures = r.procedures.filter((q) => !same(q, p));
-    const back = r.first.procedures?.length ? "fit" : (r.first.camera ?? "fit");
-    return { ...r, procedures, camera: procedures.length ? undefined : back };
+    return { ...r, procedures: r.procedures.filter((q) => !same(q, p)), camera: null };
 }
 /** Makes an airport current; its diagram stays on only if it has one. */
 export function pickAirport(r, airport, hasDiagram) {

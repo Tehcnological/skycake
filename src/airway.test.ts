@@ -32,8 +32,8 @@ test("where the two directions have different minimums, the leg stands at the hi
 });
 
 test("a flight level reads in feet; an unknown minimum is kept as unknown, never made up", () => {
-  const { airways, waypoints } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), fix("THREE", 33, -109), leg("Y1", 10, "ONEEE", "FL190", "", { level: " " }), leg("Y1", 20, "TWOOO", "UNKNN", "", { level: " " }), leg("Y1", 30, "THREE", "", "", { desc: "EE  ", level: " " }));
-  assert.deepEqual(airways[0].legs.map((l) => l.ft), [19000, null]);
+  const { airways, waypoints } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), fix("THREE", 33, -109), leg("Y1", 10, "ONEEE", "FL170", "", { level: " " }), leg("Y1", 20, "TWOOO", "UNKNN", "", { level: " " }), leg("Y1", 30, "THREE", "", "", { desc: "EE  ", level: " " }));
+  assert.deepEqual(airways[0].legs.map((l) => l.ft), [17000, null]);
   assert.equal(waypoints.find((w) => w.name === "THREE")!.ft, null);
 });
 
@@ -47,6 +47,12 @@ test("high altitude airways are left out, and their fixes with them", () => {
   const { airways, waypoints } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), leg("J1", 10, "ONEEE", "18000", "", { level: "H" }), leg("J1", 20, "TWOOO", "", "", { desc: "EE  ", level: "H" }));
   assert.deepEqual(airways, []);
   assert.deepEqual(waypoints, []);
+});
+
+test("legs at 18,000 and up are left out, and fixes only on them", () => {
+  const { airways, waypoints } = parse(fix("ONEEE", 31, -111), fix("TWOOO", 32, -110), fix("THREE", 33, -109), leg("Y1", 10, "ONEEE", "08000", "", { level: " " }), leg("Y1", 20, "TWOOO", "FL190", "", { level: " " }), leg("Y1", 30, "THREE", "", "", { desc: "EE  ", level: " " }));
+  assert.deepEqual(airways[0].legs.map((l) => l.ft), [8000]);
+  assert.deepEqual(waypoints.map((w) => w.name), ["ONEEE", "TWOOO"]);
 });
 
 test("a leg is cut at the map's edge at its own height; only fixes on the map get a waypoint", () => {
@@ -91,8 +97,8 @@ test("VFR and IFR: which charts each has and which airspace each shows", () => {
   assert.deepEqual(chartsIn(all, "vfr"), ["tac", "sectional"]);
   assert.deepEqual(chartsIn(all, "ifr"), ["area", "low"]);
   assert.deepEqual(chartsIn({ sectional: "s" }, "ifr"), []);
-  for (const k of ["R", "P", "W", "MOA", "A"] as const) assert.equal(shownIn("ifr", k), true);
-  for (const k of ["B", "C", "D", "E", "E700", "MODEC"] as const) {
+  for (const k of ["SFRA", "R", "P", "W", "MOA", "A", "TFR", "ADIZ"] as const) assert.equal(shownIn("ifr", k), true);
+  for (const k of ["B", "C", "D", "E", "E700", "EFLOOR", "MODEC", "TRSA", "SATR", "NSA", "PARK"] as const) {
     assert.equal(shownIn("ifr", k), false);
     assert.equal(shownIn("vfr", k), true);
   }
@@ -111,7 +117,7 @@ for (const name of readdirSync(new URL("../data/", import.meta.url))) {
       assert.ok(a.legs.length > 0);
       for (const l of a.legs) {
         assert.ok(l.pts.every(on), `${a.name} ${JSON.stringify(l.pts)}`);
-        assert.ok(l.ft === null || (l.ft >= 1000 && l.ft <= 30000), `${a.name} MEA ${l.ft}`);
+        assert.ok(l.ft === null || (l.ft >= 1000 && l.ft < 18000), `${a.name} MEA ${l.ft}`);
       }
     }
     assert.ok(f.waypoints.every((w) => on([w.lat, w.lon])));

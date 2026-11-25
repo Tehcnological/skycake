@@ -1,3 +1,6 @@
+// Checks content against the area's data before it ships. Pure and DOM-free, so a site runs it in Node.
+// Unknown extra fields are ignored: sites keep their own tags.
+import { tappable } from "./airspace.js";
 import { maker } from "./quiz.js";
 import { seeded } from "./generate.js";
 import { LABELS } from "./ui.js";
@@ -56,7 +59,7 @@ function answerProblems(q, data, hasFix, loaded) {
     const right = [area, ...more];
     for (const id of right) {
         const kind = data.areas.find((a) => a.id === id)?.kind;
-        if (kind === "E700" || kind === "MODEC")
+        if (kind && !tappable(kind))
             out.push(`area ${id} is ${kind}, which cannot be tapped`);
     }
     if ("fix" in q.answer && !fixesIn(data, loaded, questionScene(q))(q.answer.fix))

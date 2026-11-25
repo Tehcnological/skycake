@@ -1,4 +1,4 @@
-import type { AirspaceFile } from "./airspace.js";
+import { type AirspaceFile } from "./airspace.js";
 import type { Procedure } from "./procedure.js";
 import { type Quiz } from "./quiz.js";
 import { type Question } from "./question.js";

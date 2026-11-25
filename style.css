@@ -140,7 +140,12 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .sc-where { display: flex; flex-direction: column; gap: 1px; padding: 5px 10px; border: 1px solid var(--sc-edge); border-radius: var(--sc-r-panel); background: var(--sc-panel); }
 .skycake .sc-where b { font: 300 17px/20px var(--sc-head); }
 .skycake .sc-where span { font: 400 11px/14px var(--sc-sans); color: var(--sc-muted); }
-.skycake .sc-area-close, .skycake .sc-find { display: none; }
+.skycake .sc-find { display: none; }
+/* Close, back to the site or app, before the area name; on phones it sits in the header bar instead (below). */
+.skycake .sc-area-close { display: inline-flex; align-items: center; justify-content: center; align-self: stretch; width: var(--sc-row); border: 1px solid var(--sc-edge); border-radius: var(--sc-r-panel); background: var(--sc-panel); color: var(--sc-soft); cursor: pointer; transition: background-color 0.14s, color 0.14s; }
+.skycake .sc-area-close:hover { background: var(--sc-hover); color: var(--sc-ink); }
+.skycake .sc-area-close svg { width: 16px; height: 16px; }
+.skycake .sc-area-close span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .skycake .sc-head-full { display: none; }
 
 /* Corners (desktop). */
@@ -364,7 +369,14 @@ html.skycake-full, html.skycake-full body { overflow: hidden; overscroll-behavio
 .skycake .s-D i, .skycake .s-E i { border-style: dashed; }
 .skycake .s-E700 i { border: 0; background: color-mix(in srgb, var(--c) 45%, transparent); }
 .skycake .s-MODEC i { border-width: 1px; border-radius: 50%; }
-.skycake .s-R i, .skycake .s-P i, .skycake .s-W i, .skycake .s-MOA i, .skycake .s-A i { background: repeating-linear-gradient(90deg, var(--c) 0 2px, transparent 2px 4px); }
+.skycake .s-TRSA i { --c: #7d8a96; border-width: 3px; }
+.skycake .s-EFLOOR i { border: 0; background: color-mix(in srgb, var(--c) 40%, transparent); }
+.skycake .s-NSA i { --c: #d0509f; border-style: dashed; }
+.skycake .s-TFR i, .skycake .s-ADIZ i { --c: #d4484f; }
+.skycake .s-ADIZ i, .skycake .s-PARK i { height: 0; border-width: 2px 0 0; border-style: dashed; }
+.skycake .s-PARK i { --c: #2b8fd6; }
+.skycake .s-SFRA i { --c: #ff7a1a; }
+.skycake .s-SATR i, .skycake .s-TFR i, .skycake .s-R i, .skycake .s-P i, .skycake .s-W i, .skycake .s-MOA i, .skycake .s-A i { background: repeating-linear-gradient(90deg, var(--c) 0 2px, transparent 2px 4px); }
 
 /* Airport tags: the field's id; a tap lists its procedures. */
 .skycake .view .tag.apt { padding: 2px 8px; border: 1.5px solid #ffffffcc; border-radius: 999px; background: #14171cf0; color: #fff; font: 700 11px/1.25 var(--sc-mono); pointer-events: auto; cursor: pointer; }

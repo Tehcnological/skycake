@@ -1,6 +1,6 @@
 // Quiz questions drawn from the FAA data: seeded and pure, so the same seed asks the same questions. Every answer and
 // every wrong choice comes from the area's airspace, terrain and procedures; the class rules live in airclass.ts.
-import { deepest, feetText, hundreds, inRing, KINDS, type AirspaceFile, type Area, type Kind } from "./airspace.js";
+import { deepest, feetText, hundreds, inRing, KINDS, tappable as canTap, type AirspaceFile, type Area, type Kind } from "./airspace.js";
 import { classAt, groundFt, nearBoundary, needs } from "./airclass.js";
 import { flightLine } from "./fly.js";
 import type { Procedure } from "./procedure.js";
@@ -48,8 +48,8 @@ const procs = (g: Gen) => g.procedures.filter((p) => !g.airports || g.airports.i
 const sceneOf = (p: Procedure) => ({ procedures: [{ airport: p.airport, name: p.name }] });
 
 function find(g: Gen, rng: Rng): Made | null {
-  // The view does not make E700 or MODEC tappable. Names are drawn evenly, not pieces: Phoenix B has 21.
-  const tappable = allowed(g).filter((a) => a.kind !== "E700" && a.kind !== "MODEC");
+  // Only volumes can be tapped. Names are drawn evenly, not pieces: Phoenix B has 21.
+  const tappable = allowed(g).filter((a) => canTap(a.kind));
   const areas = [...new Set(tappable.map((a) => a.name))];
   const ps = procs(g).filter((p) => p.fixes.some((f) => p.fixes.filter((o) => o.name === f.name).length === 1));
   if (ps.length && (!areas.length || rng() < 0.5)) {

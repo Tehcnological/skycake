@@ -19,7 +19,7 @@ export declare function start(first: Scene, airport?: string): Roam;
  * one. With typeOf, adding a departure removes the approaches shown and adding an approach removes the departures.
  */
 export declare function add(r: Roam, p: ProcedureRef, hasDiagram?: (airport: string) => boolean, typeOf?: (p: ProcedureRef) => ProcType | undefined): Roam;
-/** Removing the last one goes back to the first view. */
+/** Removing one leaves the camera where it is. */
 export declare function remove(r: Roam, p: ProcedureRef): Roam;
 /** Makes an airport current; its diagram stays on only if it has one. */
 export declare function pickAirport(r: Roam, airport: string, hasDiagram: (airport: string) => boolean): Roam;
