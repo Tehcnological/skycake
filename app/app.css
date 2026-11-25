@@ -20,6 +20,14 @@ html, body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 
 #app:has(> .skycake.full) { display: flex; flex-direction: column; box-sizing: border-box; height: 100dvh; }
 #app > .skycake.full { --sc-safe-bottom: 0px; position: relative; inset: auto; flex: 1; min-height: 0; }
 
+.status-bar-background { display: none; }
+@supports (-webkit-touch-callout: none) and (background-clip: text) {
+  @media (display-mode: standalone) {
+    /* WebKit samples fixed backgrounds taller than 10px. Clipping to empty text keeps it off the app content. */
+    .status-bar-background { display: block; position: fixed; inset: 0 0 auto; height: 12px; z-index: 101; pointer-events: none; background: var(--canvas); background-clip: text; }
+  }
+}
+
 @keyframes sc-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* The start screen and info pages: flat, on the bare canvas. */
