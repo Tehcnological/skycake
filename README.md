@@ -32,7 +32,7 @@ Every area includes a VFR sectional chart and an IFR low enroute chart. Fifteen 
 ## What it shows
 
 - **Terrain:** USGS 3DEP 1 arc-second elevation data sits under every chart.
-- **VFR charts and airspace:** Displays either the TAC inside its map bounds (with the sectional outside it) or the sectional across the whole area. Airspace volumes and boundaries draw in chart colors: Class B, C, D, and surface E; Class E 700 ft floors and nonstandard floors; Mode C veils; TRSAs; special use airspace (Restricted, Prohibited, Warning, MOA, Alert); special air traffic rule areas (SATR); the DC SFRA (shown in orange so it stands out from Class B); permanent national defense TFRs; national security areas (NSA); the ADIZ; and national park, wildlife refuge, wilderness, and NOAA marine sanctuary outlines.
+- **VFR charts and airspace:** Displays either the TAC inside its map bounds (with the sectional outside it) or the sectional across the whole area. Airspace volumes and boundaries draw in chart colors: Class B, C, D, and surface E; Class E 700 ft floors and nonstandard floors; Mode C veils; TRSAs; special use airspace (Restricted, Prohibited, Warning, MOA, Alert); special air traffic rule areas (SATR); the DC SFRA (shown in orange so it stands out from Class B); permanent national defense TFRs and the Disneyland TFR; national security areas (NSA); the ADIZ; and the 60 NM ring around the DCA VOR/DME. Only US airspace is drawn.
 - **IFR charts and airspace:** Displays either the IFR area chart inside its map bounds (with the IFR low chart outside it) or the IFR low chart across the whole area. Low-altitude airways below 18,000 ft MSL draw at their minimum enroute altitude (MEA) with their fixes. Special use airspace, the SFRA, permanent TFRs, and the ADIZ also display under IFR rules.
 - **Instrument procedures:** Approaches (IAP), departures (SID), and arrivals (STAR) from the FAA CIFP for every airport inside the area bounds. Several procedures can be displayed at once from the search box. Departures and approaches are mutually exclusive, so picking one clears the other kind. Picking an approach for the first time in a view switches `Rules` to IFR once per view.
 - **Airport diagrams:** FAA d-TPP airport diagrams laid over the airport using their latitude and longitude ticks.
@@ -220,7 +220,7 @@ Sample quiz: `demo/class-b-quiz.json` (`/demo/?quiz=class-b`, or `/demo/?quiz=pr
 `validateQuiz(quiz, data, files, area, charts?)` runs in Node with no DOM and returns problems formatted as `"<quiz id> item <n>: <problem>"`. Unknown fields are ignored.
 
 - Written items are checked for valid names, non-empty prompts, 2 to 4 distinct choices (or a valid numeric answer and non-negative tolerance), valid `answerArea` and `also` IDs, valid `plateRegions`, and unique item IDs.
-- A `find` answer must be tappable: `E700`, `EFLOOR`, `MODEC`, `ADIZ`, and `PARK` areas are rejected because they cannot be tapped, and fix answers must exist on the question's procedures or the area's waypoints.
+- A `find` answer must be tappable: `E700`, `EFLOOR`, `MODEC`, `ADIZ`, and `DC60` areas are rejected because they cannot be tapped, and fix answers must exist on the question's procedures or the area's waypoints.
 - `generate` items require `count >= 1`, valid airport IDs, and one successful trial draw with a fixed seed (`seeded(0)`) at sea-level terrain; otherwise validation reports `"nothing to ask with these filters"`.
 
 ```ts
@@ -273,7 +273,7 @@ npx wrangler pages deploy www --project-name skycake-site --branch main
 
 ## Data updates
 
-`npm run data` (`scripts/build-area.ts`) rebuilds `data/` from public-domain FAA and USGS sources: VFR sectionals and TACs, IFR area and low enroute charts, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams and procedure charts, USGS 3DEP terrain, and USGS PAD-US park, refuge, wilderness, and marine sanctuary outlines. Full source list and notes: [NOTICE.md](NOTICE.md).
+`npm run data` (`scripts/build-area.ts`) rebuilds `data/` from public-domain FAA and USGS sources: VFR sectionals and TACs, IFR area and low enroute charts, ADDS airspace, CIFP procedures and airways, d-TPP airport diagrams and procedure charts, and USGS 3DEP terrain. Full source list and notes: [NOTICE.md](NOTICE.md).
 
 FAA charts update every 56 days and procedures update every 28 days. Each `area.json` records its chart `edition` and procedure `cycle`.
 
