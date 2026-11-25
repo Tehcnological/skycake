@@ -1,8 +1,9 @@
 # skycake app icon: Liquid Glass (Icon Composer 27.2)
 
-Built from `app/icon.png` (`ui/flat-metro` @ c3c9d2c), the primary Baumkuchen `sc` monogram.
+Built from the flat `sc` Baumkuchen monogram as it stood at `ui/flat-metro` @ c3c9d2c, kept here as `flat-alt.png`. `app/icon.png` is a later flat version. SkyCake Viewer's icons all come from `export/png/skycake-liquidglass-1024.png` (`scripts/app.mjs`), and `skycake.icon/` is kept for a future iOS app.
 
 ## Contents
+- `flat-alt.png`: the flat monogram the bundle was built from (1024², the alternate to `app/icon.png`).
 - `skycake.icon/`: Icon Composer bundle. Open it in Icon Composer, or drop it into an Xcode target. `actool` compiles it with no warnings.
 - `export/png/skycake-liquidglass-{1024,512,192,180}.png`: Default-appearance renders.
 - `export/appearances/`: Default, Dark, ClearLight, ClearDark, TintedLight and TintedDark at 1024/512/192/180/60.
