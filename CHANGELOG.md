@@ -2,7 +2,9 @@
 
 Notable changes. Sites install skycake from GitHub, so a version here is the `version` in `package.json`, not an npm release.
 
-## Unreleased
+## 1.0.0 (2026-11-25)
+
+First public release.
 
 - Airspace: Mexican and Canadian airspace in the FAA data (Tijuana's TCA) is left out. The park, refuge, wilderness and marine sanctuary outlines are gone: they did not line up with the charts. New: the 60 NM ring around the DCA VOR/DME (`DC60`, a dashed line on the ground; its label `kinds.DC60`) and the Disneyland TFR, from FDC NOTAM 6/6925. Kind `PARK` is replaced by `DC60`.
 - Drawing: areas from the surface no longer flicker over the sea (W-291, A-291D, W-107B), stacked sections such as R-2310A and B no longer tint their shared plane twice, and pointing at an airspace tag shows that area's tip even where another area is in front.
@@ -21,7 +23,7 @@ Notable changes. Sites install skycake from GitHub, so a version here is the `ve
 - Quizzes: an area a question asks about stands up in 3D, four times as tall and seen at an angle; procedure scenes open on the IFR chart and keep raised areas; the airplane is drawn larger with a dashed line to a ring on the ground; a flown route grows in step with the airplane. Generated questions ask for the FAF or MAP by role.
 - Plate questions: `plateRegions` on a choice question marks one box per choice on the plate, and a tap inside one picks it (the buttons stay for the keyboard). The plate can no longer be dragged off its panel.
 - Class B, C and D ceilings charted "up to but not including" (the FAA's `TNI`) are stored one foot lower and shown as on the chart: 2,999 ft, charted -30.
-- Pointer: the left mouse button pans and the right turns, as on a map app; double-click zooms in; a pen double-tap (or a pen button that sends a double-click) and drag zooms, and the pen keeps working after it.
+- Pointer: the left mouse button pans and the right turns, as on a map app; a pen double-tap (or a pen button that sends a double-click) and drag zooms, and the pen keeps working after it.
 - Demo: VFR and IFR example quizzes (`?quiz=vfr` on the TAC, `?quiz=ifr` on the IFR area chart, no airport diagram questions) and `demo/all.html`, a page of every mode and quiz type. Their words are drafts.
 - The view loads under a progress screen, the first approach shown switches to IFR once, and the diagram button no longer zooms.
 
