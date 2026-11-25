@@ -10,7 +10,14 @@ const types = { ".html": "text/html", ".js": "text/javascript", ".css": "text/cs
 const port = Number(process.env.PORT ?? 5179);
 
 createServer(async (req, res) => {
-  let path = decodeURIComponent(new URL(req.url ?? "/", "http://x").pathname);
+  // A page on another site can rebind its name to 127.0.0.1; only requests addressed to this machine by name are served.
+  if (![`localhost:${port}`, `127.0.0.1:${port}`].includes(req.headers.host ?? "")) return res.writeHead(403).end();
+  let path;
+  try {
+    path = decodeURIComponent(new URL(req.url ?? "/", "http://x").pathname);
+  } catch {
+    return res.writeHead(400).end();
+  }
   if (path.endsWith("/")) path += "index.html"; // before normalize, which turns / into \ on Windows
   path = normalize(path);
   const file = join(root, path);

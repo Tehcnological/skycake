@@ -13,7 +13,7 @@ const DAY = 864e5;
 
 await rm(out, { recursive: true, force: true });
 await build({ entryPoints: ["app/main.ts"], bundle: true, splitting: true, format: "esm", target: "es2022", minify: true, outdir: out, logLevel: "warning" });
-for (const f of ["index.html", "demo.html", "help.html", "privacy.html", "accessibility.html", "app.css", "manifest.webmanifest"]) await cp(`app/${f}`, `${out}/${f}`);
+for (const f of ["index.html", "demo.html", "help.html", "privacy.html", "accessibility.html", "404.html", "app.css", "demo.css", "a11y.js", "manifest.webmanifest", "_headers"]) await cp(`app/${f}`, `${out}/${f}`);
 await cp("style.css", `${out}/style.css`);
 await cp("app/shots", `${out}/shots`, { recursive: true });
 // The icons: Android, desktop, and favicon come from flat 2D app/icon.png (1024x1024 source, not shipped directly);
@@ -62,11 +62,13 @@ await writeFile(`${out}/data/manifest.json`, JSON.stringify({ areas }));
 
 // The service worker. The shell is every top-level file (not data/, nor shots/, the demo page's screenshots, online
 // only) plus the data manifest; VERSION changes with any of them, which makes browsers install the new shell.
-const shell = ["./", "data/manifest.json", ...(await readdir(out, { withFileTypes: true })).filter((d) => d.isFile()).map((d) => d.name).sort()];
+// _headers is Cloudflare's, never served; 404.html is what a missing file gets, not a page to keep.
+const shell = ["./", "data/manifest.json", ...(await readdir(out, { withFileTypes: true })).filter((d) => d.isFile() && !["_headers", "404.html"].includes(d.name)).map((d) => d.name).sort()];
 const hash = createHash("sha256");
 for (const f of shell.slice(1)) hash.update(f).update(await readFile(`${out}/${f}`));
 const sw = `const VERSION = ${JSON.stringify(hash.digest("hex").slice(0, 12))};\nconst SHELL = ${JSON.stringify(shell)};\n${await readFile("app/sw.js", "utf8")}`;
 await writeFile(`${out}/sw.js`, sw);
+assert.ok(!shell.includes("_headers") && shell.includes("a11y.js") && shell.includes("demo.css"));
 assert.ok(shell.includes("index.html") && shell.includes("main.js") && shell.includes("help.html") && shell.includes("privacy.html") && shell.includes("accessibility.html") && shell.includes("demo.html"));
 for (const f of ["contours-page.svg", "contours-page-still.svg", "contours-card.svg", "contours-card-still.svg"]) assert.ok(shell.includes(f), f);
 console.log(`www/: ${shell.length} shell files, areas ${Object.entries(areas).map(([id, a]) => `${id} ${a.edition} through ${a.through}`).join(", ")}`);

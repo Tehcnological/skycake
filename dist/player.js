@@ -24,7 +24,11 @@ export function player(c, w, nextLink, explore) {
     // The step's caption; once the walkthrough ends, Explore and the site's next link under it.
     const text = h("p", { "aria-live": "polite" });
     const exploreEnd = h("button", { type: "button", class: "sc-pill" }, L.explore);
-    const end = h("div", { class: "sc-end" }, exploreEnd, ...(nextLink ? [h("a", { class: "sc-pill sc-next-link", href: nextLink.href }, nextLink.label)] : []));
+    // Only a web link: a javascript: URL from a site's content would run in that site.
+    const linkOk = nextLink && /^https?:$/.test(new URL(nextLink.href, location.href).protocol);
+    if (nextLink && !linkOk)
+        console.warn(`skycake: next link ${nextLink.href} is not http(s); left out`);
+    const end = h("div", { class: "sc-end" }, exploreEnd, ...(nextLink && linkOk ? [h("a", { class: "sc-pill sc-next-link", href: nextLink.href }, nextLink.label)] : []));
     const stepCard = h("section", { class: "sc-step" }, text, end);
     const round = (label, paths, box) => h("button", { type: "button", class: "sc-round", "aria-label": label }, icon(paths, box));
     const backButton = round(L.back, PLAYER.back);

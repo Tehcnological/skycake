@@ -155,3 +155,12 @@ test("a highlighted area is raised too", () => {
   const r = resolve({ highlight: [{ area: "d-chandler-municipal-airport-class-d" }, { airport: "KPHX" }] }, data);
   assert.deepEqual([...r.raised], ["d-chandler-municipal-airport-class-d"]);
 });
+
+test("a malformed scene from a link falls back to free roam with a warning, never a crash", () => {
+  const bad = ["x", [], null, 5, { raise: 5 }, { procedures: "KPHX" }, { camera: { frame: 7 } }, { raise: [null] }];
+  for (const scene of bad) {
+    const said: string[] = [];
+    assert.deepEqual(firstScene({ scene: scene as never }, data, (m) => said.push(m)), freeRoamScene(data), JSON.stringify(scene));
+    assert.equal(said.length, 1, JSON.stringify(scene));
+  }
+});

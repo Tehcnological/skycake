@@ -1,0 +1,3 @@
+# Every change to main needs Chris's review (branch protection: require review from Code Owners). As admin he can
+# still merge his own PRs; a workflow token or an app cannot.
+* @Tehcnological

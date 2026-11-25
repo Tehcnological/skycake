@@ -16,36 +16,7 @@
 <title>skycake</title>
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="stylesheet" href="app.css">
-<style>
-/* The demo page: flat dark like the app, one column of shots, each with one line of copy. All words are drafts for Chris. */
-:root { --muted: #8c8c8c; --line: #262626; }
-body { font: 400 16px/1.55 var(--sans); }
-.demo { box-sizing: border-box; max-width: 960px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 44px; }
-.brand { display: flex; align-items: center; gap: 14px; font: 400 clamp(28px, 7vw, 42px)/1 var(--head); letter-spacing: -0.025em; }
-.brand img { width: clamp(38px, 9vw, 52px); height: auto; border: 0; border-radius: 0; }
-.hero { display: grid; gap: 16px; justify-items: start; }
-.hero h1 { margin: 0; max-width: 18ch; font: 300 clamp(28px, 6vw, 44px)/1.08 var(--head); text-wrap: balance; }
-.hero p { margin: 0; max-width: 52ch; color: var(--ink2); }
-.open { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 0; background: var(--fill); color: var(--tile-ink); font: 600 15px var(--head); text-decoration: none; transform-origin: left center; transition: background-color 0.16s, transform 0.14s var(--ease); }
-.open:hover { background: var(--fill-hover); }
-.open:active { background: var(--fill-down); transform: perspective(500px) rotateY(-2deg) scale(0.985); }
-.open:focus-visible, .demo a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
-.nfn { font: 500 12px var(--mono); color: var(--warn); }
-section { display: grid; gap: 12px; }
-section h2 { margin: 0; font: 400 22px/1.2 var(--head); }
-section p { margin: 0; max-width: 60ch; color: var(--ink2); }
-section a { color: var(--link); font-weight: 600; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.16s; }
-section a:hover { border-bottom-color: var(--link); }
-figure { margin: 0; }
-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 0; }
-/* A desktop shot beside a phone shot; stacked on a phone. */
-.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.3fr); gap: 14px; align-items: start; }
-img.solo { max-width: 340px; }
-@media (max-width: 640px) { .pair { grid-template-columns: minmax(0, 1fr); } .pair img.phone, img.solo { max-width: 260px; } }
-footer { display: grid; gap: 4px; padding-top: 16px; border-top: 1px solid var(--line); font: 400 12px/1.6 var(--mono); color: var(--muted); }
-footer a { display: inline-block; min-height: 44px; line-height: 44px; color: inherit; text-decoration: none; }
-footer a:hover { color: var(--ink); }
-</style>
+<link rel="stylesheet" href="demo.css">
 </head>
 <body>
 <main class="demo">

@@ -149,15 +149,19 @@ export function shorthand(o, data) {
  * falls back to free roam's first view, and warn() says why, so the embed still works.
  */
 export function firstScene(o, data, warn) {
+    // A scene can come from a link (SkyCake Viewer's ?scene=), so anything that is not a plain object, or that resolve()
+    // trips over, is set aside the same way.
+    if (o.scene !== undefined && (typeof o.scene !== "object" || o.scene === null || Array.isArray(o.scene))) {
+        warn("skycake: the scene is not an object; showing the whole chart instead");
+        return freeRoamScene(data);
+    }
     const scene = o.scene ?? shorthand(o, data) ?? freeRoamScene(data);
     try {
         resolve(scene, data);
         return scene;
     }
     catch (e) {
-        if (!(e instanceof SceneError))
-            throw e;
-        warn(`skycake: ${e.message}; showing the whole chart instead`);
+        warn(`skycake: ${e instanceof SceneError ? e.message : `the scene could not be read (${String(e)})`}; showing the whole chart instead`);
         return freeRoamScene(data);
     }
 }

@@ -62,3 +62,8 @@ test("a page whose text mostly runs sideways is turned to read left to right", (
   // A page drawn as outlines (2611's Luke AFB charts) has only the date strips down both margins, one each way.
   assert.equal(pageTurn([item("SW-4, 29 OCT 2026 to 26 NOV 2026", 0, 9), item("SW-4, 29 OCT 2026 to 26 NOV 2026", 0, -9)]), 0);
 });
+
+test("a record whose pdf_name is not a plain file name is dropped, so it can never become a path", () => {
+  const rec = (pdf: string) => `<record><chart_code>IAP</chart_code><chart_name>X</chart_name><useraction></useraction><pdf_name>${pdf}</pdf_name></record>`;
+  assert.deepEqual(chartRecords(rec("00144R18.PDF") + rec("../../x.PDF") + rec("..\\evil.PDF") + rec("a/b.PDF") + rec("")).map((r) => r.pdf), ["00144R18.PDF"]);
+});

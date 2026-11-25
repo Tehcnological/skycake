@@ -6,7 +6,9 @@
 export const airportBlock = (meta, id) => meta.split("<airport_name").find((b) => new RegExp(`(icao_ident|apt_ident)="${id}"`).test(b.slice(0, b.indexOf(">"))));
 const tag = (r, t) => r.match(new RegExp(`<${t}>([^<]*)</${t}>`))?.[1] ?? "";
 /** Every record of an airport's block, in metafile order. */
-export const chartRecords = (block) => block.split("<record>").slice(1).map((r) => ({ code: tag(r, "chart_code"), name: tag(r, "chart_name"), pdf: tag(r, "pdf_name"), action: tag(r, "useraction") }));
+export const chartRecords = (block) => block.split("<record>").slice(1).map((r) => ({ code: tag(r, "chart_code"), name: tag(r, "chart_name"), pdf: tag(r, "pdf_name"), action: tag(r, "useraction") }))
+    // pdf_name becomes a download and a file name (pageFile): a plain name or nothing.
+    .filter((r) => /^[A-Z0-9_-]+\.PDF$/i.test(r.pdf));
 // Graphic obstacle departures (ODP) are departures too.
 const KINDS = { IAP: "IAP", DP: "DP", ODP: "DP", STR: "STR" };
 const CONT = /, CONT\.(\d+)$/;

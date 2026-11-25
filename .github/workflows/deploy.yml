@@ -2,6 +2,9 @@ name: Deploy
 
 # SkyCake Viewer to skycake.app: after CI passes on a push to main (merges, data cycle PRs included), build www/ and
 # upload it to the Cloudflare Pages project, which is direct upload, not connected to Git. See "Hosting" in README.md.
+# Two jobs, so the Cloudflare token never shares a runner with the repo's own code or its dependencies: build runs
+# npm ci and npm run app with no secrets; deploy only unpacks the built files and runs wrangler from its own lockfile
+# (.github/deploy), in the production environment, which only main can use and which holds the token.
 on:
   workflow_run:
     workflows: [CI]
@@ -17,31 +20,84 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+  build:
+    # By hand only from main; after CI only for a push to main that passed.
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      sha: ${{ steps.latest.outputs.sha }}
+      latest: ${{ steps.latest.outputs.latest }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
-      - uses: actions/setup-node@v7
+      # A re-run of an old CI run must not put an older commit back on the site: only main's newest commit ships.
+      - name: Main's newest commit?
+        id: latest
+        run: |
+          git fetch --quiet --depth=1 origin main
+          sha=$(git rev-parse HEAD)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ "$sha" = "$(git rev-parse FETCH_HEAD)" ]; then echo "latest=true" >> "$GITHUB_OUTPUT"; else echo "::notice::$sha is not main's newest commit; not deploying it."; fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.latest.outputs.latest == 'true'
         with:
           node-version: 22
           cache: npm
 
       - name: Install
+        if: steps.latest.outputs.latest == 'true'
         run: npm ci
 
       - name: Build the app
+        if: steps.latest.outputs.latest == 'true'
         run: npm run app
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.latest.outputs.latest == 'true'
+        with:
+          name: www
+          path: www/
+          include-hidden-files: true
+          retention-days: 1
+
+  deploy:
+    needs: build
+    if: needs.build.outputs.latest == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/deploy
+
+      # No npm cache here: one written by another workflow could feed this install.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Install wrangler
+        working-directory: .github/deploy
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: www
+          path: ${{ runner.temp }}/www
+
       - name: Upload to Cloudflare Pages
+        working-directory: .github/deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ea674aaebe725a1a5f53f685818e922c
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          SHA: ${{ needs.build.outputs.sha }}
         run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::warning::No CLOUDFLARE_API_TOKEN secret, so nothing deployed. See Hosting in README.md."; exit 0; fi
-          npx --yes wrangler@4.168.0 pages deploy www --project-name skycake-site --branch main --commit-hash "$(git rev-parse HEAD)"
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then echo "::warning::No CLOUDFLARE_API_TOKEN secret in the production environment, so nothing deployed. See Hosting in README.md."; exit 0; fi
+          ./node_modules/.bin/wrangler pages deploy "$RUNNER_TEMP/www" --project-name skycake-site --branch main --commit-hash "$SHA" --commit-dirty=true
