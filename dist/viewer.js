@@ -852,7 +852,6 @@ a11y = false) {
         return [e.clientX - r.left, e.clientY - r.top];
     };
     // A pen can double-tap and drag to zoom without a wheel. Keep its second press out of OrbitControls.
-    // A mouse uses the browser's double-click and its normal drag handling.
     const zoomButton = (e) => e.pointerType === "pen" && (e.button === 0 || e.button === 2);
     let press = null;
     let firstUp = null;
@@ -916,7 +915,7 @@ a11y = false) {
     el3d.addEventListener("pointercancel", pointerDone, { capture: true });
     // Some pen drivers send a browser double-click directly. A pointer pair already zoomed on its second release.
     el3d.addEventListener("dblclick", (e) => {
-        if (e.button !== 0 || downType === "touch")
+        if (e.button !== 0 || downType !== "pen")
             return;
         const alreadyZoomed = isSecondTap(handledUp, at(e), e.timeStamp);
         handledUp = null;
@@ -1048,9 +1047,8 @@ a11y = false) {
         if (!fingers.size && e.pointerType !== "mouse" && (touch || e.button === 0))
             pickAt(e, touch);
     });
-    // The browser counts mouse clicks at its own timing so the second click zooms without picking again.
     el3d.addEventListener("click", (e) => {
-        if (downType === "mouse" && e.detail === 1)
+        if (downType === "mouse")
             pickAt(e, false);
     });
     let sized = [0, 0];
